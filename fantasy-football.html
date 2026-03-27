@@ -1,0 +1,3389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fantasy League — Your All-in-One Fantasy Football Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="historical-data.js"></script>
+<style>
+  :root {
+    /* Veracity Brand */
+    --brand-green: #2A2D35;
+    --brand-tan: #CDAA7D;
+    --brand-green-light: #353840;
+    --charcoal: #1F2937;
+    --charcoal-slate: #5A5F6B;
+    --rust: #B87333;
+    --copper: #C67D4B;
+    --muted-grey: #6B7280;
+    --off-white: #F9FAFB;
+
+    /* Light theme derived */
+    --bg: #F7F8F6;
+    --bg-white: #FFFFFF;
+    --surface: #F9FAFB;
+    --surface2: #F1F3F5;
+    --border: #E2E5E9;
+    --border-strong: #D1D5DB;
+    --text: #1F2937;
+    --text-muted: var(--charcoal-slate);
+    --accent: #2A2D35;
+    --accent-hover: #353840;
+    --green: #CDAA7D;
+    --green-light: #fdf0e6;
+    --red: #dc2626;
+    --red-light: #fef2f2;
+    --blue: #2563eb;
+    --blue-light: #eff6ff;
+    --purple: #7c3aed;
+    --purple-light: #f5f3ff;
+    --warning-amber: #f59e0b;
+    --warning-amber-light: #fef3c7;
+    --success-green: #16a34a;
+    --info-blue: #3b82f6;
+
+    /* Depth layers */
+    --tan-10: rgba(205, 170, 125, 0.1);
+    --tan-15: rgba(205, 170, 125, 0.15);
+    --tan-20: rgba(205, 170, 125, 0.2);
+    --tan-30: rgba(205, 170, 125, 0.3);
+    --green-10: rgba(90, 95, 107, 0.05);
+    --green-20: rgba(90, 95, 107, 0.08);
+    --row-alt: var(--tan-10);
+    --row-hover: var(--tan-15);
+
+    /* Spacing scale (4px base) */
+    --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+    --space-5: 20px; --space-6: 24px; --space-8: 32px; --space-10: 40px;
+
+    /* Shadow hierarchy */
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.06);
+    --shadow-md: 0 2px 8px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-lg: 0 8px 24px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06);
+    --shadow-card: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-card-hover: 0 4px 12px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.06);
+
+    /* Transition tokens */
+    --ease: cubic-bezier(0.4, 0, 0.2, 1);
+    --duration-fast: 150ms; --duration-base: 200ms; --duration-slow: 300ms;
+
+    /* Border radius scale */
+    --radius-sm: 4px; --radius-md: 8px; --radius-lg: 12px; --radius-full: 9999px;
+
+    /* Fantasy Football Position Colors */
+    --pos-qb: #2563eb;
+    --pos-rb: #16a34a;
+    --pos-wr: #f59e0b;
+    --pos-te: #dc2626;
+    --pos-k: #7c3aed;
+    --pos-def: #5A5F6B;
+    --pos-flex: #C67D4B;
+    --pos-qb-bg: rgba(37, 99, 235, 0.1);
+    --pos-rb-bg: rgba(22, 163, 74, 0.1);
+    --pos-wr-bg: rgba(245, 158, 11, 0.1);
+    --pos-te-bg: rgba(220, 38, 38, 0.1);
+    --pos-k-bg: rgba(124, 58, 237, 0.1);
+    --pos-def-bg: rgba(90, 95, 107, 0.1);
+
+    /* Semantic */
+    --win: #16a34a;
+    --loss: #dc2626;
+    --injury-out: #dc2626;
+    --injury-questionable: #f59e0b;
+    --injury-probable: #16a34a;
+  }
+
+  /* Dark mode */
+  [data-theme="dark"] {
+    --bg: #1a1d24; --bg-white: #22252d; --surface: #2a2d35; --surface2: #32353d;
+    --border: #2e3240; --border-strong: #3a3e4c;
+    --text: #e2e4e9; --text-muted: #8b8f9a;
+    --charcoal-slate: #a0a4ae; --rust: #CDAA7D;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
+    --shadow-md: 0 2px 8px rgba(0,0,0,0.25);
+    --shadow-lg: 0 8px 24px rgba(0,0,0,0.35);
+    --shadow-card: 0 1px 3px rgba(0,0,0,0.2);
+    --shadow-card-hover: 0 4px 12px rgba(0,0,0,0.3);
+    --tan-10: rgba(205,170,125,0.08); --tan-15: rgba(205,170,125,0.12);
+    --green-10: rgba(205,170,125,0.04); --green-20: rgba(205,170,125,0.06);
+    --row-alt: var(--tan-10); --row-hover: var(--tan-15);
+    --red-light: #2a1a1a; --green-light: #2a2218; --blue-light: #1a1a2a; --purple-light: #221a2a;
+  }
+  [data-theme="dark"] .ff-card,
+  [data-theme="dark"] .ff-sidebar-card { background: var(--bg-white); border-color: var(--border); }
+  [data-theme="dark"] .ff-table th { background: var(--surface2); color: var(--text); }
+  [data-theme="dark"] .ff-table td { border-color: var(--border); color: var(--text); }
+  [data-theme="dark"] .ff-hero { background: linear-gradient(135deg, #22252d 0%, #32353d 100%); }
+  [data-theme="dark"] .ff-search-input { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.2); color: var(--text); }
+  [data-theme="dark"] .ff-search-input:focus { border-color: var(--brand-tan); box-shadow: 0 0 0 3px rgba(205,170,125,0.15); }
+  [data-theme="dark"] .ff-btn-secondary { background: var(--surface); color: var(--text); border-color: var(--border); }
+  [data-theme="dark"] .ff-btn-primary { background: var(--brand-tan); color: var(--brand-green); }
+  [data-theme="dark"] .ff-btn-primary:hover { background: var(--rust); }
+  [data-theme="dark"] .ff-tab.active { color: var(--brand-tan); border-bottom-color: var(--brand-tan); }
+  [data-theme="dark"] .ff-tab { color: var(--text-muted); }
+  [data-theme="dark"] .ff-tab:hover { color: var(--text); }
+  [data-theme="dark"] .ff-news-item:hover { background: var(--surface); }
+  [data-theme="dark"] .ff-footer { background: #151820; }
+  [data-theme="dark"] .ff-sidebar-card-header { background: var(--surface2); }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Aptos Narrow', 'Inter', system-ui, -apple-system, sans-serif;
+    background: var(--bg); color: var(--text);
+    min-height: 100vh; font-size: 14px; line-height: 1.6;
+    -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+  }
+  button { cursor: pointer; font-family: inherit; }
+  input, textarea, select { font-family: inherit; }
+
+  /* ---- Top Navbar ---- */
+  .ff-top-navbar {
+    position: fixed; top: 0; left: 0; right: 0;
+    height: 48px; z-index: 55;
+    background: var(--brand-green-light); border-bottom: 1px solid var(--copper);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 24px;
+  }
+  .ff-nav-left { display: flex; align-items: center; gap: 12px; }
+  .ff-nav-logo {
+    font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 700;
+    color: #fff; letter-spacing: -0.3px;
+  }
+  .ff-nav-logo span { color: var(--brand-tan); }
+  .ff-league-select {
+    background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
+    color: rgba(255,255,255,0.85); padding: 4px 10px; border-radius: var(--radius-sm);
+    font-size: 12px; font-weight: 500; outline: none;
+  }
+  .ff-league-select option { background: var(--brand-green); color: #fff; }
+  .ff-nav-center { display: flex; align-items: center; gap: 8px; }
+  .ff-week-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 14px; border-radius: var(--radius-full);
+    border: 1px solid var(--copper); color: var(--brand-tan);
+    font-size: 12px; font-weight: 600; letter-spacing: 0.02em;
+  }
+  .ff-live-dot {
+    width: 6px; height: 6px; border-radius: 50%; background: var(--success-green);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+  .ff-nav-right { display: flex; align-items: center; gap: 12px; }
+  .ff-dark-toggle {
+    background: none; border: 1px solid rgba(255,255,255,0.2);
+    color: rgba(255,255,255,0.85); padding: 4px 8px; border-radius: var(--radius-sm);
+    font-size: 14px; display: flex; align-items: center; justify-content: center;
+    transition: background var(--duration-fast) var(--ease);
+  }
+  .ff-dark-toggle:hover { background: rgba(255,255,255,0.1); }
+  .ff-avatar {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: var(--brand-tan); color: var(--brand-green);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700;
+  }
+
+  /* ---- Hero Section ---- */
+  .ff-hero {
+    margin-top: 48px;
+    background: linear-gradient(135deg, #4A4F5A 0%, #5A5F6B 100%);
+    border-top: 4px solid var(--brand-tan);
+    padding: 32px clamp(16px, 4vw, 32px);
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 24px;
+  }
+  .ff-hero-left h1 {
+    font-family: 'Playfair Display', serif; font-size: 28px; font-weight: 700;
+    color: #fff; margin-bottom: 4px;
+  }
+  .ff-hero-left p { color: rgba(255,255,255,0.6); font-size: 14px; }
+  .ff-hero-chip {
+    display: inline-flex; align-items: center; gap: 8px;
+    margin-top: 12px; padding: 6px 16px; border-radius: var(--radius-full);
+    background: rgba(205,170,125,0.15); border: 1px solid rgba(205,170,125,0.3);
+    color: var(--brand-tan); font-size: 14px; font-weight: 600;
+  }
+  .ff-hero-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+  .ff-hero-action {
+    padding: 12px 20px; border-radius: var(--radius-md);
+    font-size: 13px; font-weight: 600; border: none;
+    display: flex; align-items: center; gap: 8px;
+    transition: transform var(--duration-fast) var(--ease), box-shadow var(--duration-fast) var(--ease);
+    box-shadow: var(--shadow-card);
+  }
+  .ff-hero-action:hover { transform: translateY(-2px); box-shadow: var(--shadow-card-hover); }
+  .ff-hero-action:active { transform: translateY(0); }
+  .ff-hero-action.primary { background: var(--copper); color: #fff; }
+  .ff-hero-action.secondary { background: var(--brand-green); color: var(--brand-tan); border: 1px solid rgba(205,170,125,0.3); }
+
+  /* ---- Main Grid ---- */
+  .ff-main-grid {
+    display: grid; grid-template-columns: 65% 1fr;
+    gap: var(--space-5); padding: var(--space-5) clamp(16px, 4vw, 32px);
+    max-width: 1400px; margin: 0 auto;
+  }
+  .ff-left { display: flex; flex-direction: column; gap: var(--space-5); }
+  .ff-right { display: flex; flex-direction: column; gap: var(--space-5); }
+
+  /* ---- Card Styles ---- */
+  .ff-card {
+    background: var(--bg-white); border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card); border: 1px solid var(--border);
+    overflow: hidden;
+    transition: box-shadow var(--duration-base) var(--ease);
+  }
+  .ff-card-header {
+    padding: 16px 20px; display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+  }
+  .ff-card-header h2 { font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+  .ff-card-body { padding: 20px; }
+  .ff-card-top-accent { height: 4px; width: 100%; }
+
+  /* Sidebar cards */
+  .ff-sidebar-card {
+    background: var(--bg-white); border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card); border: 1px solid var(--border);
+    border-left: 3px solid var(--brand-tan); overflow: hidden;
+  }
+  .ff-sidebar-card-header {
+    background: var(--brand-green); padding: 10px 16px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .ff-sidebar-card-header h3 {
+    color: var(--brand-tan); font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .ff-sidebar-card-body { padding: 12px 16px; }
+
+  /* ---- Buttons ---- */
+  .ff-btn {
+    padding: 6px 14px; border-radius: var(--radius-md);
+    font-size: 12px; font-weight: 600; border: 1px solid transparent;
+    transition: all var(--duration-fast) var(--ease);
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .ff-btn:hover { transform: translateY(-1px); }
+  .ff-btn:active { transform: translateY(0); }
+  .ff-btn-primary { background: var(--brand-green); color: var(--brand-tan); border-color: var(--brand-green); }
+  .ff-btn-primary:hover { background: var(--accent-hover); }
+  .ff-btn-copper { background: var(--copper); color: #fff; border-color: var(--copper); }
+  .ff-btn-copper:hover { background: var(--rust); }
+  .ff-btn-secondary { background: var(--surface); color: var(--text); border-color: var(--border); }
+  .ff-btn-secondary:hover { background: var(--surface2); }
+  .ff-btn-danger { background: transparent; color: var(--red); border-color: var(--red); }
+  .ff-btn-danger:hover { background: var(--red); color: #fff; }
+  .ff-btn-sm { padding: 3px 10px; font-size: 11px; border-radius: var(--radius-sm); }
+
+  /* ---- Tabs ---- */
+  .ff-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); padding: 0 20px; }
+  .ff-tab {
+    background: none; border: none; padding: 8px 14px;
+    font-size: 12px; font-weight: 500; color: var(--text-muted);
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+    transition: color var(--duration-fast) var(--ease), border-color var(--duration-fast) var(--ease);
+  }
+  .ff-tab:hover { color: var(--text); }
+  .ff-tab.active { color: var(--copper); border-bottom-color: var(--copper); font-weight: 600; }
+
+  /* ---- Position Badge ---- */
+  .ff-pos-badge {
+    display: inline-block; padding: 2px 8px; border-radius: var(--radius-full);
+    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+  }
+
+  /* ---- Matchup Widget ---- */
+  .ff-matchup { display: flex; align-items: stretch; gap: 0; }
+  .ff-matchup-team {
+    flex: 1; padding: 20px; display: flex; flex-direction: column; align-items: center; text-align: center;
+  }
+  .ff-matchup-team:first-child { border-right: 1px solid var(--border); }
+  .ff-matchup-team-name { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+  .ff-matchup-score {
+    font-size: 36px; font-weight: 700; line-height: 1;
+    transition: color var(--duration-slow) var(--ease);
+  }
+  .ff-matchup-score.winning { color: var(--brand-tan); }
+  .ff-matchup-score.losing { color: var(--text-muted); }
+  .ff-matchup-projected { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+  .ff-matchup-vs {
+    display: flex; align-items: center; justify-content: center;
+    width: 48px; font-size: 12px; font-weight: 700; color: var(--text-muted);
+    position: relative;
+  }
+  .ff-matchup-vs span {
+    background: var(--surface2); padding: 6px 8px; border-radius: var(--radius-full);
+    font-size: 10px; letter-spacing: 0.05em;
+  }
+  .ff-matchup-players { margin-top: 16px; width: 100%; }
+  .ff-matchup-player {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 4px 0; font-size: 12px;
+  }
+  .ff-matchup-player-name { display: flex; align-items: center; gap: 6px; }
+
+  /* ---- Data Table ---- */
+  .ff-table-wrap { max-height: 440px; overflow-y: auto; }
+  .ff-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .ff-table th {
+    background: var(--brand-green); color: var(--brand-tan);
+    padding: 8px 12px; text-align: left;
+    text-transform: uppercase; letter-spacing: 0.03em;
+    font-size: 11px; font-weight: 600; position: sticky; top: 0; z-index: 2;
+    cursor: pointer; user-select: none; white-space: nowrap;
+  }
+  .ff-table th:hover { background: var(--accent-hover); }
+  .ff-table th.sort-active { color: #fff; }
+  .ff-table th .sort-arrow { font-size: 9px; margin-left: 3px; }
+  .ff-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  .ff-table tr:nth-child(even) { background: var(--row-alt); }
+  .ff-table tr:hover { background: var(--row-hover); }
+  .ff-table .player-name { font-weight: 600; }
+  .ff-table .player-team { color: var(--text-muted); font-size: 11px; margin-left: 4px; }
+
+  /* ---- Search Input ---- */
+  .ff-search-input {
+    width: 100%; padding: 8px 12px; border: 1px solid var(--border);
+    border-radius: var(--radius-sm); font-size: 13px;
+    background: var(--bg-white); color: var(--text);
+    outline: none; transition: border-color var(--duration-fast) var(--ease), box-shadow var(--duration-fast) var(--ease);
+  }
+  .ff-search-input:focus { border-color: var(--brand-tan); box-shadow: 0 0 0 3px rgba(205,170,125,0.15); }
+  .ff-search-input::placeholder { color: var(--muted-grey); }
+
+  /* ---- News Feed ---- */
+  .ff-news-item {
+    display: flex; gap: 12px; padding: 12px 20px; border-bottom: 1px solid var(--border);
+    transition: background var(--duration-fast) var(--ease);
+  }
+  .ff-news-item:hover { background: var(--tan-10); }
+  .ff-news-item:last-child { border-bottom: none; }
+  .ff-news-icon {
+    width: 32px; height: 32px; border-radius: var(--radius-md);
+    background: var(--surface2); display: flex; align-items: center; justify-content: center;
+    font-size: 14px; flex-shrink: 0;
+  }
+  .ff-news-content { flex: 1; min-width: 0; }
+  .ff-news-title { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+  .ff-news-body { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+  .ff-news-meta { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+  .ff-news-time { font-size: 11px; color: var(--muted-grey); }
+  .ff-injury-dot {
+    width: 6px; height: 6px; border-radius: 50%; display: inline-block; margin-right: 4px;
+  }
+
+  /* ---- Standings ---- */
+  .ff-standings-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .ff-standings-table th {
+    padding: 6px 8px; text-align: left; font-size: 10px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+  }
+  .ff-standings-table td { padding: 6px 8px; border-bottom: 1px solid var(--border); }
+  .ff-standings-table tr:hover { background: var(--row-hover); }
+  .ff-standings-table tr.user-team { background: var(--tan-15); }
+  .ff-standings-table .playoff-zone { border-left: 2px solid var(--success-green); }
+  .ff-standings-table .danger-zone { border-left: 2px solid var(--red); }
+  .ff-streak { font-weight: 600; font-size: 11px; }
+  .ff-streak.hot { color: var(--success-green); }
+  .ff-streak.cold { color: var(--red); }
+
+  /* ---- Waiver Wire ---- */
+  .ff-waiver-row {
+    display: flex; align-items: center; gap: 10px; padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .ff-waiver-row:last-child { border-bottom: none; }
+  .ff-waiver-info { flex: 1; min-width: 0; }
+  .ff-waiver-name { font-size: 13px; font-weight: 600; }
+  .ff-waiver-detail { font-size: 11px; color: var(--text-muted); }
+  .ff-waiver-pts { font-size: 14px; font-weight: 700; color: var(--copper); min-width: 40px; text-align: right; }
+  .ff-trend { font-size: 10px; font-weight: 600; }
+  .ff-trend.up { color: var(--success-green); }
+  .ff-trend.down { color: var(--red); }
+
+  /* ---- Trade Center ---- */
+  .ff-trade {
+    padding: 12px 0; border-bottom: 1px solid var(--border);
+  }
+  .ff-trade:last-child { border-bottom: none; }
+  .ff-trade-status {
+    display: inline-block; padding: 2px 8px; border-radius: var(--radius-full);
+    font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+    margin-bottom: 8px;
+  }
+  .ff-trade-status.pending { background: var(--warning-amber-light); color: var(--warning-amber); }
+  .ff-trade-sides { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+  .ff-trade-side h5 {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em;
+    color: var(--text-muted); margin-bottom: 4px;
+  }
+  .ff-trade-player { font-size: 12px; font-weight: 500; display: flex; align-items: center; gap: 4px; padding: 2px 0; }
+  .ff-fairness-bar { height: 4px; border-radius: 2px; background: var(--surface2); overflow: hidden; margin-bottom: 8px; }
+  .ff-fairness-fill { height: 100%; border-radius: 2px; transition: width var(--duration-slow) var(--ease); }
+  .ff-trade-meta { display: flex; align-items: center; justify-content: space-between; }
+  .ff-trade-expire { font-size: 10px; color: var(--text-muted); }
+  .ff-trade-actions { display: flex; gap: 6px; }
+
+  /* ---- Power Rankings ---- */
+  .ff-power-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; }
+  .ff-power-rank { font-size: 11px; font-weight: 700; width: 18px; text-align: right; color: var(--text-muted); }
+  .ff-power-name { font-size: 11px; font-weight: 500; width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ff-power-bar-bg { flex: 1; height: 14px; background: var(--surface2); border-radius: 7px; overflow: hidden; }
+  .ff-power-bar-fill { height: 100%; border-radius: 7px; background: var(--brand-tan); opacity: 0.6; transition: width var(--duration-slow) var(--ease); }
+  .ff-power-bar-fill.user { opacity: 1; border: 1px solid var(--copper); }
+  .ff-power-score { font-size: 11px; font-weight: 600; width: 28px; text-align: right; }
+
+  /* ---- Sparkline ---- */
+  .ff-sparkline { display: flex; align-items: flex-end; gap: 2px; height: 24px; }
+  .ff-spark-bar { width: 8px; border-radius: 2px 2px 0 0; background: var(--brand-tan); opacity: 0.5; }
+  .ff-spark-bar.highlight { opacity: 1; }
+
+  /* ---- Footer ---- */
+  .ff-footer {
+    background: var(--brand-green); border-top: 1px solid var(--copper);
+    padding: var(--space-6) clamp(16px, 4vw, 32px);
+    display: grid; grid-template-columns: 1fr 1fr 1fr;
+    gap: var(--space-6); align-items: center; margin-top: var(--space-8);
+  }
+  .ff-footer-brand {
+    font-family: 'Playfair Display', serif; font-size: 16px; font-weight: 700;
+    color: rgba(255,255,255,0.7);
+  }
+  .ff-footer-brand span { color: var(--brand-tan); }
+  .ff-footer-links { display: flex; gap: 16px; justify-content: center; }
+  .ff-footer-link {
+    background: none; border: none; color: rgba(255,255,255,0.55);
+    font-size: 12px; font-weight: 500; transition: color var(--duration-fast) var(--ease);
+  }
+  .ff-footer-link:hover { color: var(--brand-tan); }
+  .ff-footer-credit { text-align: right; font-size: 11px; color: rgba(255,255,255,0.4); }
+
+  /* ---- League Settings Modal ---- */
+  .ff-modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100;
+    display: flex; align-items: flex-start; justify-content: center;
+    padding: 48px 16px 16px; overflow-y: auto;
+    animation: fadeIn 150ms var(--ease);
+  }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes slideUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+  .ff-modal {
+    background: var(--bg-white); border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg); border: 1px solid var(--border);
+    width: 100%; max-width: 920px; margin: 24px auto;
+    animation: slideUp 200ms var(--ease);
+  }
+  .ff-modal-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px 24px; border-bottom: 1px solid var(--border);
+  }
+  .ff-modal-header h2 {
+    font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 700;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .ff-modal-close {
+    background: none; border: 1px solid var(--border); border-radius: var(--radius-sm);
+    width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+    font-size: 16px; color: var(--text-muted); transition: all var(--duration-fast) var(--ease);
+  }
+  .ff-modal-close:hover { background: var(--surface); color: var(--text); }
+  .ff-modal-body { padding: 0; }
+  .ff-modal-footer {
+    padding: 16px 24px; border-top: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  }
+  .ff-modal-footer-left { display: flex; align-items: center; gap: 8px; }
+
+  /* Settings navigation tabs */
+  .ff-settings-nav {
+    display: flex; border-bottom: 1px solid var(--border); padding: 0 24px;
+    background: var(--surface); overflow-x: auto;
+  }
+  .ff-settings-tab {
+    background: none; border: none; padding: 12px 18px;
+    font-size: 13px; font-weight: 500; color: var(--text-muted);
+    border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap;
+    transition: color var(--duration-fast) var(--ease), border-color var(--duration-fast) var(--ease);
+  }
+  .ff-settings-tab:hover { color: var(--text); }
+  .ff-settings-tab.active { color: var(--copper); border-bottom-color: var(--copper); font-weight: 600; }
+
+  /* Settings content panels */
+  .ff-settings-panel { padding: 24px; }
+  .ff-settings-section { margin-bottom: 24px; }
+  .ff-settings-section:last-child { margin-bottom: 0; }
+  .ff-settings-section-title {
+    font-size: 14px; font-weight: 700; color: var(--text);
+    margin-bottom: 12px; display: flex; align-items: center; gap: 8px;
+    padding-bottom: 8px; border-bottom: 1px solid var(--border);
+  }
+  .ff-settings-section-title .section-icon {
+    width: 24px; height: 24px; border-radius: var(--radius-sm);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px;
+  }
+
+  /* Preset selector cards */
+  .ff-preset-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+  .ff-preset-card {
+    background: var(--surface); border: 2px solid var(--border);
+    border-radius: var(--radius-md); padding: 14px; cursor: pointer;
+    transition: all var(--duration-fast) var(--ease);
+  }
+  .ff-preset-card:hover { border-color: var(--brand-tan); background: var(--tan-10); }
+  .ff-preset-card.selected { border-color: var(--copper); background: var(--tan-15); box-shadow: 0 0 0 3px rgba(205,170,125,0.15); }
+  .ff-preset-card-name { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+  .ff-preset-card-desc { font-size: 11px; color: var(--text-muted); line-height: 1.4; }
+  .ff-preset-card-badge {
+    display: inline-block; padding: 2px 6px; border-radius: var(--radius-full);
+    font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+    margin-top: 6px;
+  }
+
+  /* Scoring value rows */
+  .ff-score-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+  .ff-score-category {
+    padding: 16px; border-bottom: 1px solid var(--border);
+  }
+  .ff-score-category:nth-child(odd) { border-right: 1px solid var(--border); }
+  .ff-score-category-title {
+    font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+    color: var(--text-muted); margin-bottom: 10px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .ff-score-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 5px 0; font-size: 13px;
+  }
+  .ff-score-label { color: var(--text); font-weight: 500; }
+  .ff-score-input-wrap { display: flex; align-items: center; gap: 4px; }
+  .ff-score-input {
+    width: 64px; padding: 4px 8px; border: 1px solid var(--border);
+    border-radius: var(--radius-sm); font-size: 13px; text-align: center;
+    background: var(--bg-white); color: var(--text); outline: none;
+    transition: border-color var(--duration-fast) var(--ease), box-shadow var(--duration-fast) var(--ease);
+  }
+  .ff-score-input:focus { border-color: var(--brand-tan); box-shadow: 0 0 0 2px rgba(205,170,125,0.15); }
+  .ff-score-unit { font-size: 10px; color: var(--text-muted); min-width: 24px; }
+  .ff-score-input.modified { border-color: var(--copper); background: var(--tan-10); }
+
+  /* Roster config */
+  .ff-roster-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+  .ff-roster-slot {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 12px; background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-md); font-size: 13px;
+  }
+  .ff-roster-slot-label { display: flex; align-items: center; gap: 6px; font-weight: 600; }
+  .ff-roster-slot-input {
+    width: 40px; padding: 3px 6px; border: 1px solid var(--border);
+    border-radius: var(--radius-sm); font-size: 13px; text-align: center;
+    background: var(--bg-white); color: var(--text); outline: none;
+  }
+  .ff-roster-slot-input:focus { border-color: var(--brand-tan); box-shadow: 0 0 0 2px rgba(205,170,125,0.15); }
+
+  /* League type cards */
+  .ff-league-type-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+  .ff-league-type-card {
+    background: var(--surface); border: 2px solid var(--border);
+    border-radius: var(--radius-md); padding: 14px; cursor: pointer;
+    transition: all var(--duration-fast) var(--ease);
+  }
+  .ff-league-type-card:hover { border-color: var(--brand-tan); background: var(--tan-10); }
+  .ff-league-type-card.selected { border-color: var(--copper); background: var(--tan-15); box-shadow: 0 0 0 3px rgba(205,170,125,0.15); }
+  .ff-league-type-card-icon { font-size: 20px; margin-bottom: 6px; }
+  .ff-league-type-card-name { font-size: 13px; font-weight: 700; margin-bottom: 3px; }
+  .ff-league-type-card-desc { font-size: 10px; color: var(--text-muted); line-height: 1.4; }
+
+  /* Bonus toggles */
+  .ff-bonus-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .ff-bonus-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 12px; background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-md); font-size: 12px;
+  }
+  .ff-bonus-label { font-weight: 500; flex: 1; }
+  .ff-bonus-input {
+    width: 48px; padding: 3px 6px; border: 1px solid var(--border);
+    border-radius: var(--radius-sm); font-size: 12px; text-align: center;
+    background: var(--bg-white); color: var(--text); outline: none;
+  }
+  .ff-bonus-input:focus { border-color: var(--brand-tan); }
+  .ff-toggle {
+    width: 36px; height: 20px; border-radius: 10px; border: none;
+    background: var(--border-strong); position: relative; cursor: pointer;
+    transition: background var(--duration-fast) var(--ease);
+  }
+  .ff-toggle.on { background: var(--brand-tan); }
+  .ff-toggle::after {
+    content: ''; position: absolute; width: 16px; height: 16px;
+    border-radius: 50%; background: #fff; top: 2px; left: 2px;
+    transition: transform var(--duration-fast) var(--ease);
+    box-shadow: var(--shadow-sm);
+  }
+  .ff-toggle.on::after { transform: translateX(16px); }
+
+  /* League size & teams */
+  .ff-size-selector { display: flex; gap: 8px; flex-wrap: wrap; }
+  .ff-size-btn {
+    padding: 8px 16px; border: 2px solid var(--border); border-radius: var(--radius-md);
+    background: var(--surface); font-size: 14px; font-weight: 600;
+    transition: all var(--duration-fast) var(--ease); min-width: 52px; text-align: center;
+  }
+  .ff-size-btn:hover { border-color: var(--brand-tan); }
+  .ff-size-btn.selected { border-color: var(--copper); background: var(--tan-15); color: var(--copper); }
+
+  /* Custom name input */
+  .ff-config-name-input {
+    width: 100%; max-width: 360px; padding: 8px 12px; border: 1px solid var(--border);
+    border-radius: var(--radius-sm); font-size: 14px; font-weight: 500;
+    background: var(--bg-white); color: var(--text); outline: none;
+  }
+  .ff-config-name-input:focus { border-color: var(--brand-tan); box-shadow: 0 0 0 3px rgba(205,170,125,0.15); }
+
+  /* Saved configs list */
+  .ff-saved-configs { display: flex; flex-direction: column; gap: 8px; }
+  .ff-saved-config-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px; background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-md); transition: background var(--duration-fast) var(--ease);
+  }
+  .ff-saved-config-row:hover { background: var(--tan-10); }
+  .ff-saved-config-info { flex: 1; }
+  .ff-saved-config-name { font-size: 13px; font-weight: 600; }
+  .ff-saved-config-meta { font-size: 11px; color: var(--text-muted); }
+  .ff-saved-config-actions { display: flex; gap: 6px; }
+
+  /* Dark mode overrides for modal */
+  [data-theme="dark"] .ff-modal { background: var(--bg-white); border-color: var(--border); }
+  [data-theme="dark"] .ff-modal-header { border-bottom-color: var(--border); }
+  [data-theme="dark"] .ff-modal-footer { border-top-color: var(--border); }
+  [data-theme="dark"] .ff-settings-nav { background: var(--surface); }
+  [data-theme="dark"] .ff-settings-tab { color: var(--text-muted); }
+  [data-theme="dark"] .ff-settings-tab:hover { color: var(--text); }
+  [data-theme="dark"] .ff-settings-tab.active { color: var(--brand-tan); border-bottom-color: var(--brand-tan); }
+  [data-theme="dark"] .ff-preset-card { background: var(--surface); border-color: var(--border); }
+  [data-theme="dark"] .ff-preset-card:hover { border-color: var(--brand-tan); }
+  [data-theme="dark"] .ff-preset-card.selected { border-color: var(--brand-tan); background: var(--tan-15); }
+  [data-theme="dark"] .ff-score-input,
+  [data-theme="dark"] .ff-roster-slot-input,
+  [data-theme="dark"] .ff-bonus-input,
+  [data-theme="dark"] .ff-config-name-input { background: var(--surface); border-color: var(--border); color: var(--text); }
+  [data-theme="dark"] .ff-score-input:focus,
+  [data-theme="dark"] .ff-roster-slot-input:focus,
+  [data-theme="dark"] .ff-bonus-input:focus,
+  [data-theme="dark"] .ff-config-name-input:focus { border-color: var(--brand-tan); }
+  [data-theme="dark"] .ff-roster-slot,
+  [data-theme="dark"] .ff-bonus-row,
+  [data-theme="dark"] .ff-saved-config-row { background: var(--surface); border-color: var(--border); }
+  [data-theme="dark"] .ff-league-type-card { background: var(--surface); border-color: var(--border); }
+  [data-theme="dark"] .ff-league-type-card:hover { border-color: var(--brand-tan); }
+  [data-theme="dark"] .ff-league-type-card.selected { border-color: var(--brand-tan); }
+  [data-theme="dark"] .ff-size-btn { background: var(--surface); border-color: var(--border); color: var(--text); }
+  [data-theme="dark"] .ff-size-btn.selected { border-color: var(--brand-tan); color: var(--brand-tan); }
+  [data-theme="dark"] .ff-toggle { background: var(--border-strong); }
+  [data-theme="dark"] .ff-toggle.on { background: var(--brand-tan); }
+
+  /* ---- Trade Module ---- */
+  .ff-tm-team-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; }
+  .ff-tm-team-card {
+    background: var(--surface); border: 2px solid var(--border); border-radius: var(--radius-md);
+    padding: 12px; cursor: pointer; transition: all var(--duration-fast) var(--ease); text-align: center;
+  }
+  .ff-tm-team-card:hover { border-color: var(--brand-tan); background: var(--tan-10); }
+  .ff-tm-team-card.selected { border-color: var(--copper); background: var(--tan-15); box-shadow: 0 0 0 3px rgba(205,170,125,0.15); }
+  .ff-tm-team-card-logo { font-size: 22px; margin-bottom: 4px; }
+  .ff-tm-team-card-name { font-size: 12px; font-weight: 700; }
+  .ff-tm-team-card-meta { font-size: 10px; color: var(--text-muted); }
+
+  .ff-tm-columns { display: flex; gap: 12px; }
+  .ff-tm-column { flex: 1; min-width: 0; }
+  .ff-tm-column-header {
+    padding: 8px 12px; background: var(--brand-green); color: var(--brand-tan);
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+    font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 6px;
+  }
+  .ff-tm-column-list {
+    border: 1px solid var(--border); border-top: none; border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+    max-height: 280px; overflow-y: auto;
+  }
+  .ff-tm-player-row {
+    display: flex; align-items: center; gap: 8px; padding: 7px 12px;
+    border-bottom: 1px solid var(--border); cursor: pointer; font-size: 12px;
+    transition: background var(--duration-fast) var(--ease);
+  }
+  .ff-tm-player-row:last-child { border-bottom: none; }
+  .ff-tm-player-row:hover { background: var(--tan-10); }
+  .ff-tm-player-row.selected { background: var(--tan-15); border-left: 3px solid var(--copper); padding-left: 9px; }
+  .ff-tm-player-row .p-name { font-weight: 600; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ff-tm-player-row .p-nfl { font-size: 10px; color: var(--text-muted); }
+  .ff-tm-player-row .p-val { font-size: 11px; font-weight: 700; color: var(--copper); min-width: 24px; text-align: right; }
+
+  .ff-tm-trade-zone {
+    margin: 16px 0; display: flex; gap: 12px;
+    background: var(--surface); border: 2px dashed var(--border); border-radius: var(--radius-md); padding: 16px;
+  }
+  .ff-tm-zone-panel { flex: 1; min-width: 0; }
+  .ff-tm-zone-panel h4 {
+    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+    color: var(--text-muted); margin-bottom: 8px;
+  }
+  .ff-tm-zone-player {
+    display: flex; align-items: center; gap: 6px; padding: 5px 8px;
+    background: var(--bg-white); border: 1px solid var(--border); border-radius: var(--radius-sm);
+    font-size: 12px; font-weight: 500; margin-bottom: 4px;
+  }
+  .ff-tm-zone-player .remove-btn {
+    background: none; border: none; color: var(--text-muted); font-size: 12px;
+    margin-left: auto; padding: 0 2px; cursor: pointer; transition: color var(--duration-fast);
+  }
+  .ff-tm-zone-player .remove-btn:hover { color: var(--red); }
+  .ff-tm-zone-empty { font-size: 11px; color: var(--muted-grey); font-style: italic; }
+
+  .ff-tm-analyzer { margin: 16px 0; }
+  .ff-tm-analyzer-labels { display: flex; justify-content: space-between; font-size: 11px; font-weight: 600; margin-bottom: 4px; }
+  .ff-tm-analyzer-bar { height: 8px; border-radius: 4px; background: var(--surface2); display: flex; overflow: hidden; }
+  .ff-tm-analyzer-fill-left { background: var(--copper); transition: width var(--duration-slow) var(--ease); border-radius: 4px 0 0 4px; }
+  .ff-tm-analyzer-fill-right { background: var(--info-blue); transition: width var(--duration-slow) var(--ease); border-radius: 0 4px 4px 0; }
+  .ff-tm-fairness-badge {
+    display: inline-flex; align-items: center; gap: 6px; margin-top: 8px;
+    padding: 4px 12px; border-radius: var(--radius-full); font-size: 12px; font-weight: 700;
+  }
+  .ff-tm-fairness-badge.fair { background: rgba(22,163,74,0.1); color: var(--success-green); }
+  .ff-tm-fairness-badge.uneven { background: var(--warning-amber-light); color: var(--warning-amber); }
+  .ff-tm-fairness-badge.lopsided { background: var(--red-light); color: var(--red); }
+
+  .ff-tm-inbox-card {
+    background: var(--bg-white); border: 1px solid var(--border); border-radius: var(--radius-md);
+    padding: 16px; margin-bottom: 12px; transition: box-shadow var(--duration-fast) var(--ease);
+  }
+  .ff-tm-inbox-card:hover { box-shadow: var(--shadow-card-hover); }
+  .ff-tm-inbox-card.incoming { border-left: 3px solid var(--copper); }
+  .ff-tm-inbox-card.outgoing { border-left: 3px solid var(--info-blue); }
+  .ff-tm-inbox-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; flex-wrap: wrap; gap: 6px; }
+  .ff-tm-inbox-teams { font-size: 13px; font-weight: 600; }
+  .ff-tm-inbox-countdown { font-size: 11px; color: var(--text-muted); }
+  .ff-tm-inbox-countdown.urgent { color: var(--red); font-weight: 600; }
+  .ff-tm-inbox-message {
+    margin: 8px 0; padding: 8px 10px; background: var(--surface); border-radius: var(--radius-sm);
+    font-size: 11px; font-style: italic; color: var(--text-muted);
+  }
+  .ff-tm-inbox-actions { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+  .ff-tm-confirm-bar {
+    display: flex; align-items: center; gap: 8px; margin-top: 8px; padding: 8px 10px;
+    background: var(--warning-amber-light); border-radius: var(--radius-sm); font-size: 11px;
+  }
+
+  .ff-tm-message-input {
+    width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+    font-size: 13px; background: var(--bg-white); color: var(--text); outline: none;
+    min-height: 60px; resize: vertical; font-family: inherit;
+  }
+  .ff-tm-message-input:focus { border-color: var(--brand-tan); box-shadow: 0 0 0 3px rgba(205,170,125,0.15); }
+  .ff-tm-expiry-select {
+    padding: 6px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+    font-size: 12px; background: var(--bg-white); color: var(--text); outline: none;
+  }
+
+  .ff-tm-status-pill {
+    display: inline-block; padding: 2px 8px; border-radius: var(--radius-full);
+    font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .ff-tm-status-pill.pending { background: var(--warning-amber-light); color: var(--warning-amber); }
+  .ff-tm-status-pill.completed { background: rgba(22,163,74,0.1); color: var(--success-green); }
+  .ff-tm-status-pill.rejected { background: var(--red-light); color: var(--red); }
+  .ff-tm-status-pill.expired, .ff-tm-status-pill.withdrawn { background: var(--surface2); color: var(--text-muted); }
+
+  .ff-tm-block-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+  .ff-tm-block-card {
+    padding: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md);
+    display: flex; align-items: center; gap: 8px; font-size: 12px;
+  }
+  .ff-tm-block-info { flex: 1; }
+  .ff-tm-block-name { font-weight: 600; }
+  .ff-tm-block-team { font-size: 10px; color: var(--text-muted); }
+
+  .ff-tm-history-row {
+    border: 1px solid var(--border); border-radius: var(--radius-md); margin-bottom: 8px;
+    background: var(--bg-white); overflow: hidden;
+  }
+  .ff-tm-history-header {
+    display: flex; align-items: center; gap: 10px; padding: 10px 14px; cursor: pointer;
+    font-size: 12px; transition: background var(--duration-fast) var(--ease);
+  }
+  .ff-tm-history-header:hover { background: var(--tan-10); }
+  .ff-tm-history-detail { padding: 0 14px 14px; border-top: 1px solid var(--border); }
+  .ff-tm-history-arrow { font-size: 10px; color: var(--text-muted); transition: transform var(--duration-fast); margin-left: auto; }
+  .ff-tm-history-arrow.open { transform: rotate(180deg); }
+
+  .ff-tm-filter-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+  .ff-tm-filter-pill {
+    background: none; border: 1px solid var(--border); padding: 4px 12px; border-radius: var(--radius-full);
+    font-size: 11px; font-weight: 500; color: var(--text-muted); cursor: pointer;
+    transition: all var(--duration-fast) var(--ease);
+  }
+  .ff-tm-filter-pill:hover { border-color: var(--brand-tan); color: var(--text); }
+  .ff-tm-filter-pill.active { background: var(--brand-green); color: var(--brand-tan); border-color: var(--brand-green); }
+
+  .ff-tm-impact-row { display: flex; align-items: center; gap: 6px; padding: 3px 0; font-size: 11px; }
+  .ff-tm-impact-row.added { color: var(--success-green); }
+  .ff-tm-impact-row.removed { color: var(--red); text-decoration: line-through; opacity: 0.6; }
+
+  /* Trade module dark mode */
+  [data-theme="dark"] .ff-tm-team-card { background: var(--surface); border-color: var(--border); }
+  [data-theme="dark"] .ff-tm-team-card:hover { border-color: var(--brand-tan); }
+  [data-theme="dark"] .ff-tm-team-card.selected { border-color: var(--brand-tan); }
+  [data-theme="dark"] .ff-tm-column-list { border-color: var(--border); }
+  [data-theme="dark"] .ff-tm-trade-zone { background: var(--surface); border-color: var(--border); }
+  [data-theme="dark"] .ff-tm-zone-player { background: var(--surface2); border-color: var(--border); }
+  [data-theme="dark"] .ff-tm-inbox-card { background: var(--bg-white); border-color: var(--border); }
+  [data-theme="dark"] .ff-tm-inbox-message { background: var(--surface2); }
+  [data-theme="dark"] .ff-tm-message-input,
+  [data-theme="dark"] .ff-tm-expiry-select { background: var(--surface); border-color: var(--border); color: var(--text); }
+  [data-theme="dark"] .ff-tm-block-card { background: var(--surface); border-color: var(--border); }
+  [data-theme="dark"] .ff-tm-history-row { background: var(--bg-white); border-color: var(--border); }
+  [data-theme="dark"] .ff-tm-filter-pill { border-color: var(--border); color: var(--text-muted); }
+  [data-theme="dark"] .ff-tm-filter-pill.active { background: var(--brand-tan); color: var(--brand-green); border-color: var(--brand-tan); }
+
+  /* ---- Historical Stats Section ---- */
+  .ff-historical { margin-top: var(--space-5); }
+  .ff-year-tabs { display: flex; gap: 0; padding: 0 20px; border-bottom: 1px solid var(--border); }
+  .ff-year-tab {
+    background: none; border: none; padding: 10px 20px;
+    font-size: 14px; font-weight: 600; color: var(--text-muted);
+    border-bottom: 3px solid transparent; margin-bottom: -1px;
+    transition: all var(--duration-fast) var(--ease);
+  }
+  .ff-year-tab:hover { color: var(--text); }
+  .ff-year-tab.active { color: var(--copper); border-bottom-color: var(--copper); }
+  .ff-hist-controls {
+    display: flex; align-items: center; gap: 12px; padding: 12px 20px;
+    flex-wrap: wrap; border-bottom: 1px solid var(--border);
+  }
+  .ff-hist-pos-tabs { display: flex; gap: 0; }
+  .ff-hist-pos-tab {
+    background: none; border: 1px solid var(--border); padding: 5px 14px;
+    font-size: 12px; font-weight: 600; color: var(--text-muted);
+    transition: all var(--duration-fast) var(--ease);
+  }
+  .ff-hist-pos-tab:first-child { border-radius: var(--radius-sm) 0 0 var(--radius-sm); }
+  .ff-hist-pos-tab:last-child { border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+  .ff-hist-pos-tab:not(:first-child) { border-left: none; }
+  .ff-hist-pos-tab:hover { background: var(--tan-10); color: var(--text); }
+  .ff-hist-pos-tab.active { background: var(--brand-green); color: var(--brand-tan); border-color: var(--brand-green); }
+  .ff-hist-search {
+    flex: 1; min-width: 160px; max-width: 280px; padding: 6px 10px;
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    font-size: 12px; background: var(--bg-white); color: var(--text); outline: none;
+  }
+  .ff-hist-search:focus { border-color: var(--brand-tan); box-shadow: 0 0 0 2px rgba(205,170,125,0.15); }
+  .ff-hist-stat-badge {
+    display: inline-block; padding: 2px 6px; border-radius: var(--radius-sm);
+    font-size: 10px; font-weight: 600; background: var(--tan-10); color: var(--copper);
+  }
+  .ff-hist-rank {
+    font-size: 11px; font-weight: 700; color: var(--text-muted);
+    width: 28px; text-align: center; display: inline-block;
+  }
+  .ff-hist-rank.top3 { color: var(--copper); }
+  [data-theme="dark"] .ff-hist-pos-tab { border-color: var(--border); color: var(--text-muted); }
+  [data-theme="dark"] .ff-hist-pos-tab.active { background: var(--brand-tan); color: var(--brand-green); border-color: var(--brand-tan); }
+  [data-theme="dark"] .ff-hist-search { background: var(--surface); border-color: var(--border); color: var(--text); }
+  [data-theme="dark"] .ff-year-tab.active { color: var(--brand-tan); border-bottom-color: var(--brand-tan); }
+
+  /* ---- Responsive ---- */
+  @media (max-width: 1100px) {
+    .ff-main-grid { grid-template-columns: 1fr; }
+    .ff-right { order: -1; display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-5); }
+  }
+  @media (max-width: 700px) {
+    .ff-hero { padding: 20px 16px; }
+    .ff-hero-left h1 { font-size: 22px; }
+    .ff-hero-actions { flex-direction: column; }
+    .ff-right { grid-template-columns: 1fr; }
+    .ff-matchup { flex-direction: column; }
+    .ff-matchup-team:first-child { border-right: none; border-bottom: 1px solid var(--border); }
+    .ff-matchup-vs { width: 100%; height: 32px; }
+    .ff-footer { grid-template-columns: 1fr; text-align: center; }
+    .ff-footer-credit { text-align: center; }
+    .ff-nav-center { display: none; }
+  }
+
+  /* ---- Scrollbar ---- */
+  .ff-table-wrap::-webkit-scrollbar { width: 6px; }
+  .ff-table-wrap::-webkit-scrollbar-track { background: transparent; }
+  .ff-table-wrap::-webkit-scrollbar-thumb { background: var(--tan-30); border-radius: 3px; }
+  .ff-table-wrap::-webkit-scrollbar-thumb:hover { background: var(--brand-tan); }
+
+  /* ---- Badge count ---- */
+  .ff-badge-count {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 18px; height: 18px; border-radius: var(--radius-full);
+    background: var(--copper); color: #fff; font-size: 10px; font-weight: 700;
+    padding: 0 5px;
+  }
+
+  /* ---- Notification dot in nav ---- */
+  .ff-notif-btn {
+    background: none; border: none; color: rgba(255,255,255,0.85);
+    font-size: 16px; position: relative; padding: 4px;
+  }
+  .ff-notif-btn .dot {
+    position: absolute; top: 2px; right: 2px; width: 7px; height: 7px;
+    border-radius: 50%; background: var(--copper); border: 1px solid var(--brand-green-light);
+  }
+
+  /* ---- Auth System ---- */
+  .auth-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 200;
+    display: flex; align-items: center; justify-content: center;
+    animation: fadeIn 150ms var(--ease);
+  }
+  .auth-modal {
+    background: var(--bg-white); border-radius: var(--radius-lg); width: 400px; max-width: 90vw;
+    box-shadow: var(--shadow-lg); padding: 32px; animation: slideUp 200ms var(--ease); position: relative;
+  }
+  .auth-modal h2 { font-size: 22px; font-weight: 700; color: var(--text); margin: 0 0 4px; font-family: 'Playfair Display', serif; }
+  .auth-modal .auth-subtitle { font-size: 13px; color: var(--text-muted); margin: 0 0 24px; }
+  .auth-input-group { margin-bottom: 16px; }
+  .auth-input-group label { display: block; font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+  .auth-input {
+    width: 100%; padding: 10px 12px; font-size: 14px; border: 1.5px solid var(--border-strong);
+    border-radius: var(--radius-sm); background: var(--bg-white); color: var(--text);
+    transition: border-color 150ms, box-shadow 150ms; box-sizing: border-box; font-family: inherit;
+  }
+  .auth-input:focus { outline: none; border-color: var(--brand-tan); box-shadow: 0 0 0 3px rgba(205,170,125,0.15); }
+  .auth-input::placeholder { color: var(--muted-grey); }
+  .auth-btn {
+    width: 100%; padding: 11px; font-size: 14px; font-weight: 600; border: none;
+    border-radius: var(--radius-sm); cursor: pointer; transition: opacity 150ms; margin-top: 8px; font-family: inherit;
+  }
+  .auth-btn-primary { background: var(--brand-green); color: #fff; }
+  .auth-btn-primary:hover { opacity: 0.9; }
+  .auth-btn-secondary { background: var(--brand-tan); color: var(--brand-green); }
+  .auth-btn-secondary:hover { opacity: 0.85; }
+  .auth-error { color: var(--red); font-size: 12px; font-weight: 500; margin-top: 4px; }
+  .auth-switch { text-align: center; margin-top: 20px; font-size: 13px; color: var(--text-muted); }
+  .auth-switch button { background: none; border: none; color: var(--brand-tan); font-weight: 600; cursor: pointer; font-size: 13px; }
+  .auth-switch button:hover { text-decoration: underline; }
+  .auth-close {
+    position: absolute; top: 16px; right: 16px; background: none; border: none;
+    color: var(--text-muted); cursor: pointer; padding: 4px; border-radius: var(--radius-sm); display: flex;
+  }
+  .auth-close:hover { background: var(--surface2); color: var(--text); }
+  .auth-avatar {
+    width: 30px; height: 30px; border-radius: 50%; background: var(--brand-tan); color: var(--brand-green);
+    display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0;
+  }
+  .auth-user-name {
+    font-size: 12px; font-weight: 600; color: #fff; max-width: 100px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .top-navbar-login {
+    font-size: 12px; font-weight: 600; padding: 5px 14px;
+    border-radius: var(--radius-sm); border: 1.5px solid rgba(255,255,255,0.3);
+    background: transparent; color: #fff; cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .top-navbar-login:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.5); }
+  .top-navbar-signup {
+    font-size: 12px; font-weight: 600; padding: 5px 14px;
+    border-radius: var(--radius-sm); border: 1.5px solid var(--brand-tan);
+    background: var(--brand-tan); color: var(--brand-green); cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .top-navbar-signup:hover { opacity: 0.85; }
+  .user-menu-wrapper { position: relative; }
+  .user-menu-trigger {
+    display: flex; align-items: center; gap: 6px; cursor: pointer; padding: 3px 8px;
+    border-radius: var(--radius-sm); border: none; background: none; transition: background 150ms;
+  }
+  .user-menu-trigger:hover { background: rgba(255,255,255,0.08); }
+  .user-menu-trigger .chevron { font-size: 8px; color: rgba(255,255,255,0.5); transition: transform 150ms; }
+  .user-menu-trigger.open .chevron { transform: rotate(180deg); }
+  .user-menu-dropdown {
+    position: absolute; top: calc(100% + 6px); right: 0; min-width: 200px;
+    background: var(--bg-white); border: 1px solid var(--border); border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg); z-index: 200; padding: 4px 0; animation: fadeIn 150ms var(--ease);
+  }
+  .user-menu-header { padding: 12px 14px; border-bottom: 1px solid var(--border); }
+  .user-menu-header-name { font-size: 13px; font-weight: 700; color: var(--text); }
+  .user-menu-header-email { font-size: 11px; color: var(--text-muted); }
+  .user-menu-item {
+    display: flex; align-items: center; gap: 8px; width: 100%; padding: 8px 14px;
+    border: none; background: none; font-size: 12px; color: var(--text); cursor: pointer; font-family: inherit;
+    transition: background var(--duration-fast) var(--ease);
+  }
+  .user-menu-item:hover { background: var(--tan-10); }
+  .user-menu-item.danger { color: var(--red); }
+  .user-menu-item.danger:hover { background: var(--red-light); }
+  .user-menu-divider { height: 1px; background: var(--border); margin: 4px 0; }
+
+  /* Auth dark mode */
+  [data-theme="dark"] .auth-modal { background: var(--bg-white); }
+  [data-theme="dark"] .auth-modal h2 { color: var(--text); }
+  [data-theme="dark"] .auth-input { background: var(--surface); border-color: var(--border); color: var(--text); }
+  [data-theme="dark"] .auth-input:focus { border-color: var(--brand-tan); }
+  [data-theme="dark"] .auth-btn-primary { background: var(--brand-tan); color: var(--brand-green); }
+  [data-theme="dark"] .auth-btn-primary:hover { background: var(--rust); color: #fff; }
+  [data-theme="dark"] .top-navbar-login:hover { background: var(--rust); border-color: var(--rust); }
+  [data-theme="dark"] .user-menu-dropdown { background: var(--bg-white); border-color: var(--border); }
+  [data-theme="dark"] .user-menu-header { border-bottom-color: var(--border); }
+  [data-theme="dark"] .user-menu-item { color: var(--text); }
+  [data-theme="dark"] .user-menu-item:hover { background: var(--surface); }
+
+  /* ---- League Settings Nav Button ---- */
+  .ff-nav-settings-btn {
+    background: rgba(205,170,125,0.12); border: 1px solid rgba(205,170,125,0.3);
+    color: var(--brand-tan); padding: 5px 14px; border-radius: var(--radius-sm);
+    font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 5px;
+    transition: all var(--duration-fast) var(--ease); white-space: nowrap;
+  }
+  .ff-nav-settings-btn:hover { background: rgba(205,170,125,0.22); border-color: var(--brand-tan); }
+  .ff-nav-settings-btn:active { transform: scale(0.97); }
+
+  /* ---- My Leagues Dropdown ---- */
+  .ff-leagues-trigger {
+    background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
+    color: rgba(255,255,255,0.9); padding: 4px 12px; border-radius: var(--radius-sm);
+    font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 6px;
+    cursor: pointer; transition: all var(--duration-fast) var(--ease); white-space: nowrap;
+    max-width: 220px; position: relative;
+  }
+  .ff-leagues-trigger:hover { background: rgba(255,255,255,0.14); border-color: rgba(255,255,255,0.3); }
+  .ff-leagues-trigger .chevron {
+    font-size: 8px; transition: transform var(--duration-fast) var(--ease); margin-left: 2px;
+  }
+  .ff-leagues-trigger .chevron.open { transform: rotate(180deg); }
+  .ff-leagues-trigger .league-dot {
+    width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+  }
+  .ff-leagues-trigger .league-name {
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+
+  .ff-leagues-dropdown {
+    position: absolute; top: 100%; left: 0; margin-top: 6px;
+    width: 380px; max-height: 520px; overflow-y: auto;
+    background: var(--bg-white); border: 1px solid var(--border); border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg); z-index: 60;
+    animation: slideUp 150ms var(--ease);
+  }
+  .ff-leagues-dropdown-header {
+    padding: 14px 16px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .ff-leagues-dropdown-header h3 {
+    font-size: 14px; font-weight: 700; color: var(--text);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .ff-leagues-dropdown-count {
+    font-size: 10px; font-weight: 600; color: var(--text-muted);
+    background: var(--surface2); padding: 2px 8px; border-radius: var(--radius-full);
+  }
+  .ff-leagues-search {
+    width: 100%; padding: 8px 12px; border: none; border-bottom: 1px solid var(--border);
+    font-size: 12px; background: var(--surface); color: var(--text); outline: none;
+  }
+  .ff-leagues-search:focus { background: var(--bg-white); }
+  .ff-leagues-search::placeholder { color: var(--muted-grey); }
+
+  .ff-leagues-section-label {
+    padding: 8px 16px 4px; font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.05em; color: var(--text-muted);
+  }
+
+  .ff-leagues-item {
+    display: flex; align-items: center; gap: 10px; padding: 10px 16px;
+    cursor: pointer; transition: background var(--duration-fast) var(--ease);
+    border-bottom: 1px solid var(--border);
+  }
+  .ff-leagues-item:last-child { border-bottom: none; }
+  .ff-leagues-item:hover { background: var(--tan-10); }
+  .ff-leagues-item.active { background: var(--tan-15); border-left: 3px solid var(--copper); padding-left: 13px; }
+  .ff-leagues-item-logo { font-size: 20px; flex-shrink: 0; width: 32px; text-align: center; }
+  .ff-leagues-item-info { flex: 1; min-width: 0; }
+  .ff-leagues-item-name { font-size: 13px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ff-leagues-item-meta { font-size: 10px; color: var(--text-muted); display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .ff-leagues-item-record { font-size: 11px; font-weight: 700; color: var(--copper); white-space: nowrap; }
+  .ff-leagues-item-badge {
+    display: inline-block; padding: 1px 6px; border-radius: var(--radius-full);
+    font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em;
+  }
+  .ff-leagues-item-badge.active-season { background: rgba(22,163,74,0.1); color: var(--success-green); }
+  .ff-leagues-item-badge.completed { background: var(--surface2); color: var(--text-muted); }
+  .ff-leagues-item-badge.eliminated { background: var(--red-light); color: var(--red); }
+  .ff-leagues-rank { font-size: 10px; color: var(--text-muted); font-weight: 600; min-width: 36px; text-align: right; }
+
+  .ff-leagues-footer {
+    padding: 10px 16px; border-top: 1px solid var(--border); display: flex; gap: 8px;
+  }
+
+  /* Dark mode - leagues dropdown */
+  [data-theme="dark"] .ff-leagues-dropdown { background: var(--bg-white); border-color: var(--border); }
+  [data-theme="dark"] .ff-leagues-dropdown-header { border-bottom-color: var(--border); }
+  [data-theme="dark"] .ff-leagues-dropdown-header h3 { color: var(--text); }
+  [data-theme="dark"] .ff-leagues-search { background: var(--surface); color: var(--text); border-bottom-color: var(--border); }
+  [data-theme="dark"] .ff-leagues-search:focus { background: var(--bg-white); }
+  [data-theme="dark"] .ff-leagues-item { border-bottom-color: var(--border); }
+  [data-theme="dark"] .ff-leagues-item:hover { background: var(--surface); }
+  [data-theme="dark"] .ff-leagues-item.active { background: var(--tan-15); }
+  [data-theme="dark"] .ff-leagues-item-name { color: var(--text); }
+  [data-theme="dark"] .ff-leagues-footer { border-top-color: var(--border); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useMemo, useCallback } = React;
+
+/* ===== MOCK DATA ===== */
+const TEAMS = [
+  { id: 't1', name: 'Gridiron Gladiators', abbr: 'GG', owner: 'Marcus J.', wins: 8, losses: 3, ties: 0, pf: 1247.5, pa: 1089.2, streak: 'W3', rank: 1, logo: '\u{1F3C8}', power: 94 },
+  { id: 't2', name: 'Touchdown Titans', abbr: 'TT', owner: 'Sarah K.', wins: 7, losses: 4, ties: 0, pf: 1198.3, pa: 1102.7, streak: 'W1', rank: 2, logo: '\u{26A1}', power: 89 },
+  { id: 't3', name: 'Blitz Brigade', abbr: 'BB', owner: 'Jake R.', wins: 7, losses: 4, ties: 0, pf: 1175.6, pa: 1098.4, streak: 'L1', rank: 3, logo: '\u{1F4A5}', power: 86 },
+  { id: 't4', name: 'Red Zone Raiders', abbr: 'RZR', owner: 'Emily T.', wins: 6, losses: 5, ties: 0, pf: 1156.2, pa: 1130.5, streak: 'W2', rank: 4, logo: '\u{1F6A8}', power: 80 },
+  { id: 't5', name: 'Pigskin Prophets', abbr: 'PP', owner: 'David L.', wins: 6, losses: 5, ties: 0, pf: 1142.8, pa: 1148.3, streak: 'L2', rank: 5, logo: '\u{1F52E}', power: 76 },
+  { id: 't6', name: 'End Zone Elite', abbr: 'EZE', owner: 'Lisa M.', wins: 5, losses: 6, ties: 0, pf: 1123.4, pa: 1134.9, streak: 'W1', rank: 6, logo: '\u{1F451}', power: 72 },
+  { id: 't7', name: 'Fumble Factory', abbr: 'FF', owner: 'Tom B.', wins: 5, losses: 6, ties: 0, pf: 1098.7, pa: 1156.2, streak: 'L3', rank: 7, logo: '\u{1F3ED}', power: 65 },
+  { id: 't8', name: 'Hail Mary Heroes', abbr: 'HMH', owner: 'Mia W.', wins: 4, losses: 7, ties: 0, pf: 1087.3, pa: 1167.8, streak: 'L1', rank: 8, logo: '\u{1F9B8}', power: 60 },
+  { id: 't9', name: 'Draft Day Divas', abbr: 'DDD', owner: 'Chris P.', wins: 4, losses: 7, ties: 0, pf: 1065.9, pa: 1180.4, streak: 'W1', rank: 9, logo: '\u{1F48E}', power: 55 },
+  { id: 't10', name: 'Sack Attack', abbr: 'SA', owner: 'Nick F.', wins: 3, losses: 8, ties: 0, pf: 1034.2, pa: 1210.6, streak: 'L4', rank: 10, logo: '\u{1F4A2}', power: 48 },
+  { id: 't11', name: 'Benchwarmer Bros', abbr: 'BWB', owner: 'Amy C.', wins: 3, losses: 8, ties: 0, pf: 1012.8, pa: 1225.3, streak: 'L2', rank: 11, logo: '\u{1FA91}', power: 42 },
+  { id: 't12', name: 'Last Place Legends', abbr: 'LPL', owner: 'Dan H.', wins: 2, losses: 9, ties: 0, pf: 978.4, pa: 1267.8, streak: 'L5', rank: 12, logo: '\u{1F3C6}', power: 35 },
+];
+
+const PLAYERS = [
+  { id:'p1', name:'Patrick Mahomes', team:'KC', pos:'QB', pts:26.8, proj:23.5, avg:22.1, status:'healthy' },
+  { id:'p2', name:'Josh Allen', team:'BUF', pos:'QB', pts:24.2, proj:22.8, avg:21.5, status:'healthy' },
+  { id:'p3', name:'Lamar Jackson', team:'BAL', pos:'QB', pts:22.4, proj:21.0, avg:20.8, status:'healthy' },
+  { id:'p4', name:'Jalen Hurts', team:'PHI', pos:'QB', pts:20.6, proj:19.5, avg:19.2, status:'questionable' },
+  { id:'p5', name:'Joe Burrow', team:'CIN', pos:'QB', pts:19.8, proj:20.2, avg:18.9, status:'healthy' },
+  { id:'p6', name:'CJ Stroud', team:'HOU', pos:'QB', pts:18.4, proj:18.0, avg:17.6, status:'healthy' },
+  { id:'p7', name:'Christian McCaffrey', team:'SF', pos:'RB', pts:0.0, proj:0.0, avg:16.8, status:'out' },
+  { id:'p8', name:'Breece Hall', team:'NYJ', pos:'RB', pts:18.2, proj:16.5, avg:15.8, status:'healthy' },
+  { id:'p9', name:'Bijan Robinson', team:'ATL', pos:'RB', pts:22.4, proj:18.2, avg:17.5, status:'healthy' },
+  { id:'p10', name:'Saquon Barkley', team:'PHI', pos:'RB', pts:20.1, proj:17.8, avg:17.2, status:'healthy' },
+  { id:'p11', name:'Jahmyr Gibbs', team:'DET', pos:'RB', pts:17.6, proj:15.4, avg:14.9, status:'healthy' },
+  { id:'p12', name:'Jonathan Taylor', team:'IND', pos:'RB', pts:16.8, proj:15.0, avg:14.2, status:'healthy' },
+  { id:'p13', name:'Derrick Henry', team:'BAL', pos:'RB', pts:19.4, proj:16.2, avg:15.6, status:'healthy' },
+  { id:'p14', name:'Travis Etienne', team:'JAX', pos:'RB', pts:14.2, proj:13.8, avg:13.4, status:'questionable' },
+  { id:'p15', name:'Tyreek Hill', team:'MIA', pos:'WR', pts:24.6, proj:19.0, avg:18.4, status:'healthy' },
+  { id:'p16', name:'CeeDee Lamb', team:'DAL', pos:'WR', pts:22.8, proj:18.5, avg:17.8, status:'healthy' },
+  { id:'p17', name:'Ja\'Marr Chase', team:'CIN', pos:'WR', pts:21.4, proj:18.0, avg:17.2, status:'healthy' },
+  { id:'p18', name:'Amon-Ra St. Brown', team:'DET', pos:'WR', pts:19.6, proj:16.8, avg:16.0, status:'healthy' },
+  { id:'p19', name:'Davante Adams', team:'NYJ', pos:'WR', pts:17.2, proj:15.4, avg:14.8, status:'healthy' },
+  { id:'p20', name:'AJ Brown', team:'PHI', pos:'WR', pts:16.8, proj:15.0, avg:14.5, status:'questionable' },
+  { id:'p21', name:'Stefon Diggs', team:'HOU', pos:'WR', pts:15.4, proj:14.2, avg:13.8, status:'healthy' },
+  { id:'p22', name:'DK Metcalf', team:'SEA', pos:'WR', pts:14.6, proj:13.5, avg:13.2, status:'healthy' },
+  { id:'p23', name:'Chris Olave', team:'NO', pos:'WR', pts:13.8, proj:13.0, avg:12.6, status:'healthy' },
+  { id:'p24', name:'Garrett Wilson', team:'NYJ', pos:'WR', pts:13.2, proj:12.8, avg:12.4, status:'healthy' },
+  { id:'p25', name:'Travis Kelce', team:'KC', pos:'TE', pts:16.4, proj:14.2, avg:13.8, status:'healthy' },
+  { id:'p26', name:'Sam LaPorta', team:'DET', pos:'TE', pts:14.8, proj:12.5, avg:12.2, status:'healthy' },
+  { id:'p27', name:'Mark Andrews', team:'BAL', pos:'TE', pts:13.2, proj:11.8, avg:11.4, status:'healthy' },
+  { id:'p28', name:'TJ Hockenson', team:'MIN', pos:'TE', pts:12.4, proj:11.0, avg:10.8, status:'healthy' },
+  { id:'p29', name:'George Kittle', team:'SF', pos:'TE', pts:11.8, proj:10.5, avg:10.2, status:'healthy' },
+  { id:'p30', name:'Dallas Goedert', team:'PHI', pos:'TE', pts:10.2, proj:9.8, avg:9.5, status:'questionable' },
+  { id:'p31', name:'Justin Tucker', team:'BAL', pos:'K', pts:11.0, proj:8.5, avg:8.2, status:'healthy' },
+  { id:'p32', name:'Harrison Butker', team:'KC', pos:'K', pts:10.0, proj:8.0, avg:7.8, status:'healthy' },
+  { id:'p33', name:'Jake Elliott', team:'PHI', pos:'K', pts:9.0, proj:7.5, avg:7.4, status:'healthy' },
+  { id:'p34', name:'Tyler Bass', team:'BUF', pos:'K', pts:8.0, proj:7.0, avg:7.0, status:'healthy' },
+  { id:'p35', name:'SF Defense', team:'SF', pos:'DEF', pts:12.0, proj:9.0, avg:8.8, status:'healthy' },
+  { id:'p36', name:'DAL Defense', team:'DAL', pos:'DEF', pts:10.0, proj:8.5, avg:8.2, status:'healthy' },
+  { id:'p37', name:'BAL Defense', team:'BAL', pos:'DEF', pts:9.0, proj:8.0, avg:7.8, status:'healthy' },
+  { id:'p38', name:'CLE Defense', team:'CLE', pos:'DEF', pts:8.0, proj:7.5, avg:7.2, status:'healthy' },
+  { id:'p39', name:'De\'Von Achane', team:'MIA', pos:'RB', pts:21.2, proj:17.0, avg:16.4, status:'healthy' },
+  { id:'p40', name:'Puka Nacua', team:'LAR', pos:'WR', pts:18.4, proj:16.0, avg:15.5, status:'healthy' },
+  { id:'p41', name:'Jordan Addison', team:'MIN', pos:'WR', pts:14.0, proj:13.2, avg:12.8, status:'healthy' },
+  { id:'p42', name:'Isiah Pacheco', team:'KC', pos:'RB', pts:15.8, proj:14.0, avg:13.5, status:'healthy' },
+  { id:'p43', name:'Deebo Samuel', team:'SF', pos:'WR', pts:15.2, proj:14.5, avg:14.0, status:'healthy' },
+  { id:'p44', name:'Trey McBride', team:'ARI', pos:'TE', pts:11.0, proj:10.0, avg:9.8, status:'healthy' },
+  { id:'p45', name:'Kyren Williams', team:'LAR', pos:'RB', pts:16.0, proj:14.8, avg:14.2, status:'healthy' },
+  { id:'p46', name:'Dak Prescott', team:'DAL', pos:'QB', pts:17.8, proj:17.5, avg:17.0, status:'healthy' },
+  { id:'p47', name:'Evan Engram', team:'JAX', pos:'TE', pts:10.6, proj:9.5, avg:9.2, status:'healthy' },
+  { id:'p48', name:'Brandon Aubrey', team:'DAL', pos:'K', pts:12.0, proj:9.0, avg:8.8, status:'healthy' },
+];
+
+const MATCHUPS = [
+  { id: 'm1', home: { teamId: 't1', score: 98.4, projected: 124.5 }, away: { teamId: 't2', score: 87.2, projected: 118.3 }, status: 'in_progress' },
+  { id: 'm2', home: { teamId: 't3', score: 72.1, projected: 110.2 }, away: { teamId: 't4', score: 68.5, projected: 105.8 }, status: 'in_progress' },
+  { id: 'm3', home: { teamId: 't5', score: 0, projected: 108.5 }, away: { teamId: 't6', score: 0, projected: 102.3 }, status: 'scheduled' },
+  { id: 'm4', home: { teamId: 't7', score: 0, projected: 99.8 }, away: { teamId: 't8', score: 0, projected: 96.4 }, status: 'scheduled' },
+  { id: 'm5', home: { teamId: 't9', score: 0, projected: 94.2 }, away: { teamId: 't10', score: 0, projected: 91.7 }, status: 'scheduled' },
+  { id: 'm6', home: { teamId: 't11', score: 0, projected: 88.6 }, away: { teamId: 't12', score: 0, projected: 85.3 }, status: 'scheduled' },
+];
+
+const NEWS = [
+  { id:'n1', type:'injury', severity:'out', title:'CMC Ruled OUT for Week 12', body:'Christian McCaffrey will miss his third consecutive game with a calf injury. Jordan Mason expected to start.', player:'Christian McCaffrey', team:'SF', pos:'RB', time:'2h ago', icon:'\u{1F3E5}' },
+  { id:'n2', type:'trade', severity:null, title:'Blockbuster Trade: Adams to Jets', body:'Davante Adams officially traded to the New York Jets. Expected to make debut in Week 12.', player:'Davante Adams', team:'NYJ', pos:'WR', time:'4h ago', icon:'\u{1F4E6}' },
+  { id:'n3', type:'injury', severity:'questionable', title:'Hurts Limited in Practice', body:'Jalen Hurts was limited in Wednesday practice with a knee issue. Listed as questionable.', player:'Jalen Hurts', team:'PHI', pos:'QB', time:'5h ago', icon:'\u{1F3E5}' },
+  { id:'n4', type:'waiver', severity:null, title:'Trending: Jordan Mason', body:'With CMC out again, Jordan Mason is the top waiver add this week. Projected 14+ points.', player:'Jordan Mason', team:'SF', pos:'RB', time:'6h ago', icon:'\u{1F4C8}' },
+  { id:'n5', type:'transaction', severity:null, title:'Trade Accepted in Your League', body:'Red Zone Raiders send Jonathan Taylor to Blitz Brigade for Ja\'Marr Chase and a future pick.', player:null, team:null, pos:null, time:'8h ago', icon:'\u{1F91D}' },
+  { id:'n6', type:'injury', severity:'questionable', title:'AJ Brown Questionable', body:'AJ Brown dealing with a hamstring issue. Game-time decision for Week 12.', player:'AJ Brown', team:'PHI', pos:'WR', time:'10h ago', icon:'\u{1F3E5}' },
+  { id:'n7', type:'news', severity:null, title:'Week 12 Start/Sit: Must-Starts', body:'Top must-start players this week: Mahomes, Bijan Robinson, Tyreek Hill, Travis Kelce.', player:null, team:null, pos:null, time:'12h ago', icon:'\u{2B50}' },
+  { id:'n8', type:'waiver', severity:null, title:'Achane Breakout Continues', body:'De\'Von Achane has scored 18+ points in 4 straight weeks. Must-start RB1 ROS.', player:'De\'Von Achane', team:'MIA', pos:'RB', time:'14h ago', icon:'\u{1F4C8}' },
+  { id:'n9', type:'injury', severity:'probable', title:'Etienne Probable', body:'Travis Etienne expected to play through a minor shoulder issue.', player:'Travis Etienne', team:'JAX', pos:'RB', time:'16h ago', icon:'\u{1F3E5}' },
+  { id:'n10', type:'transaction', severity:null, title:'Waiver Claim Processed', body:'Your claim for Puka Nacua was successful. He has been added to your roster.', player:'Puka Nacua', team:'LAR', pos:'WR', time:'18h ago', icon:'\u{2705}' },
+  { id:'n11', type:'news', severity:null, title:'Week 12 Rankings Update', body:'Updated consensus rankings now available. Major risers: Gibbs, St. Brown, LaPorta.', player:null, team:null, pos:null, time:'20h ago', icon:'\u{1F4CA}' },
+  { id:'n12', type:'trade', severity:null, title:'Trade Proposal Received', body:'Blitz Brigade wants to send you Breece Hall for your Tyreek Hill. Review the offer.', player:null, team:null, pos:null, time:'22h ago', icon:'\u{1F4E9}' },
+  { id:'n13', type:'injury', severity:'questionable', title:'Goedert Misses Practice', body:'Dallas Goedert did not practice Wednesday. Monitor his status closely.', player:'Dallas Goedert', team:'PHI', pos:'TE', time:'1d ago', icon:'\u{1F3E5}' },
+  { id:'n14', type:'waiver', severity:null, title:'Deep Sleeper: Jaxon Smith-Njigba', body:'JSN seeing increased targets with DK Metcalf drawing doubles. Solid FLEX play.', player:'Jaxon Smith-Njigba', team:'SEA', pos:'WR', time:'1d ago', icon:'\u{1F4C8}' },
+  { id:'n15', type:'news', severity:null, title:'Playoff Picture: Week 12 Implications', body:'5 teams fighting for last 2 playoff spots. Every matchup matters this week.', player:null, team:null, pos:null, time:'1d ago', icon:'\u{1F3C6}' },
+];
+
+const WAIVERS = [
+  { playerId: 'w1', name: 'Jordan Mason', team: 'SF', pos: 'RB', proj: 15.2, trend: 'up', trendPct: 28, reason: 'CMC ruled OUT again' },
+  { playerId: 'w2', name: 'Jaxon Smith-Njigba', team: 'SEA', pos: 'WR', proj: 12.8, trend: 'up', trendPct: 18, reason: 'Rising target share' },
+  { playerId: 'w3', name: 'Chuba Hubbard', team: 'CAR', pos: 'RB', proj: 11.4, trend: 'up', trendPct: 12, reason: 'Workhorse role secured' },
+  { playerId: 'w4', name: 'Zay Flowers', team: 'BAL', pos: 'WR', proj: 13.0, trend: 'up', trendPct: 15, reason: 'Target monster lately' },
+  { playerId: 'w5', name: 'Luke Musgrave', team: 'GB', pos: 'TE', proj: 9.6, trend: 'up', trendPct: 22, reason: 'Red zone favorite' },
+];
+
+const TRADES_SEED = [
+  { id:'tr1', status:'pending', fromTeamId:'t3', toTeamId:'t1', offeringPlayerIds:['p8'], requestingPlayerIds:['p15'], message:'Breece is a stud, you need RB depth', proposedAt:Date.now()-3600000, expiresAt:Date.now()+82800000 },
+  { id:'tr2', status:'pending', fromTeamId:'t1', toTeamId:'t6', offeringPlayerIds:['p12','p23'], requestingPlayerIds:['p9'], message:'Package deal for Bijan', proposedAt:Date.now()-7200000, expiresAt:Date.now()+169200000 },
+  { id:'tr3', status:'pending', fromTeamId:'t5', toTeamId:'t1', offeringPlayerIds:['p26','p24'], requestingPlayerIds:['p25'], message:'LaPorta + Wilson for Kelce, fair value', proposedAt:Date.now()-1800000, expiresAt:Date.now()+43200000 },
+];
+
+const USER_TEAM_ID = 't1';
+
+/* ===== TEAM ROSTERS (fantasy team -> player IDs) ===== */
+const TEAM_ROSTERS_SEED = {
+  t1: ['p1','p9','p15','p25'],    // Mahomes, Bijan, Tyreek, Kelce
+  t2: ['p2','p10','p16','p26'],   // Allen, Saquon, CeeDee, LaPorta
+  t3: ['p3','p13','p17','p27'],   // Lamar, Henry, Chase, Andrews
+  t4: ['p4','p8','p18','p28'],    // Hurts, Breece, St. Brown, Hockenson
+  t5: ['p5','p39','p19','p29'],   // Burrow, Achane, Adams, Kittle
+  t6: ['p6','p11','p40','p30'],   // Stroud, Gibbs, Puka, Goedert
+  t7: ['p46','p12','p20','p44'],  // Dak, JT, AJ Brown, McBride
+  t8: ['p42','p45','p21','p47'],  // Pacheco, Kyren, Diggs, Engram
+  t9: ['p14','p22','p41','p31'],  // Etienne, DK, Addison, Tucker
+  t10:['p7','p23','p43','p32'],   // CMC, Olave, Deebo, Butker
+  t11:['p24','p33','p35','p48'],  // G.Wilson, Elliott, SF DEF, Aubrey
+  t12:['p34','p36','p37','p38'],  // Bass, DAL DEF, BAL DEF, CLE DEF
+};
+
+/* ===== PLAYER TRADE VALUES (0-100) ===== */
+const PLAYER_VALUES = {};
+PLAYERS.forEach(p => { PLAYER_VALUES[p.id] = (p.proj * 3 + p.avg * 2 + p.pts) / 6; });
+const _maxVal = Math.max(...Object.values(PLAYER_VALUES));
+Object.keys(PLAYER_VALUES).forEach(id => { PLAYER_VALUES[id] = Math.round((PLAYER_VALUES[id] / _maxVal) * 100); });
+
+/* ===== TRADE HISTORY SEED ===== */
+const TRADE_HISTORY_SEED = [
+  { id:'th1', status:'completed', fromTeamId:'t4', toTeamId:'t3', offeringPlayerIds:['p12'], requestingPlayerIds:['p17'], message:'Need a WR1', proposedAt:Date.now()-604800000, resolvedAt:Date.now()-518400000 },
+  { id:'th2', status:'rejected', fromTeamId:'t1', toTeamId:'t5', offeringPlayerIds:['p25'], requestingPlayerIds:['p39'], message:'', proposedAt:Date.now()-432000000, resolvedAt:Date.now()-345600000 },
+  { id:'th3', status:'completed', fromTeamId:'t7', toTeamId:'t2', offeringPlayerIds:['p20'], requestingPlayerIds:['p16'], message:'AJ for CeeDee straight up', proposedAt:Date.now()-864000000, resolvedAt:Date.now()-777600000 },
+];
+
+/* ===== MY LEAGUES DATA ===== */
+const MY_LEAGUES_SEED = [
+  { id:'lg1', name:'Test League', type:'redraft', scoring:'ppr', teams:12, season:'2025-26', week:12, status:'in_progress', userTeam:'Gridiron Gladiators', record:'8-3', rank:1, commissioner:'Marcus J.', draftDate:'2025-08-28', tradeDeadline:'Week 13', logo:'\u{1F3C8}' },
+];
+
+/* ===== SCORING SYSTEM PRESETS ===== */
+const SCORING_PRESETS = {
+  standard: {
+    id: 'standard', name: 'Standard', desc: 'Traditional scoring with no reception points. Favors RBs and high-volume passers.',
+    badge: 'Most Popular', badgeColor: 'var(--success-green)',
+    passing: { yards: 0.04, td: 4, int: -2, twoPt: 2, sacked: 0 },
+    rushing: { yards: 0.1, td: 6, twoPt: 2, fumbleLost: -2 },
+    receiving: { yards: 0.1, td: 6, receptions: 0, twoPt: 2 },
+    kicking: { fg0_29: 3, fg30_39: 3, fg40_49: 4, fg50plus: 5, pat: 1, missedFg0_29: -3, missedFg30_39: -2, missedFg40_49: -1, missedFg50plus: 0, missedPat: -1 },
+    dst: { sack: 1, int: 2, fumbleRec: 2, defTd: 6, stTd: 6, safety: 2, blockedKick: 2, ptsAllow0: 10, ptsAllow1_6: 7, ptsAllow7_13: 4, ptsAllow14_20: 1, ptsAllow21_27: 0, ptsAllow28_34: -4, ptsAllow35plus: -10 },
+    bonuses: { rush100: 0, rec100: 0, pass300: 0, rush200: 0, rec200: 0, pass400: 0, td40plus: 0, td50plus: 0 },
+  },
+  ppr: {
+    id: 'ppr', name: 'PPR', desc: 'Points Per Reception. Each catch is worth 1 point. Boosts WRs and pass-catching RBs.',
+    badge: 'Popular', badgeColor: 'var(--info-blue)',
+    passing: { yards: 0.04, td: 4, int: -2, twoPt: 2, sacked: 0 },
+    rushing: { yards: 0.1, td: 6, twoPt: 2, fumbleLost: -2 },
+    receiving: { yards: 0.1, td: 6, receptions: 1, twoPt: 2 },
+    kicking: { fg0_29: 3, fg30_39: 3, fg40_49: 4, fg50plus: 5, pat: 1, missedFg0_29: -3, missedFg30_39: -2, missedFg40_49: -1, missedFg50plus: 0, missedPat: -1 },
+    dst: { sack: 1, int: 2, fumbleRec: 2, defTd: 6, stTd: 6, safety: 2, blockedKick: 2, ptsAllow0: 10, ptsAllow1_6: 7, ptsAllow7_13: 4, ptsAllow14_20: 1, ptsAllow21_27: 0, ptsAllow28_34: -4, ptsAllow35plus: -10 },
+    bonuses: { rush100: 0, rec100: 0, pass300: 0, rush200: 0, rec200: 0, pass400: 0, td40plus: 0, td50plus: 0 },
+  },
+  halfPpr: {
+    id: 'halfPpr', name: 'Half PPR', desc: 'Half-point per reception. A balanced middle ground between Standard and full PPR.',
+    badge: 'Balanced', badgeColor: 'var(--copper)',
+    passing: { yards: 0.04, td: 4, int: -2, twoPt: 2, sacked: 0 },
+    rushing: { yards: 0.1, td: 6, twoPt: 2, fumbleLost: -2 },
+    receiving: { yards: 0.1, td: 6, receptions: 0.5, twoPt: 2 },
+    kicking: { fg0_29: 3, fg30_39: 3, fg40_49: 4, fg50plus: 5, pat: 1, missedFg0_29: -3, missedFg30_39: -2, missedFg40_49: -1, missedFg50plus: 0, missedPat: -1 },
+    dst: { sack: 1, int: 2, fumbleRec: 2, defTd: 6, stTd: 6, safety: 2, blockedKick: 2, ptsAllow0: 10, ptsAllow1_6: 7, ptsAllow7_13: 4, ptsAllow14_20: 1, ptsAllow21_27: 0, ptsAllow28_34: -4, ptsAllow35plus: -10 },
+    bonuses: { rush100: 0, rec100: 0, pass300: 0, rush200: 0, rec200: 0, pass400: 0, td40plus: 0, td50plus: 0 },
+  },
+  sixPtPassTd: {
+    id: 'sixPtPassTd', name: '6-Pt Pass TD', desc: 'Passing TDs worth 6 pts instead of 4. Elevates QB value significantly.',
+    badge: 'QB Premium', badgeColor: 'var(--pos-qb)',
+    passing: { yards: 0.04, td: 6, int: -2, twoPt: 2, sacked: 0 },
+    rushing: { yards: 0.1, td: 6, twoPt: 2, fumbleLost: -2 },
+    receiving: { yards: 0.1, td: 6, receptions: 0, twoPt: 2 },
+    kicking: { fg0_29: 3, fg30_39: 3, fg40_49: 4, fg50plus: 5, pat: 1, missedFg0_29: -3, missedFg30_39: -2, missedFg40_49: -1, missedFg50plus: 0, missedPat: -1 },
+    dst: { sack: 1, int: 2, fumbleRec: 2, defTd: 6, stTd: 6, safety: 2, blockedKick: 2, ptsAllow0: 10, ptsAllow1_6: 7, ptsAllow7_13: 4, ptsAllow14_20: 1, ptsAllow21_27: 0, ptsAllow28_34: -4, ptsAllow35plus: -10 },
+    bonuses: { rush100: 0, rec100: 0, pass300: 0, rush200: 0, rec200: 0, pass400: 0, td40plus: 0, td50plus: 0 },
+  },
+  tePremium: {
+    id: 'tePremium', name: 'TE Premium', desc: 'Full PPR with an extra 0.5 pts per TE reception. Makes TEs a premium draft target.',
+    badge: 'TE Boost', badgeColor: 'var(--pos-te)',
+    passing: { yards: 0.04, td: 4, int: -2, twoPt: 2, sacked: 0 },
+    rushing: { yards: 0.1, td: 6, twoPt: 2, fumbleLost: -2 },
+    receiving: { yards: 0.1, td: 6, receptions: 1, twoPt: 2, teBonus: 0.5 },
+    kicking: { fg0_29: 3, fg30_39: 3, fg40_49: 4, fg50plus: 5, pat: 1, missedFg0_29: -3, missedFg30_39: -2, missedFg40_49: -1, missedFg50plus: 0, missedPat: -1 },
+    dst: { sack: 1, int: 2, fumbleRec: 2, defTd: 6, stTd: 6, safety: 2, blockedKick: 2, ptsAllow0: 10, ptsAllow1_6: 7, ptsAllow7_13: 4, ptsAllow14_20: 1, ptsAllow21_27: 0, ptsAllow28_34: -4, ptsAllow35plus: -10 },
+    bonuses: { rush100: 0, rec100: 0, pass300: 0, rush200: 0, rec200: 0, pass400: 0, td40plus: 0, td50plus: 0 },
+  },
+  idp: {
+    id: 'idp', name: 'IDP', desc: 'Individual Defensive Players replace team D/ST. Adds DL, LB, and DB roster slots.',
+    badge: 'Advanced', badgeColor: 'var(--purple)',
+    passing: { yards: 0.04, td: 4, int: -2, twoPt: 2, sacked: 0 },
+    rushing: { yards: 0.1, td: 6, twoPt: 2, fumbleLost: -2 },
+    receiving: { yards: 0.1, td: 6, receptions: 1, twoPt: 2 },
+    kicking: { fg0_29: 3, fg30_39: 3, fg40_49: 4, fg50plus: 5, pat: 1, missedFg0_29: -3, missedFg30_39: -2, missedFg40_49: -1, missedFg50plus: 0, missedPat: -1 },
+    dst: { sack: 1, int: 2, fumbleRec: 2, defTd: 6, stTd: 6, safety: 2, blockedKick: 2, ptsAllow0: 10, ptsAllow1_6: 7, ptsAllow7_13: 4, ptsAllow14_20: 1, ptsAllow21_27: 0, ptsAllow28_34: -4, ptsAllow35plus: -10 },
+    idp: { soloTackle: 1.5, assistTackle: 1, tackleForLoss: 1, qbHit: 1, sack: 5, int: 6, forcedFumble: 4, fumbleRec: 4, defTd: 6, safety: 2, passDeflected: 1.5 },
+    bonuses: { rush100: 0, rec100: 0, pass300: 0, rush200: 0, rec200: 0, pass400: 0, td40plus: 0, td50plus: 0 },
+  },
+};
+
+/* ===== LEAGUE TYPE DEFINITIONS ===== */
+const LEAGUE_TYPES = [
+  { id: 'redraft', name: 'Redraft', icon: '\u{1F504}', desc: 'All players return to the pool each season. Fresh draft every year.', tags: ['Classic', 'Annual'] },
+  { id: 'keeper', name: 'Keeper', icon: '\u{1F511}', desc: 'Keep 1-3 players from your roster each year. Balance between redraft and dynasty.', tags: ['Hybrid'] },
+  { id: 'dynasty', name: 'Dynasty', icon: '\u{1F3F0}', desc: 'Keep your entire roster indefinitely. Build a franchise over multiple seasons.', tags: ['Long-term'] },
+  { id: 'bestBall', name: 'Best Ball', icon: '\u{1F3B2}', desc: 'Draft only — no lineup management. Your best players auto-start each week.', tags: ['Low Maintenance'] },
+  { id: 'guillotine', name: 'Guillotine', icon: '\u{1FA93}', desc: 'Lowest-scoring team eliminated each week. Last team standing wins.', tags: ['Elimination'] },
+  { id: 'auction', name: 'Auction / Salary Cap', icon: '\u{1F4B0}', desc: 'Bid on players with a salary budget instead of snake drafting. Strategic spending.', tags: ['Auction'] },
+  { id: 'superflex', name: 'SuperFlex', icon: '\u{26A1}', desc: 'An extra FLEX slot that allows QBs. Increases QB draft value substantially.', tags: ['QB Premium'] },
+  { id: 'twoQb', name: '2QB', icon: '\u{1F46F}', desc: 'Two required QB slots. Only viable in 8-10 team leagues due to 32 NFL starters.', tags: ['QB Heavy'] },
+  { id: 'pointsOnly', name: 'Points Only', icon: '\u{1F4CA}', desc: 'No head-to-head matchups. Winner determined by total cumulative points.', tags: ['Total Points'] },
+  { id: 'idpLeague', name: 'IDP League', icon: '\u{1F6E1}\u{FE0F}', desc: 'Individual defensive players replace team D/ST. Adds DL, LB, and DB starters.', tags: ['Full Roster'] },
+];
+
+/* ===== ROSTER CONFIGURATION PRESETS ===== */
+const ROSTER_PRESETS = {
+  standard: { QB: 1, RB: 2, WR: 2, TE: 1, FLEX: 1, DST: 1, K: 1, BN: 6, IR: 1 },
+  superflex: { QB: 1, RB: 2, WR: 2, TE: 1, FLEX: 1, SFLEX: 1, DST: 1, K: 1, BN: 6, IR: 1 },
+  twoQb: { QB: 2, RB: 2, WR: 2, TE: 1, FLEX: 1, DST: 1, K: 1, BN: 6, IR: 1 },
+  bestBall: { QB: 1, RB: 2, WR: 2, TE: 1, FLEX: 2, DST: 1, K: 1, BN: 9, IR: 0 },
+  dynasty: { QB: 1, RB: 2, WR: 2, TE: 1, FLEX: 1, DST: 1, K: 1, BN: 15, IR: 3, TAXI: 3 },
+  keeper: { QB: 1, RB: 2, WR: 2, TE: 1, FLEX: 1, DST: 1, K: 1, BN: 7, IR: 2 },
+  idp: { QB: 1, RB: 2, WR: 2, TE: 1, FLEX: 1, K: 1, DL: 2, LB: 2, DB: 2, DP: 1, BN: 8, IR: 2 },
+};
+
+const ROSTER_SLOT_LABELS = {
+  QB: 'Quarterback', RB: 'Running Back', WR: 'Wide Receiver', TE: 'Tight End',
+  FLEX: 'Flex (RB/WR/TE)', SFLEX: 'SuperFlex (QB/RB/WR/TE)', DST: 'Defense/ST', K: 'Kicker',
+  BN: 'Bench', IR: 'Injured Reserve', TAXI: 'Taxi Squad',
+  DL: 'Defensive Line', LB: 'Linebacker', DB: 'Defensive Back', DP: 'Def. Flex (DL/LB/DB)',
+};
+
+const SCORING_FIELD_LABELS = {
+  passing: {
+    yards: { label: 'Passing Yards', unit: 'pt/yd' },
+    td: { label: 'Passing TD', unit: 'pts' },
+    int: { label: 'Interception Thrown', unit: 'pts' },
+    twoPt: { label: '2-Pt Conversion (Pass)', unit: 'pts' },
+    sacked: { label: 'Sacked', unit: 'pts' },
+  },
+  rushing: {
+    yards: { label: 'Rushing Yards', unit: 'pt/yd' },
+    td: { label: 'Rushing TD', unit: 'pts' },
+    twoPt: { label: '2-Pt Conversion (Rush)', unit: 'pts' },
+    fumbleLost: { label: 'Fumble Lost', unit: 'pts' },
+  },
+  receiving: {
+    yards: { label: 'Receiving Yards', unit: 'pt/yd' },
+    td: { label: 'Receiving TD', unit: 'pts' },
+    receptions: { label: 'Reception', unit: 'pts' },
+    twoPt: { label: '2-Pt Conversion (Rec)', unit: 'pts' },
+    teBonus: { label: 'TE Reception Bonus', unit: 'pts' },
+  },
+  kicking: {
+    fg0_29: { label: 'FG Made 0-29 yds', unit: 'pts' },
+    fg30_39: { label: 'FG Made 30-39 yds', unit: 'pts' },
+    fg40_49: { label: 'FG Made 40-49 yds', unit: 'pts' },
+    fg50plus: { label: 'FG Made 50+ yds', unit: 'pts' },
+    pat: { label: 'PAT Made', unit: 'pts' },
+    missedFg0_29: { label: 'Missed FG 0-29 yds', unit: 'pts' },
+    missedFg30_39: { label: 'Missed FG 30-39 yds', unit: 'pts' },
+    missedFg40_49: { label: 'Missed FG 40-49 yds', unit: 'pts' },
+    missedFg50plus: { label: 'Missed FG 50+ yds', unit: 'pts' },
+    missedPat: { label: 'Missed PAT', unit: 'pts' },
+  },
+  dst: {
+    sack: { label: 'Sack', unit: 'pts' },
+    int: { label: 'Interception', unit: 'pts' },
+    fumbleRec: { label: 'Fumble Recovery', unit: 'pts' },
+    defTd: { label: 'Defensive TD', unit: 'pts' },
+    stTd: { label: 'Special Teams TD', unit: 'pts' },
+    safety: { label: 'Safety', unit: 'pts' },
+    blockedKick: { label: 'Blocked Kick', unit: 'pts' },
+    ptsAllow0: { label: '0 Points Allowed', unit: 'pts' },
+    ptsAllow1_6: { label: '1-6 Points Allowed', unit: 'pts' },
+    ptsAllow7_13: { label: '7-13 Points Allowed', unit: 'pts' },
+    ptsAllow14_20: { label: '14-20 Points Allowed', unit: 'pts' },
+    ptsAllow21_27: { label: '21-27 Points Allowed', unit: 'pts' },
+    ptsAllow28_34: { label: '28-34 Points Allowed', unit: 'pts' },
+    ptsAllow35plus: { label: '35+ Points Allowed', unit: 'pts' },
+  },
+  idp: {
+    soloTackle: { label: 'Solo Tackle', unit: 'pts' },
+    assistTackle: { label: 'Assisted Tackle', unit: 'pts' },
+    tackleForLoss: { label: 'Tackle for Loss', unit: 'pts' },
+    qbHit: { label: 'QB Hit', unit: 'pts' },
+    sack: { label: 'Sack', unit: 'pts' },
+    int: { label: 'Interception', unit: 'pts' },
+    forcedFumble: { label: 'Forced Fumble', unit: 'pts' },
+    fumbleRec: { label: 'Fumble Recovery', unit: 'pts' },
+    defTd: { label: 'Defensive TD', unit: 'pts' },
+    safety: { label: 'Safety', unit: 'pts' },
+    passDeflected: { label: 'Pass Deflected', unit: 'pts' },
+  },
+};
+
+const BONUS_LABELS = {
+  rush100: '100+ Rushing Yards', rec100: '100+ Receiving Yards', pass300: '300+ Passing Yards',
+  rush200: '200+ Rushing Yards', rec200: '200+ Receiving Yards', pass400: '400+ Passing Yards',
+  td40plus: '40+ Yard TD', td50plus: '50+ Yard TD',
+};
+
+const CATEGORY_ICONS = {
+  passing: '\u{1F3C8}', rushing: '\u{1F3C3}', receiving: '\u{1F3AF}',
+  kicking: '\u{1F462}', dst: '\u{1F6E1}\u{FE0F}', idp: '\u{1F9BE}',
+};
+const CATEGORY_COLORS = {
+  passing: 'var(--pos-qb)', rushing: 'var(--pos-rb)', receiving: 'var(--pos-wr)',
+  kicking: 'var(--pos-k)', dst: 'var(--pos-def)', idp: 'var(--purple)',
+};
+
+/* ===== HELPER: deep clone ===== */
+function deepClone(obj) { return JSON.parse(JSON.stringify(obj)); }
+
+/* ===== TRADE HELPERS ===== */
+function getPlayerById(id) { return PLAYERS.find(p => p.id === id); }
+function getTeamById(id) { return TEAMS.find(t => t.id === id); }
+function calcFairness(sendIds, receiveIds) {
+  const sideA = sendIds.reduce((s, id) => s + (PLAYER_VALUES[id] || 0), 0);
+  const sideB = receiveIds.reduce((s, id) => s + (PLAYER_VALUES[id] || 0), 0);
+  const maxSide = Math.max(sideA, sideB, 1);
+  const fairness = Math.max(0, Math.round(100 - Math.abs(sideA - sideB)));
+  const assessment = fairness >= 75 ? 'Fair Trade' : fairness >= 50 ? 'Slightly Uneven' : 'Lopsided';
+  return { fairness, sideA, sideB, assessment };
+}
+function getTradeTeamName(teamId) { const t = getTeamById(teamId); return t ? t.name : 'Unknown'; }
+function timeUntil(ts) {
+  const diff = ts - Date.now();
+  if (diff <= 0) return 'Expired';
+  const h = Math.floor(diff / 3600000);
+  const m = Math.floor((diff % 3600000) / 60000);
+  if (h > 24) return Math.floor(h / 24) + 'd ' + (h % 24) + 'h';
+  return h + 'h ' + m + 'm';
+}
+
+/* ===== HELPER COMPONENTS ===== */
+const POS_COLORS = { QB:'--pos-qb', RB:'--pos-rb', WR:'--pos-wr', TE:'--pos-te', K:'--pos-k', DEF:'--pos-def' };
+const POS_BG = { QB:'--pos-qb-bg', RB:'--pos-rb-bg', WR:'--pos-wr-bg', TE:'--pos-te-bg', K:'--pos-k-bg', DEF:'--pos-def-bg' };
+
+function PosBadge({ pos }) {
+  return (
+    <span className="ff-pos-badge" style={{
+      background: `var(${POS_BG[pos] || '--pos-def-bg'})`,
+      color: `var(${POS_COLORS[pos] || '--pos-def'})`
+    }}>{pos}</span>
+  );
+}
+
+function InjuryDot({ status }) {
+  if (status === 'healthy') return null;
+  const colors = { out: 'var(--injury-out)', questionable: 'var(--injury-questionable)', probable: 'var(--injury-probable)' };
+  return <span className="ff-injury-dot" style={{ background: colors[status] || colors.questionable }} />;
+}
+
+function StatusLabel({ status }) {
+  if (status === 'healthy') return <span style={{ color: 'var(--success-green)', fontSize: 11, fontWeight: 600 }}>Active</span>;
+  const colors = { out: 'var(--injury-out)', questionable: 'var(--injury-questionable)', probable: 'var(--injury-probable)' };
+  const labels = { out: 'OUT', questionable: 'Q', probable: 'PROB' };
+  return <span style={{ color: colors[status], fontSize: 11, fontWeight: 700 }}>{labels[status]}</span>;
+}
+
+/* ===== AUTH MODAL ===== */
+function AuthModal({ mode, onClose, onSwitch, onAuth }) {
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [error, setError] = useState('');
+  const isSignup = mode === 'signup';
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    setError('');
+    if (!email || !password || (isSignup && (!name || !confirm))) { setError('Please fill in all fields.'); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setError('Please enter a valid email address.'); return; }
+    if (password.length < 6) { setError('Password must be at least 6 characters.'); return; }
+
+    const users = JSON.parse(localStorage.getItem('ff-users') || '[]');
+
+    if (isSignup) {
+      if (confirm !== password) { setError('Passwords do not match.'); return; }
+      if (users.find(u => u.email === email)) { setError('An account with this email already exists.'); return; }
+      const newUser = { name, email, password: btoa(password), createdAt: Date.now() };
+      users.push(newUser);
+      localStorage.setItem('ff-users', JSON.stringify(users));
+      onAuth({ name, email });
+    } else {
+      const found = users.find(u => u.email === email);
+      if (!found) { setError('No account found with this email.'); return; }
+      if (atob(found.password) !== password) { setError('Incorrect password.'); return; }
+      onAuth({ name: found.name, email: found.email });
+    }
+  };
+
+  return (
+    <div className="auth-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="auth-modal">
+        <button className="auth-close" onClick={onClose}>{'\u{2715}'}</button>
+        <h2>{isSignup ? 'Create Account' : 'Welcome Back'}</h2>
+        <p className="auth-subtitle">{isSignup ? 'Join Fantasy League to manage your teams and trades.' : 'Sign in to your Fantasy League account.'}</p>
+        <form onSubmit={handleSubmit}>
+          {isSignup && (
+            <div className="auth-input-group">
+              <label>Full Name</label>
+              <input className="auth-input" type="text" placeholder="Marcus Johnson" value={name} onChange={e => setName(e.target.value)} />
+            </div>
+          )}
+          <div className="auth-input-group">
+            <label>Email Address</label>
+            <input className="auth-input" type="email" placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} />
+          </div>
+          <div className="auth-input-group">
+            <label>Password</label>
+            <input className="auth-input" type="password" placeholder={isSignup ? 'Min. 6 characters' : 'Enter your password'} value={password} onChange={e => setPassword(e.target.value)} />
+          </div>
+          {isSignup && (
+            <div className="auth-input-group">
+              <label>Confirm Password</label>
+              <input className="auth-input" type="password" placeholder="Re-enter your password" value={confirm} onChange={e => setConfirm(e.target.value)} />
+            </div>
+          )}
+          {error && <p className="auth-error">{error}</p>}
+          <button type="submit" className={`auth-btn ${isSignup ? 'auth-btn-secondary' : 'auth-btn-primary'}`}>
+            {isSignup ? 'Create Account' : 'Sign In'}
+          </button>
+        </form>
+        <div className="auth-switch">
+          {isSignup ? 'Already have an account? ' : "Don't have an account? "}
+          <button onClick={onSwitch}>{isSignup ? 'Sign In' : 'Create one'}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ===== MY LEAGUES DROPDOWN ===== */
+function MyLeaguesDropdown({ leagues, activeLeagueId, onSelectLeague }) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const ref = React.useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const activeLeague = leagues.find(l => l.id === activeLeagueId);
+  const filtered = leagues.filter(l => l.name.toLowerCase().includes(search.toLowerCase()) || l.userTeam.toLowerCase().includes(search.toLowerCase()));
+  const activeSeason = filtered.filter(l => l.status === 'in_progress');
+  const pastSeason = filtered.filter(l => l.status !== 'in_progress');
+
+  const statusColor = (s) => s === 'in_progress' ? 'var(--success-green)' : s === 'eliminated' ? 'var(--red)' : 'var(--text-muted)';
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <button className="ff-leagues-trigger" onClick={() => setOpen(!open)}>
+        <span className="league-dot" style={{ background: statusColor(activeLeague?.status) }} />
+        <span className="league-name">{activeLeague?.name || 'Select League'}</span>
+        <span className={`chevron ${open ? 'open' : ''}`}>{'\u25BC'}</span>
+      </button>
+
+      {open && (
+        <div className="ff-leagues-dropdown">
+          <div className="ff-leagues-dropdown-header">
+            <h3>{'\u{1F3C8}'} My Leagues</h3>
+            <span className="ff-leagues-dropdown-count">{leagues.length} leagues</span>
+          </div>
+          <input className="ff-leagues-search" type="text" placeholder="Search leagues..."
+            value={search} onChange={e => setSearch(e.target.value)} autoFocus />
+
+          {activeSeason.length > 0 && (
+            <>
+              <div className="ff-leagues-section-label">Active Leagues</div>
+              {activeSeason.map(lg => (
+                <div key={lg.id} className={`ff-leagues-item ${lg.id === activeLeagueId ? 'active' : ''}`}
+                  onClick={() => { onSelectLeague(lg.id); setOpen(false); setSearch(''); }}>
+                  <div className="ff-leagues-item-logo">{lg.logo}</div>
+                  <div className="ff-leagues-item-info">
+                    <div className="ff-leagues-item-name">{lg.name}</div>
+                    <div className="ff-leagues-item-meta">
+                      <span>{lg.userTeam}</span>
+                      <span>&middot;</span>
+                      <span>{lg.teams} teams</span>
+                      <span>&middot;</span>
+                      <span>{lg.type}</span>
+                      <span>&middot;</span>
+                      <span>{lg.scoring.toUpperCase()}</span>
+                      <span className="ff-leagues-item-badge active-season">Wk {lg.week}</span>
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div className="ff-leagues-item-record">{lg.record}</div>
+                    {lg.rank && <div className="ff-leagues-rank">#{lg.rank}</div>}
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
+
+          {pastSeason.length > 0 && (
+            <>
+              <div className="ff-leagues-section-label">Past / Inactive</div>
+              {pastSeason.map(lg => (
+                <div key={lg.id} className={`ff-leagues-item ${lg.id === activeLeagueId ? 'active' : ''}`}
+                  onClick={() => { onSelectLeague(lg.id); setOpen(false); setSearch(''); }}>
+                  <div className="ff-leagues-item-logo">{lg.logo}</div>
+                  <div className="ff-leagues-item-info">
+                    <div className="ff-leagues-item-name" style={{ opacity: 0.7 }}>{lg.name}</div>
+                    <div className="ff-leagues-item-meta">
+                      <span>{lg.userTeam}</span>
+                      <span>&middot;</span>
+                      <span>{lg.season}</span>
+                      <span className={`ff-leagues-item-badge ${lg.status}`}>
+                        {lg.status === 'completed' ? 'Finished' : lg.status === 'eliminated' ? 'Eliminated' : lg.status}
+                      </span>
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div className="ff-leagues-item-record">{lg.record}</div>
+                    {lg.rank && <div className="ff-leagues-rank">#{lg.rank}</div>}
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
+
+          {filtered.length === 0 && (
+            <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-muted)', fontSize: 12 }}>No leagues match your search.</div>
+          )}
+
+          <div className="ff-leagues-footer">
+            <button className="ff-btn ff-btn-copper ff-btn-sm">{'\u{2795}'} Join League</button>
+            <button className="ff-btn ff-btn-secondary ff-btn-sm">{'\u{1F4CB}'} Create League</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ===== TOP NAVBAR ===== */
+function TopNavbar({ theme, setTheme, onOpenSettings, leagues, activeLeagueId, onSelectLeague, user, onShowAuth, onSignOut }) {
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const menuRef = React.useRef(null);
+  const activeLeague = leagues.find(l => l.id === activeLeagueId);
+
+  useEffect(() => {
+    const handleClick = (e) => { if (menuRef.current && !menuRef.current.contains(e.target)) setShowUserMenu(false); };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  return (
+    <nav className="ff-top-navbar">
+      <div className="ff-nav-left">
+        <div className="ff-nav-logo">{'\u{1F3C8}'} Fantasy <span>League</span></div>
+        {user && <MyLeaguesDropdown leagues={leagues} activeLeagueId={activeLeagueId} onSelectLeague={onSelectLeague} />}
+      </div>
+      <div className="ff-nav-center">
+        {user ? (
+          <div className="ff-week-badge">
+            {activeLeague?.status === 'in_progress' && <span className="ff-live-dot"></span>}
+            Week {activeLeague?.week || 12} — {activeLeague?.status === 'in_progress' ? 'In Progress' : activeLeague?.status === 'completed' ? 'Season Over' : 'Inactive'}
+          </div>
+        ) : (
+          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>Sign in to access your leagues</div>
+        )}
+      </div>
+      <div className="ff-nav-right">
+        {user ? (
+          <>
+            <button className="ff-nav-settings-btn" onClick={onOpenSettings}>
+              {'\u{2699}\u{FE0F}'} League Settings
+            </button>
+            <button className="ff-notif-btn" title="Notifications">
+              {'\u{1F514}'}
+              <span className="dot"></span>
+            </button>
+            <button className="ff-dark-toggle" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} title="Toggle dark mode">
+              {theme === 'dark' ? '\u{2600}\u{FE0F}' : '\u{1F319}'}
+            </button>
+            <div className="user-menu-wrapper" ref={menuRef}>
+              <button className={`user-menu-trigger ${showUserMenu ? 'open' : ''}`} onClick={() => setShowUserMenu(prev => !prev)}>
+                <div className="auth-avatar">{user.name.charAt(0).toUpperCase()}</div>
+                <span className="auth-user-name">{user.name}</span>
+                <span className="chevron">{'\u25BC'}</span>
+              </button>
+              {showUserMenu && (
+                <div className="user-menu-dropdown">
+                  <div className="user-menu-header">
+                    <div className="user-menu-header-name">{user.name}</div>
+                    <div className="user-menu-header-email">{user.email}</div>
+                  </div>
+                  <button className="user-menu-item" onClick={() => { onOpenSettings(); setShowUserMenu(false); }}>
+                    {'\u{2699}\u{FE0F}'} League Settings
+                  </button>
+                  <button className="user-menu-item" onClick={() => { setShowUserMenu(false); }}>
+                    {'\u{1F464}'} Profile
+                  </button>
+                  <div className="user-menu-divider" />
+                  <button className="user-menu-item danger" onClick={() => { onSignOut(); setShowUserMenu(false); }}>
+                    {'\u{1F6AA}'} Sign Out
+                  </button>
+                </div>
+              )}
+            </div>
+          </>
+        ) : (
+          <>
+            <button className="ff-dark-toggle" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} title="Toggle dark mode">
+              {theme === 'dark' ? '\u{2600}\u{FE0F}' : '\u{1F319}'}
+            </button>
+            <button className="top-navbar-login" onClick={() => onShowAuth('signin')}>Sign In</button>
+            <button className="top-navbar-signup" onClick={() => onShowAuth('signup')}>Create Account</button>
+          </>
+        )}
+      </div>
+    </nav>
+  );
+}
+
+/* ===== HERO SECTION ===== */
+function HeroSection({ onOpenSettings, onOpenTradeModal }) {
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  const userMatchup = MATCHUPS[0];
+  const homeTeam = TEAMS.find(t => t.id === userMatchup.home.teamId);
+  const awayTeam = TEAMS.find(t => t.id === userMatchup.away.teamId);
+
+  return (
+    <div className="ff-hero">
+      <div className="ff-hero-left">
+        <h1>{greeting}, Marcus</h1>
+        <p>Week 12 — Your matchup is live</p>
+        <div className="ff-hero-chip">
+          {homeTeam.abbr} {userMatchup.home.score} &nbsp;vs&nbsp; {awayTeam.abbr} {userMatchup.away.score}
+          <span className="ff-live-dot"></span>
+        </div>
+      </div>
+      <div className="ff-hero-actions">
+        <button className="ff-hero-action primary">{'\u{1F3C8}'} Set Lineup</button>
+        <button className="ff-hero-action secondary">{'\u{1F50D}'} Check Waivers</button>
+        <button className="ff-hero-action secondary" onClick={onOpenTradeModal}>{'\u{1F91D}'} View Trades</button>
+        <button className="ff-hero-action secondary" onClick={onOpenSettings}>{'\u{2699}\u{FE0F}'} League Settings</button>
+      </div>
+    </div>
+  );
+}
+
+/* ===== MATCHUP WIDGET ===== */
+function MatchupWidget() {
+  const [scores, setScores] = useState({ home: 98.4, away: 87.2 });
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setScores(prev => ({
+        home: +(prev.home + (Math.random() * 1.8 - 0.4)).toFixed(1),
+        away: +(prev.away + (Math.random() * 1.8 - 0.4)).toFixed(1),
+      }));
+    }, 8000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const homeTeam = TEAMS.find(t => t.id === 't1');
+  const awayTeam = TEAMS.find(t => t.id === 't2');
+  const homeWinning = scores.home >= scores.away;
+
+  const homePlayers = [
+    { name: 'P. Mahomes', pos: 'QB', pts: 26.8 },
+    { name: 'B. Robinson', pos: 'RB', pts: 22.4 },
+    { name: 'T. Hill', pos: 'WR', pts: 24.6 },
+  ];
+  const awayPlayers = [
+    { name: 'J. Allen', pos: 'QB', pts: 24.2 },
+    { name: 'S. Barkley', pos: 'RB', pts: 20.1 },
+    { name: 'C. Lamb', pos: 'WR', pts: 22.8 },
+  ];
+
+  return (
+    <div className="ff-card">
+      <div className="ff-card-top-accent" style={{ background: 'var(--copper)' }} />
+      <div className="ff-card-header">
+        <h2><span className="ff-live-dot" style={{ marginRight: 4 }}></span> This Week's Matchup</h2>
+        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Sunday 1:00 PM</span>
+      </div>
+      <div className="ff-matchup">
+        <div className="ff-matchup-team">
+          <div style={{ fontSize: 24, marginBottom: 4 }}>{homeTeam.logo}</div>
+          <div className="ff-matchup-team-name">{homeTeam.name}</div>
+          <div className={`ff-matchup-score ${homeWinning ? 'winning' : 'losing'}`}>{scores.home.toFixed(1)}</div>
+          <div className="ff-matchup-projected">Projected: {MATCHUPS[0].home.projected}</div>
+          <div className="ff-matchup-players">
+            {homePlayers.map((p, i) => (
+              <div className="ff-matchup-player" key={i}>
+                <span className="ff-matchup-player-name"><PosBadge pos={p.pos} /> {p.name}</span>
+                <span style={{ fontWeight: 600 }}>{p.pts}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="ff-matchup-vs"><span>VS</span></div>
+        <div className="ff-matchup-team">
+          <div style={{ fontSize: 24, marginBottom: 4 }}>{awayTeam.logo}</div>
+          <div className="ff-matchup-team-name">{awayTeam.name}</div>
+          <div className={`ff-matchup-score ${!homeWinning ? 'winning' : 'losing'}`}>{scores.away.toFixed(1)}</div>
+          <div className="ff-matchup-projected">Projected: {MATCHUPS[0].away.projected}</div>
+          <div className="ff-matchup-players">
+            {awayPlayers.map((p, i) => (
+              <div className="ff-matchup-player" key={i}>
+                <span className="ff-matchup-player-name"><PosBadge pos={p.pos} /> {p.name}</span>
+                <span style={{ fontWeight: 600 }}>{p.pts}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ===== PLAYER RANKINGS TABLE ===== */
+function PlayerRankings() {
+  const [sortField, setSortField] = useState('pts');
+  const [sortDir, setSortDir] = useState('desc');
+  const [posFilter, setPosFilter] = useState('ALL');
+  const [search, setSearch] = useState('');
+  const positions = ['ALL', 'QB', 'RB', 'WR', 'TE', 'K', 'DEF'];
+
+  const handleSort = (field) => {
+    if (field === sortField) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    else { setSortField(field); setSortDir('desc'); }
+  };
+
+  const filtered = useMemo(() => {
+    return PLAYERS
+      .filter(p => posFilter === 'ALL' || p.pos === posFilter)
+      .filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
+      .sort((a, b) => {
+        const av = typeof a[sortField] === 'string' ? a[sortField] : a[sortField];
+        const bv = typeof b[sortField] === 'string' ? b[sortField] : b[sortField];
+        if (typeof av === 'string') return sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
+        return sortDir === 'asc' ? av - bv : bv - av;
+      });
+  }, [sortField, sortDir, posFilter, search]);
+
+  const SortArrow = ({ field }) => {
+    if (field !== sortField) return null;
+    return <span className="sort-arrow">{sortDir === 'asc' ? '\u25B2' : '\u25BC'}</span>;
+  };
+
+  return (
+    <div className="ff-card">
+      <div className="ff-card-top-accent" style={{ background: 'var(--brand-tan)' }} />
+      <div className="ff-card-header">
+        <h2>Player Rankings</h2>
+        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{filtered.length} players</span>
+      </div>
+      <div className="ff-tabs">
+        {positions.map(pos => (
+          <button key={pos}
+            className={`ff-tab ${posFilter === pos ? 'active' : ''}`}
+            onClick={() => setPosFilter(pos)}
+            style={posFilter === pos && pos !== 'ALL' ? { borderBottomColor: `var(${POS_COLORS[pos]})`, color: `var(${POS_COLORS[pos]})` } : {}}
+          >{pos}</button>
+        ))}
+      </div>
+      <div style={{ padding: '12px 20px 0' }}>
+        <input className="ff-search-input" type="text" placeholder="Search players..." value={search} onChange={e => setSearch(e.target.value)} />
+      </div>
+      <div className="ff-card-body" style={{ padding: '12px 0 0' }}>
+        <div className="ff-table-wrap">
+          <table className="ff-table">
+            <thead>
+              <tr>
+                <th style={{ width: 44 }} onClick={() => handleSort('pts')}>#</th>
+                <th onClick={() => handleSort('name')} className={sortField === 'name' ? 'sort-active' : ''}>Player <SortArrow field="name" /></th>
+                <th style={{ width: 56 }}>POS</th>
+                <th style={{ width: 64 }} onClick={() => handleSort('pts')} className={sortField === 'pts' ? 'sort-active' : ''}>PTS <SortArrow field="pts" /></th>
+                <th style={{ width: 64 }} onClick={() => handleSort('proj')} className={sortField === 'proj' ? 'sort-active' : ''}>PROJ <SortArrow field="proj" /></th>
+                <th style={{ width: 64 }} onClick={() => handleSort('avg')} className={sortField === 'avg' ? 'sort-active' : ''}>AVG <SortArrow field="avg" /></th>
+                <th style={{ width: 64 }}>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((p, i) => (
+                <tr key={p.id}>
+                  <td style={{ fontWeight: 600, color: 'var(--text-muted)' }}>{i + 1}</td>
+                  <td>
+                    <span className="player-name">{p.name}</span>
+                    <span className="player-team">{p.team}</span>
+                  </td>
+                  <td><PosBadge pos={p.pos} /></td>
+                  <td style={{ fontWeight: 600 }}>{p.pts}</td>
+                  <td style={{ color: 'var(--text-muted)' }}>{p.proj}</td>
+                  <td style={{ color: 'var(--text-muted)' }}>{p.avg}</td>
+                  <td><StatusLabel status={p.status} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ===== NEWS FEED ===== */
+function NewsFeed() {
+  const [tab, setTab] = useState('all');
+  const [showAll, setShowAll] = useState(false);
+  const tabs = ['all', 'injury', 'trade', 'waiver', 'transaction', 'news'];
+
+  const filtered = useMemo(() => {
+    const items = tab === 'all' ? NEWS : NEWS.filter(n => n.type === tab);
+    return showAll ? items : items.slice(0, 5);
+  }, [tab, showAll]);
+
+  const totalCount = tab === 'all' ? NEWS.length : NEWS.filter(n => n.type === tab).length;
+
+  return (
+    <div className="ff-card">
+      <div className="ff-card-top-accent" style={{ background: 'var(--charcoal-slate)' }} />
+      <div className="ff-card-header">
+        <h2>News & Alerts</h2>
+      </div>
+      <div className="ff-tabs">
+        {tabs.map(t => (
+          <button key={t} className={`ff-tab ${tab === t ? 'active' : ''}`} onClick={() => { setTab(t); setShowAll(false); }}>
+            {t.charAt(0).toUpperCase() + t.slice(1)}
+          </button>
+        ))}
+      </div>
+      <div>
+        {filtered.map(item => (
+          <div className="ff-news-item" key={item.id}>
+            <div className="ff-news-icon">{item.icon}</div>
+            <div className="ff-news-content">
+              <div className="ff-news-title">
+                {item.severity && <InjuryDot status={item.severity} />}
+                {item.title}
+              </div>
+              <div className="ff-news-body">{item.body}</div>
+              <div className="ff-news-meta">
+                {item.pos && <PosBadge pos={item.pos} />}
+                <span className="ff-news-time">{item.time}</span>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+      {!showAll && totalCount > 5 && (
+        <div style={{ padding: '12px 20px', textAlign: 'center' }}>
+          <button className="ff-btn ff-btn-secondary" onClick={() => setShowAll(true)}>
+            Show All ({totalCount})
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ===== LEAGUE STANDINGS ===== */
+function StandingsCard() {
+  return (
+    <div className="ff-sidebar-card">
+      <div className="ff-sidebar-card-header">
+        <h3>League Standings</h3>
+        <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>Week 12</span>
+      </div>
+      <div className="ff-sidebar-card-body" style={{ padding: 0 }}>
+        <table className="ff-standings-table">
+          <thead>
+            <tr>
+              <th style={{ width: 28 }}>#</th>
+              <th>Team</th>
+              <th>W-L</th>
+              <th>PF</th>
+              <th>Streak</th>
+            </tr>
+          </thead>
+          <tbody>
+            {TEAMS.map((team, i) => {
+              const zone = i < 4 ? 'playoff-zone' : i >= 10 ? 'danger-zone' : '';
+              const isUser = team.id === USER_TEAM_ID;
+              return (
+                <tr key={team.id} className={`${zone} ${isUser ? 'user-team' : ''}`}>
+                  <td style={{ fontWeight: 600, color: 'var(--text-muted)', fontSize: 11 }}>{i + 1}</td>
+                  <td style={{ fontWeight: isUser ? 700 : 500 }}>
+                    <span style={{ marginRight: 4 }}>{team.logo}</span>
+                    {team.abbr}
+                  </td>
+                  <td>{team.wins}-{team.losses}</td>
+                  <td>{team.pf.toFixed(1)}</td>
+                  <td>
+                    <span className={`ff-streak ${team.streak.startsWith('W') ? 'hot' : 'cold'}`}>
+                      {team.streak}
+                    </span>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+/* ===== WAIVER WIRE ===== */
+function WaiverWireCard() {
+  return (
+    <div className="ff-sidebar-card">
+      <div className="ff-sidebar-card-header">
+        <h3>Top Available</h3>
+        <span className="ff-badge-count">{WAIVERS.length}</span>
+      </div>
+      <div className="ff-sidebar-card-body">
+        {WAIVERS.map(w => (
+          <div className="ff-waiver-row" key={w.playerId}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <PosBadge pos={w.pos} />
+            </div>
+            <div className="ff-waiver-info">
+              <div className="ff-waiver-name">{w.name} <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{w.team}</span></div>
+              <div className="ff-waiver-detail">{w.reason}</div>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
+              <div className="ff-waiver-pts">{w.proj}</div>
+              <span className={`ff-trend ${w.trend}`}>
+                {w.trend === 'up' ? '\u25B2' : '\u25BC'} {w.trendPct}%
+              </span>
+            </div>
+            <button className="ff-btn ff-btn-copper ff-btn-sm">+ Add</button>
+          </div>
+        ))}
+        <div style={{ textAlign: 'center', paddingTop: 8 }}>
+          <button className="ff-btn ff-btn-secondary ff-btn-sm" style={{ color: 'var(--copper)' }}>View All Free Agents</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ===== TRADE CENTER ===== */
+function TradeCenterCard({ trades, onOpenTradeModal }) {
+  const pending = trades.filter(t => t.status === 'pending');
+  const incoming = pending.filter(t => t.toTeamId === USER_TEAM_ID);
+
+  return (
+    <div className="ff-sidebar-card">
+      <div className="ff-sidebar-card-header">
+        <h3>Trade Center</h3>
+        <span className="ff-badge-count">{pending.length}</span>
+      </div>
+      <div className="ff-sidebar-card-body">
+        {pending.slice(0, 3).map(trade => {
+          const fromTeam = getTeamById(trade.fromTeamId);
+          const toTeam = getTeamById(trade.toTeamId);
+          const isIncoming = trade.toTeamId === USER_TEAM_ID;
+          const { fairness } = calcFairness(trade.offeringPlayerIds, trade.requestingPlayerIds);
+          const color = fairness >= 75 ? 'var(--success-green)' : fairness >= 50 ? 'var(--warning-amber)' : 'var(--red)';
+          return (
+            <div className="ff-trade" key={trade.id}>
+              <span className="ff-trade-status pending">pending</span>
+              <span style={{ fontSize: 10, color: 'var(--text-muted)', marginLeft: 8 }}>
+                {isIncoming ? `${fromTeam?.name} \u2192 You` : `You \u2192 ${toTeam?.name}`}
+              </span>
+              <div className="ff-trade-sides">
+                <div className="ff-trade-side">
+                  <h5>{isIncoming ? 'You Receive' : 'You Send'}</h5>
+                  {trade.offeringPlayerIds.map(id => { const p = getPlayerById(id); return p ? <div className="ff-trade-player" key={id}><PosBadge pos={p.pos} /> {p.name}</div> : null; })}
+                </div>
+                <div className="ff-trade-side">
+                  <h5>{isIncoming ? 'They Want' : 'You Receive'}</h5>
+                  {trade.requestingPlayerIds.map(id => { const p = getPlayerById(id); return p ? <div className="ff-trade-player" key={id}><PosBadge pos={p.pos} /> {p.name}</div> : null; })}
+                </div>
+              </div>
+              <div className="ff-fairness-bar"><div className="ff-fairness-fill" style={{ width: fairness + '%', background: color }} /></div>
+              <div className="ff-trade-meta">
+                <span className="ff-trade-expire">{timeUntil(trade.expiresAt)}</span>
+              </div>
+            </div>
+          );
+        })}
+        {pending.length === 0 && <div style={{ padding: 8, fontSize: 11, color: 'var(--text-muted)', textAlign: 'center' }}>No active trades</div>}
+        <button className="ff-btn ff-btn-copper" style={{ width: '100%', marginTop: 10 }} onClick={onOpenTradeModal}>
+          {'\u{1F91D}'} Open Trade Center{incoming.length > 0 ? ` (${incoming.length} new)` : ''}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ===== POWER RANKINGS ===== */
+function PowerRankingsCard() {
+  const sorted = [...TEAMS].sort((a, b) => b.power - a.power);
+  const maxPower = sorted[0].power;
+
+  return (
+    <div className="ff-sidebar-card">
+      <div className="ff-sidebar-card-header">
+        <h3>Power Rankings</h3>
+      </div>
+      <div className="ff-sidebar-card-body">
+        {sorted.map((team, i) => (
+          <div className="ff-power-row" key={team.id}>
+            <span className="ff-power-rank">{i + 1}</span>
+            <span className="ff-power-name" style={{ fontWeight: team.id === USER_TEAM_ID ? 700 : 500 }}>
+              {team.logo} {team.abbr}
+            </span>
+            <div className="ff-power-bar-bg">
+              <div className={`ff-power-bar-fill ${team.id === USER_TEAM_ID ? 'user' : ''}`}
+                style={{ width: `${(team.power / maxPower) * 100}%` }} />
+            </div>
+            <span className="ff-power-score">{team.power}</span>
+          </div>
+        ))}
+        <div style={{ marginTop: 12 }}>
+          <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 6, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            Your Last 5 Weeks
+          </div>
+          <div className="ff-sparkline">
+            {[108, 124, 98, 132, 118].map((v, i) => (
+              <div key={i} className={`ff-spark-bar ${i === 3 ? 'highlight' : ''}`}
+                style={{ height: `${(v / 140) * 100}%` }} />
+            ))}
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: 'var(--muted-grey)', marginTop: 2 }}>
+            <span>Wk 8</span><span>Wk 9</span><span>Wk 10</span><span>Wk 11</span><span>Wk 12</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ===== LEAGUE SETTINGS MODAL ===== */
+function LeagueSettingsModal({ isOpen, onClose }) {
+  const [activeTab, setActiveTab] = useState('scoring');
+  const [selectedPreset, setSelectedPreset] = useState('standard');
+  const [scoring, setScoring] = useState(() => deepClone(SCORING_PRESETS.standard));
+  const [leagueType, setLeagueType] = useState('redraft');
+  const [leagueSize, setLeagueSize] = useState(12);
+  const [roster, setRoster] = useState(() => ({ ...ROSTER_PRESETS.standard }));
+  const [bonuses, setBonuses] = useState(() => ({ ...SCORING_PRESETS.standard.bonuses }));
+  const [configName, setConfigName] = useState('My Custom League');
+  const [savedConfigs, setSavedConfigs] = useState(() => {
+    try { const s = localStorage.getItem('ff-saved-configs'); return s ? JSON.parse(s) : []; }
+    catch { return []; }
+  });
+  const [hasModified, setHasModified] = useState(false);
+
+  const tabs = [
+    { id: 'scoring', label: 'Scoring System' },
+    { id: 'roster', label: 'Roster' },
+    { id: 'league', label: 'League Type' },
+    { id: 'bonuses', label: 'Bonuses' },
+    { id: 'saved', label: 'Saved Configs' },
+  ];
+
+  const applyPreset = (presetId) => {
+    const preset = SCORING_PRESETS[presetId];
+    if (!preset) return;
+    setSelectedPreset(presetId);
+    setScoring(deepClone(preset));
+    setBonuses({ ...preset.bonuses });
+    setHasModified(false);
+  };
+
+  const applyLeagueType = (typeId) => {
+    setLeagueType(typeId);
+    const rosterKey = typeId === 'idpLeague' ? 'idp' : typeId === 'twoQb' ? 'twoQb'
+      : typeId === 'superflex' ? 'superflex' : typeId === 'bestBall' ? 'bestBall'
+      : typeId === 'dynasty' ? 'dynasty' : typeId === 'keeper' ? 'keeper' : 'standard';
+    setRoster({ ...ROSTER_PRESETS[rosterKey] });
+    if (typeId === 'idpLeague' && selectedPreset !== 'idp') applyPreset('idp');
+    if (typeId === 'superflex' && selectedPreset === 'standard') applyPreset('halfPpr');
+  };
+
+  const updateScoring = (category, field, value) => {
+    setScoring(prev => {
+      const next = deepClone(prev);
+      if (!next[category]) next[category] = {};
+      next[category][field] = parseFloat(value) || 0;
+      return next;
+    });
+    setHasModified(true);
+  };
+
+  const updateRoster = (slot, value) => {
+    setRoster(prev => ({ ...prev, [slot]: Math.max(0, parseInt(value) || 0) }));
+  };
+
+  const updateBonus = (key, value) => {
+    setBonuses(prev => ({ ...prev, [key]: parseFloat(value) || 0 }));
+    setHasModified(true);
+  };
+
+  const saveConfig = () => {
+    const config = {
+      id: Date.now().toString(),
+      name: configName,
+      preset: hasModified ? 'custom' : selectedPreset,
+      leagueType, leagueSize, scoring: deepClone(scoring), roster: { ...roster }, bonuses: { ...bonuses },
+      savedAt: new Date().toLocaleDateString(),
+    };
+    const updated = [...savedConfigs, config];
+    setSavedConfigs(updated);
+    localStorage.setItem('ff-saved-configs', JSON.stringify(updated));
+  };
+
+  const loadConfig = (config) => {
+    setConfigName(config.name);
+    setSelectedPreset(config.preset);
+    setScoring(deepClone(config.scoring));
+    setLeagueType(config.leagueType);
+    setLeagueSize(config.leagueSize);
+    setRoster({ ...config.roster });
+    setBonuses({ ...config.bonuses });
+    setHasModified(config.preset === 'custom');
+    setActiveTab('scoring');
+  };
+
+  const deleteConfig = (id) => {
+    const updated = savedConfigs.filter(c => c.id !== id);
+    setSavedConfigs(updated);
+    localStorage.setItem('ff-saved-configs', JSON.stringify(updated));
+  };
+
+  const totalStarters = Object.entries(roster).filter(([k]) => !['BN','IR','TAXI'].includes(k)).reduce((s, [, v]) => s + v, 0);
+  const totalRoster = Object.values(roster).reduce((s, v) => s + v, 0);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="ff-modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="ff-modal">
+        <div className="ff-modal-header">
+          <h2>{'\u{2699}\u{FE0F}'} League Configuration</h2>
+          <button className="ff-modal-close" onClick={onClose}>{'\u{2715}'}</button>
+        </div>
+
+        <div className="ff-settings-nav">
+          {tabs.map(t => (
+            <button key={t.id} className={`ff-settings-tab ${activeTab === t.id ? 'active' : ''}`}
+              onClick={() => setActiveTab(t.id)}>{t.label}
+              {t.id === 'saved' && savedConfigs.length > 0 && (
+                <span className="ff-badge-count" style={{ marginLeft: 6, transform: 'scale(0.85)' }}>{savedConfigs.length}</span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        <div className="ff-modal-body">
+
+          {/* ===== SCORING TAB ===== */}
+          {activeTab === 'scoring' && (
+            <div className="ff-settings-panel">
+              <div className="ff-settings-section">
+                <div className="ff-settings-section-title">
+                  <span className="section-icon" style={{ background: 'var(--tan-15)', color: 'var(--copper)' }}>{'\u{1F3C8}'}</span>
+                  Scoring Preset
+                </div>
+                <div className="ff-preset-grid">
+                  {Object.values(SCORING_PRESETS).map(p => (
+                    <div key={p.id} className={`ff-preset-card ${selectedPreset === p.id && !hasModified ? 'selected' : ''}`}
+                      onClick={() => applyPreset(p.id)}>
+                      <div className="ff-preset-card-name">{p.name}</div>
+                      <div className="ff-preset-card-desc">{p.desc}</div>
+                      <span className="ff-preset-card-badge" style={{ background: 'var(--tan-10)', color: p.badgeColor }}>{p.badge}</span>
+                    </div>
+                  ))}
+                  {hasModified && (
+                    <div className="ff-preset-card selected" style={{ borderStyle: 'dashed' }}>
+                      <div className="ff-preset-card-name">Custom</div>
+                      <div className="ff-preset-card-desc">Modified from {SCORING_PRESETS[selectedPreset]?.name || 'preset'}. Your custom point values are active.</div>
+                      <span className="ff-preset-card-badge" style={{ background: 'var(--tan-10)', color: 'var(--rust)' }}>Modified</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="ff-settings-section">
+                <div className="ff-settings-section-title">
+                  <span className="section-icon" style={{ background: 'var(--tan-15)', color: 'var(--copper)' }}>{'\u{270F}\u{FE0F}'}</span>
+                  Scoring Values
+                  {hasModified && <span style={{ fontSize: 10, color: 'var(--copper)', fontWeight: 500, marginLeft: 'auto' }}>Modified</span>}
+                </div>
+                <div className="ff-score-grid">
+                  {['passing', 'rushing', 'receiving', 'kicking', 'dst', ...(scoring.idp ? ['idp'] : [])].map(cat => (
+                    <div className="ff-score-category" key={cat}>
+                      <div className="ff-score-category-title">
+                        <span style={{ color: CATEGORY_COLORS[cat] }}>{CATEGORY_ICONS[cat]}</span>
+                        {cat === 'dst' ? 'Defense / ST' : cat === 'idp' ? 'IDP' : cat.charAt(0).toUpperCase() + cat.slice(1)}
+                      </div>
+                      {scoring[cat] && Object.entries(scoring[cat]).map(([field, value]) => {
+                        const meta = SCORING_FIELD_LABELS[cat]?.[field];
+                        if (!meta) return null;
+                        const presetVal = SCORING_PRESETS[selectedPreset]?.[cat]?.[field];
+                        const isModified = presetVal !== undefined && presetVal !== value;
+                        return (
+                          <div className="ff-score-row" key={field}>
+                            <span className="ff-score-label">{meta.label}</span>
+                            <div className="ff-score-input-wrap">
+                              <input className={`ff-score-input ${isModified ? 'modified' : ''}`}
+                                type="number" step="0.01" value={value}
+                                onChange={e => updateScoring(cat, field, e.target.value)} />
+                              <span className="ff-score-unit">{meta.unit}</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ===== ROSTER TAB ===== */}
+          {activeTab === 'roster' && (
+            <div className="ff-settings-panel">
+              <div className="ff-settings-section">
+                <div className="ff-settings-section-title">
+                  <span className="section-icon" style={{ background: 'var(--tan-15)', color: 'var(--copper)' }}>{'\u{1F465}'}</span>
+                  League Size
+                </div>
+                <div className="ff-size-selector">
+                  {[6, 8, 10, 12, 14, 16, 18, 20].map(n => (
+                    <button key={n} className={`ff-size-btn ${leagueSize === n ? 'selected' : ''}`}
+                      onClick={() => setLeagueSize(n)}>{n}</button>
+                  ))}
+                </div>
+                <div style={{ marginTop: 8, fontSize: 11, color: 'var(--text-muted)' }}>
+                  {leagueSize} teams &middot; {totalStarters} starters &middot; {totalRoster} total roster
+                </div>
+              </div>
+
+              <div className="ff-settings-section">
+                <div className="ff-settings-section-title">
+                  <span className="section-icon" style={{ background: 'var(--tan-15)', color: 'var(--copper)' }}>{'\u{1F4CB}'}</span>
+                  Starting Lineup
+                </div>
+                <div className="ff-roster-grid">
+                  {Object.entries(roster).filter(([k]) => !['BN','IR','TAXI'].includes(k)).map(([slot, count]) => (
+                    <div className="ff-roster-slot" key={slot}>
+                      <span className="ff-roster-slot-label">
+                        {POS_COLORS[slot] ? <PosBadge pos={slot} /> : <span style={{ fontSize: 11, fontWeight: 700 }}>{slot}</span>}
+                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{ROSTER_SLOT_LABELS[slot] ? ROSTER_SLOT_LABELS[slot].split(' ')[0] : slot}</span>
+                      </span>
+                      <input className="ff-roster-slot-input" type="number" min="0" max="9"
+                        value={count} onChange={e => updateRoster(slot, e.target.value)} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="ff-settings-section">
+                <div className="ff-settings-section-title">
+                  <span className="section-icon" style={{ background: 'var(--tan-15)', color: 'var(--copper)' }}>{'\u{1FA91}'}</span>
+                  Bench & Reserve
+                </div>
+                <div className="ff-roster-grid">
+                  {Object.entries(roster).filter(([k]) => ['BN','IR','TAXI'].includes(k)).map(([slot, count]) => (
+                    <div className="ff-roster-slot" key={slot}>
+                      <span className="ff-roster-slot-label">
+                        <span style={{ fontSize: 11, fontWeight: 700 }}>{slot}</span>
+                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{ROSTER_SLOT_LABELS[slot]}</span>
+                      </span>
+                      <input className="ff-roster-slot-input" type="number" min="0" max="30"
+                        value={count} onChange={e => updateRoster(slot, e.target.value)} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ marginTop: 12, padding: 12, background: 'var(--tan-10)', borderRadius: 'var(--radius-md)', fontSize: 12, color: 'var(--text-muted)' }}>
+                <strong style={{ color: 'var(--text)' }}>Roster Summary:</strong> {totalStarters} starters + {roster.BN || 0} bench + {roster.IR || 0} IR{roster.TAXI ? ` + ${roster.TAXI} taxi` : ''} = <strong style={{ color: 'var(--copper)' }}>{totalRoster} total</strong>
+              </div>
+            </div>
+          )}
+
+          {/* ===== LEAGUE TYPE TAB ===== */}
+          {activeTab === 'league' && (
+            <div className="ff-settings-panel">
+              <div className="ff-settings-section">
+                <div className="ff-settings-section-title">
+                  <span className="section-icon" style={{ background: 'var(--tan-15)', color: 'var(--copper)' }}>{'\u{1F3C6}'}</span>
+                  League Format
+                </div>
+                <div className="ff-league-type-grid">
+                  {LEAGUE_TYPES.map(lt => (
+                    <div key={lt.id} className={`ff-league-type-card ${leagueType === lt.id ? 'selected' : ''}`}
+                      onClick={() => applyLeagueType(lt.id)}>
+                      <div className="ff-league-type-card-icon">{lt.icon}</div>
+                      <div className="ff-league-type-card-name">{lt.name}</div>
+                      <div className="ff-league-type-card-desc">{lt.desc}</div>
+                      <div style={{ marginTop: 6, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                        {lt.tags.map(tag => (
+                          <span key={tag} style={{
+                            fontSize: 9, fontWeight: 600, padding: '1px 6px', borderRadius: 'var(--radius-full)',
+                            background: 'var(--tan-10)', color: 'var(--copper)', textTransform: 'uppercase', letterSpacing: '0.03em',
+                          }}>{tag}</span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ marginTop: 16, padding: 14, background: 'var(--tan-10)', borderRadius: 'var(--radius-md)', fontSize: 12 }}>
+                <strong>{LEAGUE_TYPES.find(l => l.id === leagueType)?.icon} {LEAGUE_TYPES.find(l => l.id === leagueType)?.name}</strong>
+                <span style={{ color: 'var(--text-muted)', marginLeft: 8 }}>{LEAGUE_TYPES.find(l => l.id === leagueType)?.desc}</span>
+                {(leagueType === 'twoQb' && leagueSize > 10) && (
+                  <div style={{ marginTop: 8, padding: '6px 10px', background: 'var(--warning-amber-light)', borderRadius: 'var(--radius-sm)', color: 'var(--warning-amber)', fontWeight: 600, fontSize: 11 }}>
+                    {'\u{26A0}\u{FE0F}'} 2QB leagues with {leagueSize}+ teams can lead to QB scarcity. Consider SuperFlex instead.
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ===== BONUSES TAB ===== */}
+          {activeTab === 'bonuses' && (
+            <div className="ff-settings-panel">
+              <div className="ff-settings-section">
+                <div className="ff-settings-section-title">
+                  <span className="section-icon" style={{ background: 'var(--tan-15)', color: 'var(--copper)' }}>{'\u{2B50}'}</span>
+                  Performance Bonuses
+                </div>
+                <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 14 }}>
+                  Set bonus points awarded for milestone performances. Leave at 0 to disable.
+                </p>
+                <div className="ff-bonus-grid">
+                  {Object.entries(BONUS_LABELS).map(([key, label]) => (
+                    <div className="ff-bonus-row" key={key}>
+                      <span className="ff-bonus-label">{label}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <input className="ff-bonus-input" type="number" step="0.5" min="0"
+                          value={bonuses[key] || 0}
+                          onChange={e => updateBonus(key, e.target.value)} />
+                        <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>pts</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="ff-settings-section">
+                <div className="ff-settings-section-title">
+                  <span className="section-icon" style={{ background: 'var(--tan-15)', color: 'var(--copper)' }}>{'\u{1F4A1}'}</span>
+                  Common Bonus Presets
+                </div>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <button className="ff-btn ff-btn-secondary" onClick={() => setBonuses({ rush100: 3, rec100: 3, pass300: 3, rush200: 5, rec200: 5, pass400: 5, td40plus: 1, td50plus: 2 })}>
+                    Standard Bonuses
+                  </button>
+                  <button className="ff-btn ff-btn-secondary" onClick={() => setBonuses({ rush100: 5, rec100: 5, pass300: 3, rush200: 10, rec200: 10, pass400: 5, td40plus: 2, td50plus: 3 })}>
+                    Big Play Emphasis
+                  </button>
+                  <button className="ff-btn ff-btn-secondary" onClick={() => setBonuses({ rush100: 0, rec100: 0, pass300: 0, rush200: 0, rec200: 0, pass400: 0, td40plus: 0, td50plus: 0 })}>
+                    No Bonuses
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ===== SAVED CONFIGS TAB ===== */}
+          {activeTab === 'saved' && (
+            <div className="ff-settings-panel">
+              <div className="ff-settings-section">
+                <div className="ff-settings-section-title">
+                  <span className="section-icon" style={{ background: 'var(--tan-15)', color: 'var(--copper)' }}>{'\u{1F4BE}'}</span>
+                  Save Current Configuration
+                </div>
+                <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <input className="ff-config-name-input" type="text" placeholder="Configuration name..."
+                    value={configName} onChange={e => setConfigName(e.target.value)} />
+                  <button className="ff-btn ff-btn-copper" onClick={saveConfig}>Save Config</button>
+                </div>
+                <div style={{ marginTop: 8, fontSize: 11, color: 'var(--text-muted)' }}>
+                  {hasModified ? 'Custom' : SCORING_PRESETS[selectedPreset]?.name} scoring &middot; {LEAGUE_TYPES.find(l => l.id === leagueType)?.name} &middot; {leagueSize} teams
+                </div>
+              </div>
+
+              <div className="ff-settings-section">
+                <div className="ff-settings-section-title">
+                  <span className="section-icon" style={{ background: 'var(--tan-15)', color: 'var(--copper)' }}>{'\u{1F4C2}'}</span>
+                  Saved Configurations
+                </div>
+                {savedConfigs.length === 0 ? (
+                  <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
+                    No saved configurations yet. Set up your scoring and league type, then save it here.
+                  </div>
+                ) : (
+                  <div className="ff-saved-configs">
+                    {savedConfigs.map(config => (
+                      <div className="ff-saved-config-row" key={config.id}>
+                        <div className="ff-saved-config-info">
+                          <div className="ff-saved-config-name">{config.name}</div>
+                          <div className="ff-saved-config-meta">
+                            {config.preset === 'custom' ? 'Custom' : SCORING_PRESETS[config.preset]?.name || config.preset} scoring &middot; {LEAGUE_TYPES.find(l => l.id === config.leagueType)?.name || config.leagueType} &middot; {config.leagueSize} teams &middot; Saved {config.savedAt}
+                          </div>
+                        </div>
+                        <div className="ff-saved-config-actions">
+                          <button className="ff-btn ff-btn-copper ff-btn-sm" onClick={() => loadConfig(config)}>Load</button>
+                          <button className="ff-btn ff-btn-danger ff-btn-sm" onClick={() => deleteConfig(config.id)}>Delete</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="ff-modal-footer">
+          <div className="ff-modal-footer-left">
+            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+              {hasModified ? 'Custom' : SCORING_PRESETS[selectedPreset]?.name} &middot; {LEAGUE_TYPES.find(l => l.id === leagueType)?.name} &middot; {leagueSize} teams &middot; {totalStarters} starters
+            </span>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="ff-btn ff-btn-secondary" onClick={() => { applyPreset('standard'); setLeagueType('redraft'); setLeagueSize(12); setRoster({...ROSTER_PRESETS.standard}); }}>
+              Reset Defaults
+            </button>
+            <button className="ff-btn ff-btn-copper" onClick={onClose}>Apply & Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ===== HISTORICAL STATS ===== */
+function HistoricalStats() {
+  const [year, setYear] = useState(2024);
+  const [pos, setPos] = useState('QB');
+  const [search, setSearch] = useState('');
+  const [sortField, setSortField] = useState('fpts');
+  const [sortDir, setSortDir] = useState('desc');
+  const years = [2024, 2023, 2022];
+  const positions = ['QB', 'RB', 'WR', 'TE'];
+
+  const data = typeof HISTORICAL_DATA !== 'undefined' ? HISTORICAL_DATA : null;
+  if (!data) return null;
+
+  const columns = {
+    QB: [
+      { key: 'g', label: 'G', w: 36 },
+      { key: 'cmp', label: 'CMP', w: 48 },
+      { key: 'att', label: 'ATT', w: 48 },
+      { key: 'passYds', label: 'PASS YDS', w: 72 },
+      { key: 'passTd', label: 'PASS TD', w: 60 },
+      { key: 'int', label: 'INT', w: 42 },
+      { key: 'rushYds', label: 'RUSH YDS', w: 72 },
+      { key: 'rushTd', label: 'RUSH TD', w: 60 },
+      { key: 'fpts', label: 'FPTS', w: 60 },
+    ],
+    RB: [
+      { key: 'g', label: 'G', w: 36 },
+      { key: 'rushAtt', label: 'ATT', w: 48 },
+      { key: 'rushYds', label: 'RUSH YDS', w: 72 },
+      { key: 'rushTd', label: 'RUSH TD', w: 60 },
+      { key: 'rec', label: 'REC', w: 42 },
+      { key: 'recYds', label: 'REC YDS', w: 64 },
+      { key: 'recTd', label: 'REC TD', w: 52 },
+      { key: 'fpts', label: 'FPTS', w: 60 },
+    ],
+    WR: [
+      { key: 'g', label: 'G', w: 36 },
+      { key: 'rec', label: 'REC', w: 42 },
+      { key: 'recYds', label: 'REC YDS', w: 72 },
+      { key: 'recTd', label: 'REC TD', w: 52 },
+      { key: 'rushYds', label: 'RUSH YDS', w: 72 },
+      { key: 'rushTd', label: 'RUSH TD', w: 60 },
+      { key: 'fpts', label: 'FPTS', w: 60 },
+    ],
+    TE: [
+      { key: 'g', label: 'G', w: 36 },
+      { key: 'rec', label: 'REC', w: 48 },
+      { key: 'recYds', label: 'REC YDS', w: 72 },
+      { key: 'recTd', label: 'REC TD', w: 60 },
+      { key: 'fpts', label: 'FPTS', w: 60 },
+    ],
+  };
+
+  const handleSort = (field) => {
+    if (field === sortField) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    else { setSortField(field); setSortDir('desc'); }
+  };
+
+  const players = useMemo(() => {
+    const raw = data[year]?.[pos] || [];
+    return raw
+      .filter(p => p.name.toLowerCase().includes(search.toLowerCase()) || p.team.toLowerCase().includes(search.toLowerCase()))
+      .sort((a, b) => {
+        const av = a[sortField] ?? 0;
+        const bv = b[sortField] ?? 0;
+        if (typeof av === 'string') return sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
+        return sortDir === 'asc' ? av - bv : bv - av;
+      });
+  }, [year, pos, search, sortField, sortDir]);
+
+  const SortArrow = ({ field }) => {
+    if (field !== sortField) return null;
+    return <span className="sort-arrow">{sortDir === 'asc' ? '\u25B2' : '\u25BC'}</span>;
+  };
+
+  return (
+    <div className="ff-card ff-historical">
+      <div className="ff-card-top-accent" style={{ background: 'var(--rust)' }} />
+      <div className="ff-card-header">
+        <h2>{'\u{1F4CA}'} Historical Performance</h2>
+        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>2022-2024 Real NFL Data</span>
+      </div>
+      <div className="ff-year-tabs">
+        {years.map(y => (
+          <button key={y} className={`ff-year-tab ${year === y ? 'active' : ''}`}
+            onClick={() => { setYear(y); setSearch(''); setSortField('fpts'); setSortDir('desc'); }}>{y}</button>
+        ))}
+      </div>
+      <div className="ff-hist-controls">
+        <div className="ff-hist-pos-tabs">
+          {positions.map(p => (
+            <button key={p} className={`ff-hist-pos-tab ${pos === p ? 'active' : ''}`}
+              onClick={() => { setPos(p); setSortField('fpts'); setSortDir('desc'); }}>{p}</button>
+          ))}
+        </div>
+        <input className="ff-hist-search" type="text" placeholder="Search player or team..."
+          value={search} onChange={e => setSearch(e.target.value)} />
+        <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 'auto' }}>
+          {players.length} players &middot; Standard Scoring
+        </span>
+      </div>
+      <div className="ff-table-wrap" style={{ maxHeight: 520 }}>
+        <table className="ff-table">
+          <thead>
+            <tr>
+              <th style={{ width: 36 }}>#</th>
+              <th onClick={() => handleSort('name')} className={sortField === 'name' ? 'sort-active' : ''}>
+                Player <SortArrow field="name" />
+              </th>
+              {columns[pos].map(col => (
+                <th key={col.key} style={{ width: col.w }} onClick={() => handleSort(col.key)}
+                  className={sortField === col.key ? 'sort-active' : ''}>
+                  {col.label} <SortArrow field={col.key} />
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {players.map((p, i) => (
+              <tr key={p.name}>
+                <td><span className={`ff-hist-rank ${i < 3 ? 'top3' : ''}`}>{i + 1}</span></td>
+                <td>
+                  <span className="player-name">{p.name}</span>
+                  <span className="player-team">{p.team}</span>
+                </td>
+                {columns[pos].map(col => (
+                  <td key={col.key} style={{
+                    fontWeight: col.key === 'fpts' ? 700 : 400,
+                    color: col.key === 'fpts' ? 'var(--copper)' : undefined,
+                  }}>
+                    {p[col.key] !== undefined ? (typeof p[col.key] === 'number' && col.key === 'fpts' ? p[col.key].toFixed(1) : p[col.key].toLocaleString()) : '-'}
+                  </td>
+                ))}
+              </tr>
+            ))}
+            {players.length === 0 && (
+              <tr><td colSpan={columns[pos].length + 2} style={{ textAlign: 'center', padding: 24, color: 'var(--text-muted)' }}>No results found</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+/* ===== TRADE MODULE MODAL ===== */
+function TradeAnalyzerBar({ sendIds, receiveIds }) {
+  const { fairness, sideA, sideB, assessment } = calcFairness(sendIds, receiveIds);
+  const total = Math.max(sideA + sideB, 1);
+  const leftPct = (sideA / total) * 100;
+  const rightPct = (sideB / total) * 100;
+  const cls = fairness >= 75 ? 'fair' : fairness >= 50 ? 'uneven' : 'lopsided';
+  return (
+    <div className="ff-tm-analyzer">
+      <div className="ff-tm-analyzer-labels">
+        <span>You: {sideA} pts</span>
+        <span>Them: {sideB} pts</span>
+      </div>
+      <div className="ff-tm-analyzer-bar">
+        <div className="ff-tm-analyzer-fill-left" style={{ width: leftPct + '%' }} />
+        <div className="ff-tm-analyzer-fill-right" style={{ width: rightPct + '%' }} />
+      </div>
+      <div className={`ff-tm-fairness-badge ${cls}`}>{fairness} — {assessment}</div>
+    </div>
+  );
+}
+
+function TradePlayerChip({ playerId, onRemove }) {
+  const p = getPlayerById(playerId);
+  if (!p) return null;
+  return (
+    <div className="ff-tm-zone-player">
+      <PosBadge pos={p.pos} />
+      <span style={{ fontWeight: 600 }}>{p.name}</span>
+      <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{PLAYER_VALUES[p.id]}</span>
+      {onRemove && <button className="remove-btn" onClick={() => onRemove(playerId)}>{'\u2715'}</button>}
+    </div>
+  );
+}
+
+function TradeModuleModal({ isOpen, onClose, trades, setTrades, teamRosters, setTeamRosters, tradeBlock, setTradeBlock, tradeHistory, setTradeHistory }) {
+  const [activeTab, setActiveTab] = useState('propose');
+  const [partnerTeamId, setPartnerTeamId] = useState(null);
+  const [sendIds, setSendIds] = useState([]);
+  const [receiveIds, setReceiveIds] = useState([]);
+  const [message, setMessage] = useState('');
+  const [expiresIn, setExpiresIn] = useState(172800000);
+  const [confirmId, setConfirmId] = useState(null);
+  const [historyFilter, setHistoryFilter] = useState('all');
+  const [expandedHistory, setExpandedHistory] = useState(null);
+  const [analyzerTeamA, setAnalyzerTeamA] = useState(USER_TEAM_ID);
+  const [analyzerTeamB, setAnalyzerTeamB] = useState(null);
+  const [analyzerSendIds, setAnalyzerSendIds] = useState([]);
+  const [analyzerReceiveIds, setAnalyzerReceiveIds] = useState([]);
+
+  const tabs = [
+    { id: 'propose', label: 'Propose Trade' },
+    { id: 'active', label: 'Active Trades' },
+    { id: 'analyzer', label: 'Analyzer' },
+    { id: 'block', label: 'Trade Block' },
+    { id: 'history', label: 'History' },
+  ];
+
+  const incomingCount = trades.filter(t => t.toTeamId === USER_TEAM_ID && t.status === 'pending').length;
+
+  const resetPropose = () => { setPartnerTeamId(null); setSendIds([]); setReceiveIds([]); setMessage(''); };
+
+  const handlePropose = () => {
+    if (!sendIds.length || !receiveIds.length || !partnerTeamId) return;
+    const newTrade = {
+      id: 'tr_' + Date.now(), status: 'pending', fromTeamId: USER_TEAM_ID, toTeamId: partnerTeamId,
+      offeringPlayerIds: [...sendIds], requestingPlayerIds: [...receiveIds],
+      message, proposedAt: Date.now(), expiresAt: Date.now() + expiresIn,
+    };
+    setTrades(prev => [...prev, newTrade]);
+    resetPropose();
+    setActiveTab('active');
+  };
+
+  const handleAccept = (tradeId) => {
+    const trade = trades.find(t => t.id === tradeId);
+    if (!trade) return;
+    setTeamRosters(prev => {
+      const next = deepClone(prev);
+      const fromRoster = next[trade.fromTeamId] || [];
+      const toRoster = next[trade.toTeamId] || [];
+      trade.offeringPlayerIds.forEach(pid => {
+        const idx = fromRoster.indexOf(pid);
+        if (idx > -1) fromRoster.splice(idx, 1);
+        toRoster.push(pid);
+      });
+      trade.requestingPlayerIds.forEach(pid => {
+        const idx = toRoster.indexOf(pid);
+        if (idx > -1) toRoster.splice(idx, 1);
+        fromRoster.push(pid);
+      });
+      next[trade.fromTeamId] = fromRoster;
+      next[trade.toTeamId] = toRoster;
+      return next;
+    });
+    setTradeHistory(prev => [...prev, { ...trade, status: 'completed', resolvedAt: Date.now() }]);
+    setTrades(prev => prev.filter(t => t.id !== tradeId));
+    setConfirmId(null);
+  };
+
+  const handleReject = (tradeId) => {
+    const trade = trades.find(t => t.id === tradeId);
+    if (!trade) return;
+    setTradeHistory(prev => [...prev, { ...trade, status: 'rejected', resolvedAt: Date.now() }]);
+    setTrades(prev => prev.filter(t => t.id !== tradeId));
+  };
+
+  const handleWithdraw = (tradeId) => {
+    const trade = trades.find(t => t.id === tradeId);
+    if (!trade) return;
+    setTradeHistory(prev => [...prev, { ...trade, status: 'withdrawn', resolvedAt: Date.now() }]);
+    setTrades(prev => prev.filter(t => t.id !== tradeId));
+  };
+
+  const handleCounter = (trade) => {
+    handleReject(trade.id);
+    setPartnerTeamId(trade.fromTeamId === USER_TEAM_ID ? trade.toTeamId : trade.fromTeamId);
+    setSendIds([]);
+    setReceiveIds([]);
+    setMessage('Counter to previous offer');
+    setActiveTab('propose');
+  };
+
+  const suggestFairTrade = () => {
+    if (!analyzerTeamA || !analyzerTeamB) return;
+    const rosterA = teamRosters[analyzerTeamA] || [];
+    const rosterB = teamRosters[analyzerTeamB] || [];
+    let best = null;
+    let bestFairness = -1;
+    for (const a of rosterA) {
+      for (const b of rosterB) {
+        const f = calcFairness([a], [b]);
+        if (f.fairness > bestFairness && f.sideA > 0 && f.sideB > 0) { bestFairness = f.fairness; best = { send: [a], receive: [b] }; }
+      }
+    }
+    if (rosterA.length >= 2 && rosterB.length >= 2) {
+      for (let i = 0; i < rosterA.length; i++) for (let j = i+1; j < rosterA.length; j++)
+        for (let k = 0; k < rosterB.length; k++) for (let l = k+1; l < rosterB.length; l++) {
+          const f = calcFairness([rosterA[i], rosterA[j]], [rosterB[k], rosterB[l]]);
+          if (f.fairness > bestFairness && f.sideA > 10) { bestFairness = f.fairness; best = { send: [rosterA[i], rosterA[j]], receive: [rosterB[k], rosterB[l]] }; }
+        }
+    }
+    if (best) { setAnalyzerSendIds(best.send); setAnalyzerReceiveIds(best.receive); }
+  };
+
+  const togglePlayer = (playerId, side) => {
+    if (side === 'send') setSendIds(prev => prev.includes(playerId) ? prev.filter(id => id !== playerId) : [...prev, playerId]);
+    else setReceiveIds(prev => prev.includes(playerId) ? prev.filter(id => id !== playerId) : [...prev, playerId]);
+  };
+
+  const aiTradeBlock = useMemo(() => {
+    const blocked = [];
+    ['t3','t5','t7','t9'].forEach(tid => {
+      const roster = teamRosters[tid] || [];
+      if (roster.length > 0) blocked.push({ playerId: roster[roster.length - 1], teamId: tid });
+      if (roster.length > 2) blocked.push({ playerId: roster[1], teamId: tid });
+    });
+    return blocked;
+  }, [teamRosters]);
+
+  if (!isOpen) return null;
+
+  const renderRosterColumn = (teamId, label, selectedIds, onToggle) => {
+    const team = getTeamById(teamId);
+    const roster = (teamRosters[teamId] || []).map(id => getPlayerById(id)).filter(Boolean);
+    return (
+      <div className="ff-tm-column">
+        <div className="ff-tm-column-header">
+          {team && <span>{team.logo}</span>} {label} {team && <span style={{ fontWeight: 400, opacity: 0.7 }}>({team.wins}-{team.losses})</span>}
+        </div>
+        <div className="ff-tm-column-list">
+          {roster.map(p => (
+            <div key={p.id} className={`ff-tm-player-row ${selectedIds.includes(p.id) ? 'selected' : ''}`}
+              onClick={() => onToggle(p.id)}>
+              <PosBadge pos={p.pos} />
+              <span className="p-name">{p.name}</span>
+              <span className="p-nfl">{p.team}</span>
+              <span className="p-val">{PLAYER_VALUES[p.id]}</span>
+            </div>
+          ))}
+          {roster.length === 0 && <div style={{ padding: 12, fontSize: 11, color: 'var(--text-muted)' }}>No players</div>}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="ff-modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="ff-modal" style={{ maxWidth: 1000 }}>
+        <div className="ff-modal-header">
+          <h2>{'\u{1F91D}'} Trade Center</h2>
+          <button className="ff-modal-close" onClick={onClose}>{'\u{2715}'}</button>
+        </div>
+
+        <div className="ff-settings-nav">
+          {tabs.map(t => (
+            <button key={t.id} className={`ff-settings-tab ${activeTab === t.id ? 'active' : ''}`}
+              onClick={() => setActiveTab(t.id)}>
+              {t.label}
+              {t.id === 'active' && incomingCount > 0 && <span className="ff-badge-count" style={{ marginLeft: 6, transform: 'scale(0.85)' }}>{incomingCount}</span>}
+            </button>
+          ))}
+        </div>
+
+        <div className="ff-modal-body" style={{ maxHeight: 'calc(100vh - 240px)', overflowY: 'auto' }}>
+
+          {/* ===== PROPOSE TAB ===== */}
+          {activeTab === 'propose' && (
+            <div className="ff-settings-panel">
+              <div className="ff-settings-section">
+                <div className="ff-settings-section-title">{'\u{1F465}'} Choose a Trade Partner</div>
+                <div className="ff-tm-team-grid">
+                  {TEAMS.filter(t => t.id !== USER_TEAM_ID).map(t => (
+                    <div key={t.id} className={`ff-tm-team-card ${partnerTeamId === t.id ? 'selected' : ''}`}
+                      onClick={() => { setPartnerTeamId(t.id); setSendIds([]); setReceiveIds([]); }}>
+                      <div className="ff-tm-team-card-logo">{t.logo}</div>
+                      <div className="ff-tm-team-card-name">{t.name}</div>
+                      <div className="ff-tm-team-card-meta">{t.owner} &middot; {t.wins}-{t.losses}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {partnerTeamId && (
+                <>
+                  <div className="ff-settings-section">
+                    <div className="ff-settings-section-title">{'\u{1F3C8}'} Select Players</div>
+                    <div className="ff-tm-columns">
+                      {renderRosterColumn(USER_TEAM_ID, 'Your Roster', sendIds, id => togglePlayer(id, 'send'))}
+                      {renderRosterColumn(partnerTeamId, getTeamById(partnerTeamId)?.name || 'Their Roster', receiveIds, id => togglePlayer(id, 'receive'))}
+                    </div>
+                  </div>
+
+                  {(sendIds.length > 0 || receiveIds.length > 0) && (
+                    <div className="ff-settings-section">
+                      <div className="ff-tm-trade-zone">
+                        <div className="ff-tm-zone-panel">
+                          <h4>You Send</h4>
+                          {sendIds.map(id => <TradePlayerChip key={id} playerId={id} onRemove={id => togglePlayer(id, 'send')} />)}
+                          {sendIds.length === 0 && <div className="ff-tm-zone-empty">Select players from your roster</div>}
+                        </div>
+                        <div className="ff-tm-zone-panel">
+                          <h4>You Receive</h4>
+                          {receiveIds.map(id => <TradePlayerChip key={id} playerId={id} onRemove={id => togglePlayer(id, 'receive')} />)}
+                          {receiveIds.length === 0 && <div className="ff-tm-zone-empty">Select players from their roster</div>}
+                        </div>
+                      </div>
+                      {sendIds.length > 0 && receiveIds.length > 0 && <TradeAnalyzerBar sendIds={sendIds} receiveIds={receiveIds} />}
+                    </div>
+                  )}
+
+                  <div className="ff-settings-section">
+                    <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+                      <div style={{ flex: 1, minWidth: 200 }}>
+                        <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Message (optional)</label>
+                        <textarea className="ff-tm-message-input" value={message} onChange={e => setMessage(e.target.value)} placeholder="Add a message..." />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Expires In</label>
+                        <select className="ff-tm-expiry-select" value={expiresIn} onChange={e => setExpiresIn(Number(e.target.value))}>
+                          <option value={43200000}>12 hours</option>
+                          <option value={86400000}>24 hours</option>
+                          <option value={172800000}>48 hours</option>
+                          <option value={604800000}>1 week</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* ===== ACTIVE TRADES TAB ===== */}
+          {activeTab === 'active' && (
+            <div className="ff-settings-panel">
+              {trades.filter(t => t.status === 'pending').length === 0 ? (
+                <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)' }}>No active trades. Propose one to get started.</div>
+              ) : trades.filter(t => t.status === 'pending').map(trade => {
+                const isIncoming = trade.toTeamId === USER_TEAM_ID;
+                const fromTeam = getTeamById(trade.fromTeamId);
+                const toTeam = getTeamById(trade.toTeamId);
+                const { fairness } = calcFairness(trade.offeringPlayerIds, trade.requestingPlayerIds);
+                const cls = fairness >= 75 ? 'fair' : fairness >= 50 ? 'uneven' : 'lopsided';
+                const remaining = timeUntil(trade.expiresAt);
+                const urgent = trade.expiresAt - Date.now() < 21600000;
+
+                return (
+                  <div key={trade.id} className={`ff-tm-inbox-card ${isIncoming ? 'incoming' : 'outgoing'}`}>
+                    <div className="ff-tm-inbox-header">
+                      <div>
+                        <span className="ff-tm-status-pill pending">Pending</span>
+                        <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 6 }}>
+                          {isIncoming ? 'Incoming' : 'Outgoing'}
+                        </span>
+                      </div>
+                      <span className={`ff-tm-inbox-countdown ${urgent ? 'urgent' : ''}`}>{remaining}</span>
+                    </div>
+                    <div className="ff-tm-inbox-teams">
+                      {fromTeam?.logo} {fromTeam?.name} {'\u{2192}'} {toTeam?.logo} {toTeam?.name}
+                    </div>
+                    <div className="ff-trade-sides" style={{ margin: '10px 0' }}>
+                      <div className="ff-trade-side">
+                        <h5>{isIncoming ? 'You Receive' : 'You Send'}</h5>
+                        {(isIncoming ? trade.offeringPlayerIds : trade.offeringPlayerIds).map(id => {
+                          const p = getPlayerById(id);
+                          return p ? <div className="ff-trade-player" key={id}><PosBadge pos={p.pos} /> {p.name} <span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--copper)' }}>{PLAYER_VALUES[id]}</span></div> : null;
+                        })}
+                      </div>
+                      <div className="ff-trade-side">
+                        <h5>{isIncoming ? 'They Want' : 'You Receive'}</h5>
+                        {(isIncoming ? trade.requestingPlayerIds : trade.requestingPlayerIds).map(id => {
+                          const p = getPlayerById(id);
+                          return p ? <div className="ff-trade-player" key={id}><PosBadge pos={p.pos} /> {p.name} <span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--copper)' }}>{PLAYER_VALUES[id]}</span></div> : null;
+                        })}
+                      </div>
+                    </div>
+                    <div className="ff-fairness-bar"><div className="ff-fairness-fill" style={{ width: fairness + '%', background: cls === 'fair' ? 'var(--success-green)' : cls === 'uneven' ? 'var(--warning-amber)' : 'var(--red)' }} /></div>
+                    <div className={`ff-tm-fairness-badge ${cls}`} style={{ fontSize: 10, marginTop: 4, marginBottom: 4 }}>{fairness} — {cls === 'fair' ? 'Fair' : cls === 'uneven' ? 'Uneven' : 'Lopsided'}</div>
+                    {trade.message && <div className="ff-tm-inbox-message">"{trade.message}"</div>}
+
+                    {confirmId === trade.id ? (
+                      <div className="ff-tm-confirm-bar">
+                        <span>{'\u{26A0}\u{FE0F}'} Confirm accept? Players will be swapped.</span>
+                        <button className="ff-btn ff-btn-copper ff-btn-sm" onClick={() => handleAccept(trade.id)}>Confirm</button>
+                        <button className="ff-btn ff-btn-secondary ff-btn-sm" onClick={() => setConfirmId(null)}>Cancel</button>
+                      </div>
+                    ) : (
+                      <div className="ff-tm-inbox-actions">
+                        {isIncoming && <button className="ff-btn ff-btn-copper ff-btn-sm" onClick={() => setConfirmId(trade.id)}>Accept</button>}
+                        {isIncoming && <button className="ff-btn ff-btn-danger ff-btn-sm" onClick={() => handleReject(trade.id)}>Reject</button>}
+                        {isIncoming && <button className="ff-btn ff-btn-secondary ff-btn-sm" onClick={() => handleCounter(trade)}>Counter</button>}
+                        {!isIncoming && <button className="ff-btn ff-btn-danger ff-btn-sm" onClick={() => handleWithdraw(trade.id)}>Withdraw</button>}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* ===== ANALYZER TAB ===== */}
+          {activeTab === 'analyzer' && (
+            <div className="ff-settings-panel">
+              <div className="ff-settings-section">
+                <div className="ff-settings-section-title">{'\u{1F4CA}'} Trade Analyzer</div>
+                <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Team A</label>
+                    <select className="ff-tm-expiry-select" value={analyzerTeamA || ''} onChange={e => { setAnalyzerTeamA(e.target.value); setAnalyzerSendIds([]); }}>
+                      {TEAMS.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Team B</label>
+                    <select className="ff-tm-expiry-select" value={analyzerTeamB || ''} onChange={e => { setAnalyzerTeamB(e.target.value); setAnalyzerReceiveIds([]); }}>
+                      <option value="">Select team...</option>
+                      {TEAMS.filter(t => t.id !== analyzerTeamA).map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                    </select>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+                    <button className="ff-btn ff-btn-copper" onClick={suggestFairTrade} disabled={!analyzerTeamA || !analyzerTeamB}>
+                      {'\u{2728}'} Suggest Fair Trade
+                    </button>
+                  </div>
+                </div>
+                {analyzerTeamA && analyzerTeamB && (
+                  <>
+                    <div className="ff-tm-columns">
+                      {renderRosterColumn(analyzerTeamA, getTeamById(analyzerTeamA)?.name || 'Team A', analyzerSendIds, id => setAnalyzerSendIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]))}
+                      {renderRosterColumn(analyzerTeamB, getTeamById(analyzerTeamB)?.name || 'Team B', analyzerReceiveIds, id => setAnalyzerReceiveIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]))}
+                    </div>
+                    {(analyzerSendIds.length > 0 || analyzerReceiveIds.length > 0) && (
+                      <div className="ff-tm-trade-zone">
+                        <div className="ff-tm-zone-panel">
+                          <h4>{getTeamById(analyzerTeamA)?.abbr} Sends</h4>
+                          {analyzerSendIds.map(id => <TradePlayerChip key={id} playerId={id} onRemove={id => setAnalyzerSendIds(prev => prev.filter(x => x !== id))} />)}
+                          {analyzerSendIds.length === 0 && <div className="ff-tm-zone-empty">Select players</div>}
+                        </div>
+                        <div className="ff-tm-zone-panel">
+                          <h4>{getTeamById(analyzerTeamB)?.abbr} Sends</h4>
+                          {analyzerReceiveIds.map(id => <TradePlayerChip key={id} playerId={id} onRemove={id => setAnalyzerReceiveIds(prev => prev.filter(x => x !== id))} />)}
+                          {analyzerReceiveIds.length === 0 && <div className="ff-tm-zone-empty">Select players</div>}
+                        </div>
+                      </div>
+                    )}
+                    {analyzerSendIds.length > 0 && analyzerReceiveIds.length > 0 && <TradeAnalyzerBar sendIds={analyzerSendIds} receiveIds={analyzerReceiveIds} />}
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ===== TRADE BLOCK TAB ===== */}
+          {activeTab === 'block' && (
+            <div className="ff-settings-panel">
+              <div className="ff-settings-section">
+                <div className="ff-settings-section-title">{'\u{1F4E2}'} Your Trade Block</div>
+                <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 10 }}>Toggle players you want to move. Other managers see these.</p>
+                {(teamRosters[USER_TEAM_ID] || []).map(pid => {
+                  const p = getPlayerById(pid);
+                  if (!p) return null;
+                  const isBlocked = tradeBlock.includes(pid);
+                  return (
+                    <div key={pid} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
+                      <PosBadge pos={p.pos} />
+                      <span style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{p.name}</span>
+                      <span style={{ fontSize: 11, color: 'var(--copper)', fontWeight: 600 }}>{PLAYER_VALUES[pid]}</span>
+                      <button className={`ff-toggle ${isBlocked ? 'on' : ''}`}
+                        onClick={() => setTradeBlock(prev => isBlocked ? prev.filter(id => id !== pid) : [...prev, pid])} />
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="ff-settings-section">
+                <div className="ff-settings-section-title">{'\u{1F310}'} League Trade Block</div>
+                {aiTradeBlock.length === 0 ? (
+                  <div style={{ padding: 16, textAlign: 'center', color: 'var(--text-muted)', fontSize: 12 }}>No players on the trade block right now.</div>
+                ) : (
+                  <div className="ff-tm-block-grid">
+                    {aiTradeBlock.map(({ playerId, teamId }) => {
+                      const p = getPlayerById(playerId);
+                      const t = getTeamById(teamId);
+                      if (!p || !t) return null;
+                      return (
+                        <div className="ff-tm-block-card" key={playerId}>
+                          <PosBadge pos={p.pos} />
+                          <div className="ff-tm-block-info">
+                            <div className="ff-tm-block-name">{p.name}</div>
+                            <div className="ff-tm-block-team">{t.logo} {t.name} &middot; Val: {PLAYER_VALUES[playerId]}</div>
+                          </div>
+                          <button className="ff-btn ff-btn-copper ff-btn-sm" onClick={() => {
+                            setPartnerTeamId(teamId); setReceiveIds([playerId]); setSendIds([]); setMessage('');
+                            setActiveTab('propose');
+                          }}>Offer</button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ===== HISTORY TAB ===== */}
+          {activeTab === 'history' && (
+            <div className="ff-settings-panel">
+              <div className="ff-tm-filter-bar">
+                {['all','completed','rejected','expired','withdrawn'].map(f => (
+                  <button key={f} className={`ff-tm-filter-pill ${historyFilter === f ? 'active' : ''}`}
+                    onClick={() => setHistoryFilter(f)}>
+                    {f.charAt(0).toUpperCase() + f.slice(1)}
+                  </button>
+                ))}
+              </div>
+              {tradeHistory.filter(t => historyFilter === 'all' || t.status === historyFilter).length === 0 ? (
+                <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)' }}>No trade history to show.</div>
+              ) : tradeHistory
+                .filter(t => historyFilter === 'all' || t.status === historyFilter)
+                .sort((a, b) => (b.resolvedAt || b.proposedAt) - (a.resolvedAt || a.proposedAt))
+                .map(trade => {
+                  const fromTeam = getTeamById(trade.fromTeamId);
+                  const toTeam = getTeamById(trade.toTeamId);
+                  const expanded = expandedHistory === trade.id;
+                  const { fairness } = calcFairness(trade.offeringPlayerIds, trade.requestingPlayerIds);
+                  return (
+                    <div className="ff-tm-history-row" key={trade.id}>
+                      <div className="ff-tm-history-header" onClick={() => setExpandedHistory(expanded ? null : trade.id)}>
+                        <span className={`ff-tm-status-pill ${trade.status}`}>{trade.status}</span>
+                        <span style={{ fontWeight: 600 }}>{fromTeam?.logo} {fromTeam?.abbr} {'\u{2194}\u{FE0F}'} {toTeam?.logo} {toTeam?.abbr}</span>
+                        <span style={{ color: 'var(--text-muted)' }}>{new Date(trade.resolvedAt || trade.proposedAt).toLocaleDateString()}</span>
+                        <span style={{ fontSize: 11, color: 'var(--copper)', fontWeight: 600 }}>{fairness}</span>
+                        <span className={`ff-tm-history-arrow ${expanded ? 'open' : ''}`}>{'\u25BC'}</span>
+                      </div>
+                      {expanded && (
+                        <div className="ff-tm-history-detail" style={{ paddingTop: 12 }}>
+                          <div className="ff-trade-sides">
+                            <div className="ff-trade-side">
+                              <h5>{fromTeam?.name} Offered</h5>
+                              {trade.offeringPlayerIds.map(id => { const p = getPlayerById(id); return p ? <div className="ff-trade-player" key={id}><PosBadge pos={p.pos} /> {p.name}</div> : null; })}
+                            </div>
+                            <div className="ff-trade-side">
+                              <h5>{toTeam?.name} Offered</h5>
+                              {trade.requestingPlayerIds.map(id => { const p = getPlayerById(id); return p ? <div className="ff-trade-player" key={id}><PosBadge pos={p.pos} /> {p.name}</div> : null; })}
+                            </div>
+                          </div>
+                          {trade.message && <div className="ff-tm-inbox-message" style={{ marginTop: 8 }}>"{trade.message}"</div>}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+            </div>
+          )}
+
+        </div>
+
+        <div className="ff-modal-footer">
+          <div className="ff-modal-footer-left">
+            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+              {trades.filter(t => t.status === 'pending').length} active &middot; {tradeHistory.length} historical
+            </span>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {activeTab === 'propose' && partnerTeamId && (
+              <>
+                <button className="ff-btn ff-btn-secondary" onClick={resetPropose}>Reset</button>
+                <button className="ff-btn ff-btn-copper" disabled={!sendIds.length || !receiveIds.length} onClick={handlePropose}>
+                  {'\u{1F91D}'} Propose Trade
+                </button>
+              </>
+            )}
+            <button className="ff-btn ff-btn-secondary" onClick={onClose}>Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ===== FOOTER ===== */
+function Footer({ onOpenSettings }) {
+  return (
+    <footer className="ff-footer">
+      <div className="ff-footer-brand">Fantasy <span>League</span> <span style={{ fontSize: 12, fontFamily: 'Inter, sans-serif', fontWeight: 400, opacity: 0.6 }}>2025-26</span></div>
+      <div className="ff-footer-links">
+        <button className="ff-footer-link">League Rules</button>
+        <button className="ff-footer-link" onClick={onOpenSettings}>Scoring</button>
+        <button className="ff-footer-link" onClick={onOpenSettings}>Settings</button>
+        <button className="ff-footer-link">Help</button>
+      </div>
+      <div className="ff-footer-credit">Built with the Veracity Design System</div>
+    </footer>
+  );
+}
+
+/* ===== APP ROOT ===== */
+function App() {
+  const [theme, setTheme] = useState(() => {
+    try { const s = localStorage.getItem('ff-theme'); return s || 'light'; }
+    catch { return 'light'; }
+  });
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [tradeModalOpen, setTradeModalOpen] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(null);
+  const [user, setUser] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('ff-user')); }
+    catch { return null; }
+  });
+  const [activeLeagueId, setActiveLeagueId] = useState(() => {
+    try { return localStorage.getItem('ff-active-league') || 'lg1'; }
+    catch { return 'lg1'; }
+  });
+  const [leagues] = useState(MY_LEAGUES_SEED);
+
+  const [trades, setTrades] = useState(() => {
+    try { const s = localStorage.getItem('ff-trades'); return s ? JSON.parse(s) : [...TRADES_SEED]; }
+    catch { return [...TRADES_SEED]; }
+  });
+  const [teamRosters, setTeamRosters] = useState(() => {
+    try { const s = localStorage.getItem('ff-team-rosters'); return s ? JSON.parse(s) : deepClone(TEAM_ROSTERS_SEED); }
+    catch { return deepClone(TEAM_ROSTERS_SEED); }
+  });
+  const [tradeBlock, setTradeBlock] = useState(() => {
+    try { const s = localStorage.getItem('ff-trade-block'); return s ? JSON.parse(s) : []; }
+    catch { return []; }
+  });
+  const [tradeHistory, setTradeHistory] = useState(() => {
+    try { const s = localStorage.getItem('ff-trade-history'); return s ? JSON.parse(s) : [...TRADE_HISTORY_SEED]; }
+    catch { return [...TRADE_HISTORY_SEED]; }
+  });
+
+  useEffect(() => { localStorage.setItem('ff-theme', theme); document.documentElement.dataset.theme = theme; }, [theme]);
+  useEffect(() => { if (user) localStorage.setItem('ff-user', JSON.stringify(user)); else localStorage.removeItem('ff-user'); }, [user]);
+  useEffect(() => { localStorage.setItem('ff-active-league', activeLeagueId); }, [activeLeagueId]);
+
+  const handleSignOut = () => { setUser(null); localStorage.removeItem('ff-user'); };
+  const handleAuth = (u) => { setUser(u); setShowAuthModal(null); };
+  useEffect(() => { localStorage.setItem('ff-trades', JSON.stringify(trades)); }, [trades]);
+  useEffect(() => { localStorage.setItem('ff-team-rosters', JSON.stringify(teamRosters)); }, [teamRosters]);
+  useEffect(() => { localStorage.setItem('ff-trade-block', JSON.stringify(tradeBlock)); }, [tradeBlock]);
+  useEffect(() => { localStorage.setItem('ff-trade-history', JSON.stringify(tradeHistory)); }, [tradeHistory]);
+
+  return (
+    <>
+      <TopNavbar theme={theme} setTheme={setTheme} onOpenSettings={() => setSettingsOpen(true)}
+        leagues={leagues} activeLeagueId={activeLeagueId} onSelectLeague={setActiveLeagueId}
+        user={user} onShowAuth={setShowAuthModal} onSignOut={handleSignOut} />
+      {user ? (
+        <>
+          <HeroSection onOpenSettings={() => setSettingsOpen(true)} onOpenTradeModal={() => setTradeModalOpen(true)} />
+          <div className="ff-main-grid">
+            <div className="ff-left">
+              <MatchupWidget />
+              <PlayerRankings />
+              <NewsFeed />
+            </div>
+            <div className="ff-right">
+              <StandingsCard />
+              <WaiverWireCard />
+              <TradeCenterCard trades={trades} onOpenTradeModal={() => setTradeModalOpen(true)} />
+              <PowerRankingsCard />
+            </div>
+          </div>
+          <div style={{ padding: '0 clamp(16px, 4vw, 32px)', maxWidth: 1400, margin: '0 auto' }}>
+            <HistoricalStats />
+          </div>
+        </>
+      ) : (
+        <div className="ff-hero" style={{ minHeight: 'calc(100vh - 120px)', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>{'\u{1F3C8}'}</div>
+          <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 36, fontWeight: 700, color: '#fff', marginBottom: 8 }}>
+            Fantasy <span style={{ color: 'var(--brand-tan)' }}>League</span>
+          </h1>
+          <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 16, maxWidth: 480, marginBottom: 28 }}>
+            Your all-in-one fantasy football dashboard. Manage leagues, analyze trades, track players, and dominate your competition.
+          </p>
+          <div style={{ display: 'flex', gap: 12 }}>
+            <button className="ff-hero-action primary" style={{ fontSize: 15, padding: '14px 28px' }}
+              onClick={() => setShowAuthModal('signup')}>Create Account</button>
+            <button className="ff-hero-action secondary" style={{ fontSize: 15, padding: '14px 28px' }}
+              onClick={() => setShowAuthModal('signin')}>Sign In</button>
+          </div>
+          <div style={{ marginTop: 40, display: 'flex', gap: 32, color: 'rgba(255,255,255,0.4)', fontSize: 12 }}>
+            <div>{'\u{1F4CA}'} 8 League Types</div>
+            <div>{'\u{1F91D}'} Full Trade Center</div>
+            <div>{'\u{1F4C8}'} 3 Years of Stats</div>
+            <div>{'\u{2699}\u{FE0F}'} Custom Scoring</div>
+          </div>
+        </div>
+      )}
+      <Footer onOpenSettings={() => setSettingsOpen(true)} />
+      <LeagueSettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <TradeModuleModal isOpen={tradeModalOpen} onClose={() => setTradeModalOpen(false)}
+        trades={trades} setTrades={setTrades} teamRosters={teamRosters} setTeamRosters={setTeamRosters}
+        tradeBlock={tradeBlock} setTradeBlock={setTradeBlock} tradeHistory={tradeHistory} setTradeHistory={setTradeHistory} />
+      {showAuthModal && (
+        <AuthModal mode={showAuthModal} onClose={() => setShowAuthModal(null)}
+          onSwitch={() => setShowAuthModal(prev => prev === 'signin' ? 'signup' : 'signin')}
+          onAuth={handleAuth} />
+      )}
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
