@@ -47,6 +47,7 @@ CREATE TABLE IF NOT EXISTS news_articles (
   id            INTEGER PRIMARY KEY AUTOINCREMENT,
   title         TEXT NOT NULL,
   summary       TEXT NOT NULL,
+  image_url     TEXT,
   source_url    TEXT NOT NULL,
   source_name   TEXT NOT NULL,
   category      TEXT NOT NULL DEFAULT 'news',

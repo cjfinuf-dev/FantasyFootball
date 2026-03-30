@@ -1,5 +1,5 @@
 {
-  "name": "fantasy-football-server",
+  "name": "hexmetrics-server",
   "private": true,
   "scripts": {
     "dev": "nodemon src/index.js",

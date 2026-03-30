@@ -1,5 +1,5 @@
 {
-  "name": "fantasy-football",
+  "name": "hexmetrics",
   "private": true,
   "workspaces": ["client", "server"],
   "scripts": {

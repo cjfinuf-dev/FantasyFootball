@@ -1,23 +1,35 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from './hooks/useAuth';
 import { useTheme } from './context/ThemeContext';
+import TeamPicker from './components/ui/TeamPicker';
 import AuthModal from './components/auth/AuthModal';
 import NewsFeed from './components/dashboard/NewsFeed';
-import MatchupWidget from './components/dashboard/MatchupWidget';
-import PlayerRankings from './components/dashboard/PlayerRankings';
-import StandingsCard from './components/sidebar/StandingsCard';
-import WaiverWireCard from './components/sidebar/WaiverWireCard';
-import PowerRankingsCard from './components/sidebar/PowerRankingsCard';
+import LeagueDashboard from './components/league/LeagueDashboard';
 import * as leagueApi from './api/leagues';
 
 export default function App() {
   const { user, loading, signout } = useAuth();
-  const { theme, toggleTheme } = useTheme();
+  const { theme, toggleTheme, teamId, setTeamId } = useTheme();
   const [showAuthModal, setShowAuthModal] = useState(null);
   const [showCreateLeague, setShowCreateLeague] = useState(false);
   const [leagueForm, setLeagueForm] = useState({ name: '', teamName: '', type: 'redraft', scoring: 'standard', size: 12, season: '2025-26' });
   const [leagueError, setLeagueError] = useState('');
   const [leagueCreating, setLeagueCreating] = useState(false);
+
+  // Leagues state
+  const [leagues, setLeagues] = useState([]);
+  const [leaguesLoading, setLeaguesLoading] = useState(false);
+  const [activeLeague, setActiveLeague] = useState(null); // null = hub, object = league page
+
+  // Fetch leagues when user logs in
+  useEffect(() => {
+    if (!user) { setLeagues([]); setActiveLeague(null); return; }
+    setLeaguesLoading(true);
+    leagueApi.getLeagues()
+      .then(data => setLeagues(data.leagues || []))
+      .catch(() => {})
+      .finally(() => setLeaguesLoading(false));
+  }, [user]);
 
   const handleCreateLeague = async (e) => {
     e.preventDefault();
@@ -25,7 +37,8 @@ export default function App() {
     if (!leagueForm.name.trim() || !leagueForm.teamName.trim()) { setLeagueError('League name and team name are required.'); return; }
     setLeagueCreating(true);
     try {
-      await leagueApi.createLeague({ name: leagueForm.name, teamName: leagueForm.teamName, type: leagueForm.type, scoringPreset: leagueForm.scoring, leagueSize: leagueForm.size, season: leagueForm.season });
+      const { league } = await leagueApi.createLeague({ name: leagueForm.name, teamName: leagueForm.teamName, type: leagueForm.type, scoringPreset: leagueForm.scoring, leagueSize: leagueForm.size, season: leagueForm.season });
+      setLeagues(prev => [league, ...prev]);
       setShowCreateLeague(false);
       setLeagueForm({ name: '', teamName: '', type: 'redraft', scoring: 'standard', size: 12, season: '2025-26' });
     } catch (err) { setLeagueError(err.message || 'Failed to create league.'); }
@@ -36,21 +49,56 @@ export default function App() {
     return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: 'var(--bg)', color: 'var(--text-muted)', fontSize: 14 }}>Loading...</div>;
   }
 
+  // If viewing a specific league, render the league dashboard
+  if (user && activeLeague) {
+    return (
+      <>
+        <nav className="ff-top-navbar">
+          <div className="ff-nav-left">
+            <div className="ff-nav-logo" style={{ cursor: 'pointer' }} onClick={() => setActiveLeague(null)}>{'\u{1F3C8}'} Hex<span>Metrics</span></div>
+          </div>
+          <div className="ff-nav-center">
+            <div className="ff-week-badge"><span className="ff-live-dot"></span> {activeLeague.name}</div>
+          </div>
+          <div className="ff-nav-right">
+            <TeamPicker value={teamId} onChange={setTeamId} />
+            <button className="ff-dark-toggle" onClick={toggleTheme}>{theme === 'dark' ? '\u{2600}\u{FE0F}' : '\u{1F319}'}</button>
+            <div className="auth-avatar">{user.name.charAt(0).toUpperCase()}</div>
+            <span className="auth-user-name">{user.name}</span>
+            <button className="top-navbar-login" onClick={signout} style={{ marginLeft: 8 }}>Sign Out</button>
+          </div>
+        </nav>
+        <LeagueDashboard league={activeLeague} onBack={() => setActiveLeague(null)} />
+        <footer className="ff-footer">
+          <div className="ff-footer-brand">Hex<span>Metrics</span> <span style={{ fontSize: 12, fontFamily: 'Inter, sans-serif', fontWeight: 400, opacity: 0.6 }}>2025-26</span></div>
+          <div className="ff-footer-links">
+            <button className="ff-footer-link" onClick={() => setActiveLeague(null)}>Home</button>
+            <button className="ff-footer-link">Help</button>
+          </div>
+          <div className="ff-footer-credit">Built with the Veracity Design System</div>
+        </footer>
+      </>
+    );
+  }
+
   return (
     <>
       {/* Navbar */}
       <nav className="ff-top-navbar">
         <div className="ff-nav-left">
-          <div className="ff-nav-logo">{'\u{1F3C8}'} Fantasy <span>League</span></div>
+          <div className="ff-nav-logo">{'\u{1F3C8}'} Hex<span>Metrics</span></div>
         </div>
         <div className="ff-nav-center">
           {user ? (
-            <div className="ff-week-badge"><span className="ff-live-dot"></span> Week 12 — In Progress</div>
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>
+              {leagues.length > 0 ? `${leagues.length} league${leagues.length > 1 ? 's' : ''}` : 'Get started by creating a league'}
+            </div>
           ) : (
             <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>Sign in to access your leagues</div>
           )}
         </div>
         <div className="ff-nav-right">
+          <TeamPicker value={teamId} onChange={setTeamId} />
           <button className="ff-dark-toggle" onClick={toggleTheme} title="Toggle dark mode">
             {theme === 'dark' ? '\u{2600}\u{FE0F}' : '\u{1F319}'}
           </button>
@@ -70,54 +118,107 @@ export default function App() {
         </div>
       </nav>
 
-      {/* Main Content */}
+      {/* LOGGED IN — Hub Page */}
       {user ? (
-        <>
-          <div className="ff-hero" style={{ marginTop: 48 }}>
+        <div style={{ marginTop: 48 }}>
+          {/* Greeting */}
+          <div className="ff-hero" style={{ paddingBottom: 24 }}>
             <div className="ff-hero-left">
-              <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 28, fontWeight: 700, color: '#fff', marginBottom: 4 }}>
+              <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 26, fontWeight: 700, color: '#fff', marginBottom: 4 }}>
                 Welcome back, {user.name.split(' ')[0]}
               </h1>
-              <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14 }}>Your fantasy football dashboard is ready.</p>
-            </div>
-            <div className="ff-hero-actions">
-              <button className="ff-hero-action primary">{'\u{1F3C8}'} Set Lineup</button>
-              <button className="ff-hero-action secondary">{'\u{1F50D}'} Check Waivers</button>
-              <button className="ff-hero-action secondary">{'\u{1F91D}'} View Trades</button>
-              <button className="ff-hero-action secondary" onClick={() => setShowCreateLeague(true)}>{'\u{2699}\u{FE0F}'} League Settings</button>
+              <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13 }}>Your fantasy football hub.</p>
             </div>
           </div>
-          <div className="ff-main-grid">
-            <div className="ff-left">
-              <MatchupWidget />
-              <PlayerRankings />
-              <NewsFeed />
+
+          <div style={{ padding: '20px clamp(16px, 4vw, 32px)', maxWidth: 1400, margin: '0 auto' }}>
+            {/* My Leagues Section */}
+            <div className="ff-card" style={{ marginBottom: 20 }}>
+              <div className="ff-card-top-accent" style={{ background: 'var(--copper)' }} />
+              <div className="ff-card-header">
+                <h2 style={{ fontSize: 16, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>{'\u{1F3C6}'} My Leagues</h2>
+                <button className="ff-btn ff-btn-copper" onClick={() => setShowCreateLeague(true)}>{'\u{2795}'} Create a League</button>
+              </div>
+              <div className="ff-card-body">
+                {leaguesLoading ? (
+                  <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 20, fontSize: 13 }}>Loading leagues...</div>
+                ) : leagues.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: 40 }}>
+                    <div style={{ fontSize: 36, marginBottom: 12 }}>{'\u{1F3C8}'}</div>
+                    <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 6 }}>No leagues yet</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 16 }}>Create your first league or join one to get started.</div>
+                    <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+                      <button className="ff-btn ff-btn-copper" onClick={() => setShowCreateLeague(true)}>{'\u{2795}'} Create a League</button>
+                      <button className="ff-btn ff-btn-secondary">{'\u{1F517}'} Join a League</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
+                    {leagues.map(lg => (
+                      <div key={lg.id} onClick={() => setActiveLeague(lg)} style={{
+                        padding: 16, background: 'var(--surface)', border: '1px solid var(--border)',
+                        borderRadius: 'var(--radius-md)', cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--brand-tan)'; e.currentTarget.style.background = 'var(--tan-10)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = 'var(--surface)'; }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                          <div style={{ fontSize: 22 }}>{'\u{1F3C8}'}</div>
+                          <div>
+                            <div style={{ fontSize: 14, fontWeight: 700 }}>{lg.name}</div>
+                            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{lg.team_name} &middot; {lg.role === 'commissioner' ? 'Commissioner' : 'Member'}</div>
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: 9, fontWeight: 600, padding: '2px 6px', borderRadius: 'var(--radius-full)', background: 'var(--tan-10)', color: 'var(--copper)', textTransform: 'uppercase' }}>{lg.type}</span>
+                          <span style={{ fontSize: 9, fontWeight: 600, padding: '2px 6px', borderRadius: 'var(--radius-full)', background: 'var(--tan-10)', color: 'var(--copper)', textTransform: 'uppercase' }}>{lg.scoring_preset}</span>
+                          <span style={{ fontSize: 9, fontWeight: 600, padding: '2px 6px', borderRadius: 'var(--radius-full)', background: 'var(--tan-10)', color: 'var(--copper)' }}>{lg.league_size} teams</span>
+                          <span style={{ fontSize: 9, color: 'var(--text-muted)', marginLeft: 'auto' }}>{lg.season}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="ff-right">
-              <StandingsCard />
-              <WaiverWireCard />
-              <PowerRankingsCard />
+
+            {/* Trade Calculator (generic) */}
+            <div className="ff-card" style={{ marginBottom: 20 }}>
+              <div className="ff-card-top-accent" style={{ background: 'var(--brand-tan)' }} />
+              <div className="ff-card-header">
+                <h2 style={{ fontSize: 16, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>{'\u{1F4CA}'} Trade Calculator</h2>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Generic values &middot; Join a league for personalized analysis</span>
+              </div>
+              <div className="ff-card-body" style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 32 }}>
+                <div style={{ fontSize: 28, marginBottom: 8 }}>{'\u{1F4CA}'}</div>
+                <div style={{ fontSize: 13, marginBottom: 4 }}>Compare player trade values across formats</div>
+                <div style={{ fontSize: 11, color: 'var(--muted-grey)' }}>League-specific trade analysis available inside your leagues</div>
+              </div>
             </div>
+
+            {/* News Feed */}
+            <NewsFeed />
           </div>
-        </>
+        </div>
       ) : (
+        /* LOGGED OUT — Landing Page */
         <>
           <div className="ff-hero" style={{ marginTop: 48, minHeight: 'auto', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', paddingBottom: 40 }}>
             <div style={{ fontSize: 48, marginBottom: 16 }}>{'\u{1F3C8}'}</div>
             <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 36, fontWeight: 700, color: '#fff', marginBottom: 8 }}>
-              Fantasy <span style={{ color: 'var(--brand-tan)' }}>League</span>
+              Hex<span style={{ color: 'var(--accent-secondary-text)' }}>Metrics</span>
             </h1>
             <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 16, maxWidth: 480, marginBottom: 28 }}>
-              Your all-in-one fantasy football dashboard. Manage leagues, analyze trades, track players, and dominate your competition.
+              Your all-in-one fantasy football dashboard. Manage leagues, analyze trades, track players, and dominate your competition with HexMetrics.
             </p>
             <div style={{ display: 'flex', gap: 12 }}>
               <button className="ff-hero-action primary" style={{ fontSize: 15, padding: '14px 28px' }} onClick={() => setShowAuthModal('signup')}>Create Account</button>
               <button className="ff-hero-action secondary" style={{ fontSize: 15, padding: '14px 28px' }} onClick={() => setShowAuthModal('signin')}>Sign In</button>
             </div>
             <div style={{ marginTop: 40, display: 'flex', gap: 32, color: 'rgba(255,255,255,0.4)', fontSize: 12 }}>
-              <div>{'\u{1F4CA}'} 8 League Types</div>
-              <div>{'\u{1F91D}'} Full Trade Center</div>
-              <div>{'\u{1F4C8}'} 3 Years of Stats</div>
+              <div>{'\u{1F4CA}'} Trade Calculator</div>
+              <div>{'\u{1F3C6}'} Multiple Leagues</div>
+              <div>{'\u{1F4F0}'} Live News Feed</div>
               <div>{'\u{2699}\u{FE0F}'} Custom Scoring</div>
             </div>
           </div>
@@ -129,11 +230,8 @@ export default function App() {
 
       {/* Footer */}
       <footer className="ff-footer">
-        <div className="ff-footer-brand">Fantasy <span>League</span> <span style={{ fontSize: 12, fontFamily: 'Inter, sans-serif', fontWeight: 400, opacity: 0.6 }}>2025-26</span></div>
+        <div className="ff-footer-brand">Hex<span>Metrics</span> <span style={{ fontSize: 12, fontFamily: 'Inter, sans-serif', fontWeight: 400, opacity: 0.6 }}>2025-26</span></div>
         <div className="ff-footer-links">
-          <button className="ff-footer-link">League Rules</button>
-          <button className="ff-footer-link">Scoring</button>
-          <button className="ff-footer-link">Settings</button>
           <button className="ff-footer-link">Help</button>
         </div>
         <div className="ff-footer-credit">Built with the Veracity Design System</div>

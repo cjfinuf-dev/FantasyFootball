@@ -3,7 +3,15 @@ const stringSimilarity = require('string-similarity');
 const { getDb, saveDb } = require('../db/connection');
 const { RSS_FEEDS, CATEGORY_KEYWORDS, NFL_TEAMS, STOP_WORDS } = require('../utils/rssFeeds');
 
-const parser = new RSSParser({ timeout: 10000 });
+const parser = new RSSParser({
+  timeout: 10000,
+  customFields: {
+    item: [
+      ['media:content', 'media:content', { keepArray: false }],
+      ['media:thumbnail', 'media:thumbnail', { keepArray: false }],
+    ],
+  },
+});
 const FORTY_EIGHT_HOURS = 48 * 60 * 60 * 1000;
 
 // --- Helpers ---
@@ -13,6 +21,29 @@ function extractFirstSentence(text) {
   const clean = text.replace(/<[^>]*>/g, '').replace(/&[^;]+;/g, ' ').trim();
   const match = clean.match(/^(.+?[.!?])\s/);
   return match ? match[1] : clean.slice(0, 200);
+}
+
+function extractImage(item) {
+  // Try enclosure (most common for RSS media)
+  if (item.enclosure && item.enclosure.url && item.enclosure.type && item.enclosure.type.startsWith('image')) {
+    return item.enclosure.url;
+  }
+  // Try media:content or media:thumbnail (rss-parser puts these in various places)
+  if (item['media:content'] && item['media:content'].$ && item['media:content'].$.url) {
+    return item['media:content'].$.url;
+  }
+  if (item['media:thumbnail'] && item['media:thumbnail'].$ && item['media:thumbnail'].$.url) {
+    return item['media:thumbnail'].$.url;
+  }
+  // Try itunes image
+  if (item.itunes && item.itunes.image) {
+    return item.itunes.image;
+  }
+  // Try to find an img tag in the content/description
+  const content = item.content || item['content:encoded'] || item.description || '';
+  const imgMatch = content.match(/<img[^>]+src=["']([^"']+)["']/i);
+  if (imgMatch) return imgMatch[1];
+  return null;
 }
 
 function tokenize(title) {
@@ -76,6 +107,7 @@ async function fetchAllFeeds() {
           title: item.title || '',
           link: item.link || '',
           description: item.contentSnippet || item.content || item.summary || '',
+          imageUrl: extractImage(item),
           pubDate: item.pubDate ? new Date(item.pubDate) : new Date(),
           sourceName: feed.name,
           priority: feed.priority,
@@ -161,10 +193,13 @@ async function storeArticles(clusters, sweepId) {
     const playerName = [...entities].find(e => e.includes(' ') && !NFL_TEAMS.includes(e)) || null;
     const teamName = [...entities].find(e => NFL_TEAMS.includes(e)) || null;
 
+    // Pick best image from cluster — prefer the representative, fall back to any article with an image
+    const imageUrl = rep.imageUrl || cluster.articles.find(a => a.imageUrl)?.imageUrl || null;
+
     db.run(
-      `INSERT INTO news_articles (title, summary, source_url, source_name, category, player_name, team_name, source_count, published_at, sweep_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [rep.title, summary, rep.link, rep.sourceName, category, playerName, teamName, cluster.sources.size, rep.pubDate.toISOString(), sweepId]
+      `INSERT INTO news_articles (title, summary, image_url, source_url, source_name, category, player_name, team_name, source_count, published_at, sweep_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [rep.title, summary, imageUrl, rep.link, rep.sourceName, category, playerName, teamName, cluster.sources.size, rep.pubDate.toISOString(), sweepId]
     );
     stored++;
   }

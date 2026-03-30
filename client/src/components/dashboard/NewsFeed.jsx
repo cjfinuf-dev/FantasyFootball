@@ -97,9 +97,15 @@ export default function NewsFeed() {
         {articles.map(article => (
           <a key={article.id} href={article.source_url} target="_blank" rel="noopener noreferrer"
             className="ff-news-item" style={{ textDecoration: 'none', color: 'inherit', display: 'flex' }}>
-            <div className="ff-news-icon">
-              {CATEGORY_ICONS[article.category] || CATEGORY_ICONS.news}
-            </div>
+            {article.image_url ? (
+              <div className="ff-news-thumb">
+                <img src={article.image_url} alt="" loading="lazy" />
+              </div>
+            ) : (
+              <div className="ff-news-icon">
+                {CATEGORY_ICONS[article.category] || CATEGORY_ICONS.news}
+              </div>
+            )}
             <div className="ff-news-content">
               <div className="ff-news-title">{article.title}</div>
               <div className="ff-news-body">{article.summary}</div>

@@ -53,7 +53,7 @@ export default function AuthModal({ mode, onClose, onSwitch }) {
         <button className="auth-close" onClick={onClose}>{'\u2715'}</button>
         <h2>{isSignup ? 'Create Account' : 'Welcome Back'}</h2>
         <p className="auth-subtitle">
-          {isSignup ? 'Join Fantasy League to manage your teams and trades.' : 'Sign in to your Fantasy League account.'}
+          {isSignup ? 'Join HexMetrics to manage your teams and trades.' : 'Sign in to your HexMetrics account.'}
         </p>
         <form onSubmit={handleSubmit}>
           {isSignup && (
