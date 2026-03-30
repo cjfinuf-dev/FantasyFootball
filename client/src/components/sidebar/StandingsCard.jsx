@@ -1,11 +1,11 @@
 import { TEAMS, USER_TEAM_ID } from '../../data/teams';
 
-export default function StandingsCard() {
+export default function StandingsCard({ expanded = false }) {
   return (
-    <div className="ff-sidebar-card">
+    <div className={`ff-sidebar-card${expanded ? ' expanded' : ''}`}>
       <div className="ff-sidebar-card-header">
         <h3>League Standings</h3>
-        <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>Week 12</span>
+        <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>Week 12</span>
       </div>
       <div className="ff-sidebar-card-body" style={{ padding: 0 }}>
         <table className="ff-standings-table">

@@ -1,9 +1,9 @@
 import { WAIVERS } from '../../data/waivers';
 import PosBadge from '../ui/PosBadge';
 
-export default function WaiverWireCard() {
+export default function WaiverWireCard({ expanded = false }) {
   return (
-    <div className="ff-sidebar-card">
+    <div className={`ff-sidebar-card${expanded ? ' expanded' : ''}`}>
       <div className="ff-sidebar-card-header">
         <h3>Top Available</h3>
         <span className="ff-badge-count">{WAIVERS.length}</span>

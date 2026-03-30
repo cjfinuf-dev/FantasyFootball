@@ -1,11 +1,11 @@
 import { TEAMS, USER_TEAM_ID } from '../../data/teams';
 
-export default function PowerRankingsCard() {
+export default function PowerRankingsCard({ expanded = false }) {
   const sorted = [...TEAMS].sort((a, b) => b.power - a.power);
   const maxPower = sorted[0].power;
 
   return (
-    <div className="ff-sidebar-card">
+    <div className={`ff-sidebar-card${expanded ? ' expanded' : ''}`}>
       <div className="ff-sidebar-card-header"><h3>Power Rankings</h3></div>
       <div className="ff-sidebar-card-body">
         {sorted.map((team, i) => (

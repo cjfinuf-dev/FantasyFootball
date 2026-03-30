@@ -26,6 +26,7 @@ export default function NewsFeed() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('all');
+  const [categoryCounts, setCategoryCounts] = useState({});
   const [nextCursor, setNextCursor] = useState(null);
   const [loadingMore, setLoadingMore] = useState(false);
 
@@ -37,6 +38,13 @@ export default function NewsFeed() {
       .then(data => {
         setArticles(data.articles);
         setNextCursor(data.nextCursor);
+        if (activeTab === 'all' && data.articles) {
+          const counts = { all: data.articles.length };
+          data.articles.forEach(a => {
+            counts[a.category] = (counts[a.category] || 0) + 1;
+          });
+          setCategoryCounts(counts);
+        }
       })
       .catch(err => setError(err.message))
       .finally(() => setLoading(false));
@@ -71,6 +79,11 @@ export default function NewsFeed() {
           <button key={tab} className={`ff-tab ${activeTab === tab ? 'active' : ''}`}
             onClick={() => setActiveTab(tab)}>
             {tab.charAt(0).toUpperCase() + tab.slice(1)}
+            {categoryCounts[tab] != null && (
+              <span style={{ marginLeft: 6, fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 'var(--radius-full)', background: 'var(--tan-10)', color: 'var(--copper)' }}>
+                {categoryCounts[tab]}
+              </span>
+            )}
           </button>
         ))}
       </div>
