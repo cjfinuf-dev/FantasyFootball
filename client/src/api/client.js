@@ -13,7 +13,12 @@ export async function apiFetch(path, options = {}) {
     headers,
   });
 
-  const data = await res.json();
+  let data;
+  try {
+    data = await res.json();
+  } catch {
+    throw new Error('Server unavailable');
+  }
 
   if (!res.ok) {
     const err = new Error(data.error || 'Request failed');

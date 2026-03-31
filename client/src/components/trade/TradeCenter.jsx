@@ -1,0 +1,116 @@
+import { useState } from 'react';
+import { USER_TEAM_ID } from '../../data/teams';
+import { TRADES_SEED, TRADE_HISTORY_SEED } from '../../data/rosters';
+import { deepClone } from '../../utils/helpers';
+import TradeProposal from './TradeProposal';
+import TradeInbox from './TradeInbox';
+import TradeHistory from './TradeHistory';
+
+export default function TradeCenter({ rosters, onRostersChange, scoringPreset = 'standard' }) {
+  const [subTab, setSubTab] = useState('propose');
+  const [trades, setTrades] = useState(() => deepClone(TRADES_SEED));
+  const [history, setHistory] = useState(() => deepClone(TRADE_HISTORY_SEED));
+
+  const pendingCount = trades.filter(t =>
+    (t.toTeamId === USER_TEAM_ID || t.fromTeamId === USER_TEAM_ID) && t.status === 'pending'
+  ).length;
+
+  const handlePropose = (proposal) => {
+    const newTrade = {
+      id: 'tr' + Date.now(),
+      status: 'pending',
+      ...proposal,
+      proposedAt: Date.now(),
+    };
+    setTrades(prev => [newTrade, ...prev]);
+    setSubTab('inbox');
+  };
+
+  const handleAccept = (tradeId) => {
+    const trade = trades.find(t => t.id === tradeId);
+    if (!trade) return;
+
+    // Move trade to history
+    setTrades(prev => prev.filter(t => t.id !== tradeId));
+    setHistory(prev => [{ ...trade, status: 'completed', resolvedAt: Date.now() }, ...prev]);
+
+    // Swap players between rosters
+    if (onRostersChange && rosters) {
+      const newRosters = deepClone(rosters);
+      const fromRoster = newRosters[trade.fromTeamId] || [];
+      const toRoster = newRosters[trade.toTeamId] || [];
+
+      // Remove offering players from sender, add to receiver
+      trade.offeringPlayerIds.forEach(pid => {
+        const idx = fromRoster.indexOf(pid);
+        if (idx !== -1) fromRoster.splice(idx, 1);
+        toRoster.push(pid);
+      });
+
+      // Remove requesting players from receiver, add to sender
+      trade.requestingPlayerIds.forEach(pid => {
+        const idx = toRoster.indexOf(pid);
+        if (idx !== -1) toRoster.splice(idx, 1);
+        fromRoster.push(pid);
+      });
+
+      newRosters[trade.fromTeamId] = fromRoster;
+      newRosters[trade.toTeamId] = toRoster;
+      onRostersChange(newRosters);
+    }
+  };
+
+  const handleReject = (tradeId) => {
+    const trade = trades.find(t => t.id === tradeId);
+    if (!trade) return;
+    setTrades(prev => prev.filter(t => t.id !== tradeId));
+    setHistory(prev => [{ ...trade, status: 'rejected', resolvedAt: Date.now() }, ...prev]);
+  };
+
+  const handleWithdraw = (tradeId) => {
+    const trade = trades.find(t => t.id === tradeId);
+    if (!trade) return;
+    setTrades(prev => prev.filter(t => t.id !== tradeId));
+    setHistory(prev => [{ ...trade, status: 'withdrawn', resolvedAt: Date.now() }, ...prev]);
+  };
+
+  return (
+    <div className="ff-card">
+      <div className="ff-card-top-accent" style={{ background: 'var(--accent-secondary)' }} />
+      <div className="ff-card-header">
+        <h2>Trade Center</h2>
+      </div>
+
+      {/* Sub-tab navigation */}
+      <div className="ff-tm-filter-bar" style={{ padding: '0 20px', borderBottom: '1px solid var(--border)' }}>
+        <button className={`ff-tm-filter-pill${subTab === 'propose' ? ' active' : ''}`} onClick={() => setSubTab('propose')}>
+          Propose
+        </button>
+        <button className={`ff-tm-filter-pill${subTab === 'inbox' ? ' active' : ''}`} onClick={() => setSubTab('inbox')}>
+          Inbox {pendingCount > 0 && <span style={{ marginLeft: 4, fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 'var(--radius-full)', background: 'var(--accent-secondary)', color: '#fff' }}>{pendingCount}</span>}
+        </button>
+        <button className={`ff-tm-filter-pill${subTab === 'history' ? ' active' : ''}`} onClick={() => setSubTab('history')}>
+          History
+        </button>
+      </div>
+
+      <div className="ff-card-body">
+        {subTab === 'propose' && (
+          <TradeProposal rosters={rosters} onPropose={handlePropose} scoringPreset={scoringPreset} />
+        )}
+        {subTab === 'inbox' && (
+          <TradeInbox
+            trades={trades}
+            rosters={rosters}
+            onAccept={handleAccept}
+            onReject={handleReject}
+            onWithdraw={handleWithdraw}
+          />
+        )}
+        {subTab === 'history' && (
+          <TradeHistory history={history} />
+        )}
+      </div>
+    </div>
+  );
+}

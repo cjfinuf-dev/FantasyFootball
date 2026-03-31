@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import MatchupWidget from '../dashboard/MatchupWidget';
 import PlayerRankings from '../dashboard/PlayerRankings';
 import NewsFeed from '../dashboard/NewsFeed';
@@ -9,11 +9,15 @@ import DraftBoard from './DraftBoard';
 import MyLineup from './MyLineup';
 import PlayerStats from './PlayerStats';
 import AdSpace from '../ui/AdSpace';
+import TradeCenter from '../trade/TradeCenter';
 import * as leagueApi from '../../api/leagues';
+
 import { TEAMS } from '../../data/teams';
 
-export default function LeagueDashboard({ league, onBack }) {
-  const [activeTab, setActiveTab] = useState('draft');
+export default function LeagueDashboard({ league, onBack, activeTab: externalTab, onTabChange }) {
+  const [internalTab, setInternalTab] = useState('draft');
+  const activeTab = externalTab || internalTab;
+  const setActiveTab = (tab) => { setInternalTab(tab); onTabChange?.(tab); };
   const [draftComplete, setDraftComplete] = useState(false);
   const [draftedRosters, setDraftedRosters] = useState(null);
   const [savedDraft, setSavedDraft] = useState(null);
@@ -40,7 +44,7 @@ export default function LeagueDashboard({ league, onBack }) {
           });
           setDraftedRosters(rosters);
           setDraftComplete(true);
-          setActiveTab('overview');
+          if (!externalTab) setActiveTab('overview');
         }
       })
       .catch(() => {}) // No saved draft — that's fine
@@ -80,56 +84,90 @@ export default function LeagueDashboard({ league, onBack }) {
     finally { setRemovingMemberId(null); }
   };
 
-  const tabs = [
+  const primaryTabs = [
     { id: 'draft', label: 'Draft' },
     { id: 'overview', label: 'Overview' },
     { id: 'lineup', label: 'My Lineup' },
     { id: 'matchups', label: 'Matchups' },
+  ];
+  const moreTabs = [
     { id: 'standings', label: 'Standings' },
     { id: 'waivers', label: 'Waivers' },
     { id: 'trades', label: 'Trades' },
     { id: 'players', label: 'Players' },
-    { id: 'settings', label: 'Settings' },
   ];
+  const allTabs = [...primaryTabs, ...moreTabs, { id: 'settings', label: 'Settings' }];
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const moreMenuRef = useRef(null);
+  useEffect(() => {
+    const handler = (e) => { if (moreMenuRef.current && !moreMenuRef.current.contains(e.target)) setShowMoreMenu(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+  const isMoreTabActive = moreTabs.some(t => t.id === activeTab);
 
   return (
-    <div>
+    <div className="ff-league-layout">
+      <div>
       {/* League Header */}
-      <div className="ff-hero" style={{ marginTop: 48, paddingBottom: 0 }}>
+      <div className="ff-hero ff-hero-compact" style={{ marginTop: 48 }}>
         <div style={{ width: '100%' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
             <button onClick={onBack} className="ff-back-btn">{'\u2190'} My Leagues</button>
-            <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12 }}>{league.type} &middot; {league.scoring_preset?.toUpperCase() || 'PPR'} &middot; {league.league_size} teams</span>
+            <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>{league.type} &middot; {league.scoring_preset?.toUpperCase() || 'PPR'} &middot; {league.league_size} teams</span>
           </div>
-          <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 26, fontWeight: 700, color: '#fff', marginBottom: 4 }}>
+          <h1 style={{ fontFamily: "'Playfair Display', serif", color: 'var(--text)' }}>
             {league.name}
           </h1>
-          <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13 }}>
+          <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>
             Your team: <strong style={{ color: 'var(--accent-secondary-text)' }}>{league.team_name}</strong> &middot; {league.role === 'commissioner' ? 'Commissioner' : 'Member'}
           </p>
 
           {/* League Nav Tabs */}
           <div className="ff-league-tabs-wrap">
-            {tabs.map(t => (
+            {primaryTabs.map(t => (
               <button key={t.id} onClick={() => setActiveTab(t.id)}
                 className={`ff-league-tab${activeTab === t.id ? ' active' : ''}`}>
                 {t.label}
               </button>
             ))}
+            <div ref={moreMenuRef} style={{ position: 'relative', display: 'flex' }}>
+              <button
+                className={`ff-league-tab${isMoreTabActive ? ' active' : ''}`}
+                onClick={() => setShowMoreMenu(prev => !prev)}>
+                {isMoreTabActive ? moreTabs.find(t => t.id === activeTab)?.label : 'More'} {'\u25BE'}
+              </button>
+              {showMoreMenu && (
+                <div className="ff-more-dropdown">
+                  {moreTabs.map(t => (
+                    <button key={t.id}
+                      className={`ff-more-dropdown-item${activeTab === t.id ? ' active' : ''}`}
+                      onClick={() => { setActiveTab(t.id); setShowMoreMenu(false); }}>
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <button onClick={() => setActiveTab('settings')}
+              className={`ff-league-tab ff-league-tab-gear${activeTab === 'settings' ? ' active' : ''}`}
+              title="Settings">
+              {'\u2699'}
+            </button>
           </div>
         </div>
       </div>
 
       {/* Player Stats View */}
       {viewingPlayerId ? (
-        <div className="ff-tab-content" style={{ padding: '20px clamp(16px, 4vw, 32px)', maxWidth: 900, margin: '0 auto' }}>
+        <div className="ff-tab-content ff-tab-content-narrow">
           <PlayerStats playerId={viewingPlayerId} onBack={() => setViewingPlayerId(null)} />
         </div>
       ) : <>
 
       {/* Tab Content */}
       {activeTab === 'draft' && (
-        <div className="ff-tab-content" style={{ padding: '20px clamp(16px, 4vw, 32px)', maxWidth: 1600, margin: '0 auto' }}>
+        <div className="ff-tab-content ff-tab-content-full">
           {draftLoading ? (
             <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)', fontSize: 13 }}>Loading draft...</div>
           ) : (
@@ -146,10 +184,12 @@ export default function LeagueDashboard({ league, onBack }) {
       {activeTab === 'overview' && (
         <div className="ff-tab-content">
           {!draftComplete ? (
-            <div style={{ textAlign: 'center', padding: 40 }}>
-                            <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>Complete the Draft First</div>
-              <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16 }}>Your league overview will populate once the draft is complete.</div>
-              <button className="ff-btn ff-btn-primary" style={{ fontSize: 13, padding: '10px 20px' }} onClick={() => setActiveTab('draft')}>Go to Draft</button>
+            <div className="ff-empty-state">
+              <div className="ff-empty-state-title">Complete the Draft First</div>
+              <div className="ff-empty-state-desc">Your league overview will populate once the draft is complete.</div>
+              <div className="ff-empty-state-actions">
+                <button className="ff-btn ff-btn-primary" onClick={() => setActiveTab('draft')}>Go to Draft</button>
+              </div>
             </div>
           ) : (
             <div className="ff-main-grid">
@@ -168,16 +208,18 @@ export default function LeagueDashboard({ league, onBack }) {
       )}
 
       {activeTab === 'lineup' && (
-        <div className="ff-tab-content" style={{ padding: '20px clamp(16px, 4vw, 32px)', maxWidth: 900, margin: '0 auto' }}>
+        <div className="ff-tab-content ff-tab-content-narrow">
           {draftComplete ? (
             <MyLineup rosters={draftedRosters} onPlayerClick={handlePlayerClick} />
           ) : (
             <div className="ff-card">
               <div className="ff-card-top-accent" style={{ background: 'var(--accent)' }} />
-              <div className="ff-card-body" style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 40 }}>
-                <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 6 }}>Complete the draft first</div>
-                <div style={{ fontSize: 12 }}>Head to the Draft tab to draft your team before managing your lineup.</div>
-                <button className="ff-btn ff-btn-primary" style={{ marginTop: 16, fontSize: 13, padding: '10px 20px' }} onClick={() => setActiveTab('draft')}>Go to Draft</button>
+              <div className="ff-card-body ff-empty-state">
+                <div className="ff-empty-state-title">Complete the draft first</div>
+                <div className="ff-empty-state-desc">Head to the Draft tab to draft your team before managing your lineup.</div>
+                <div className="ff-empty-state-actions">
+                  <button className="ff-btn ff-btn-primary" onClick={() => setActiveTab('draft')}>Go to Draft</button>
+                </div>
               </div>
             </div>
           )}
@@ -185,43 +227,50 @@ export default function LeagueDashboard({ league, onBack }) {
       )}
 
       {activeTab === 'matchups' && (
-        <div className="ff-tab-content" style={{ padding: '20px clamp(16px, 4vw, 32px)', maxWidth: 1400, margin: '0 auto' }}>
+        <div className="ff-tab-content ff-tab-content-wide">
           <MatchupWidget mode="all" rosters={draftedRosters} onPlayerClick={handlePlayerClick} />
         </div>
       )}
 
       {activeTab === 'standings' && (
-        <div className="ff-tab-content" style={{ padding: '20px clamp(16px, 4vw, 32px)', maxWidth: 1000, margin: '0 auto' }}>
+        <div className="ff-tab-content ff-tab-content-mid">
           <StandingsCard expanded rosters={draftedRosters} leagueName={league.name} />
         </div>
       )}
 
       {activeTab === 'waivers' && (
-        <div className="ff-tab-content" style={{ padding: '20px clamp(16px, 4vw, 32px)', maxWidth: 1000, margin: '0 auto' }}>
+        <div className="ff-tab-content ff-tab-content-mid">
           <WaiverWireCard expanded rosters={draftedRosters} onPlayerClick={handlePlayerClick} />
         </div>
       )}
 
       {activeTab === 'trades' && (
-        <div className="ff-tab-content" style={{ padding: '20px clamp(16px, 4vw, 32px)', maxWidth: 1400, margin: '0 auto' }}>
-          <div className="ff-card">
-            <div className="ff-card-top-accent" style={{ background: 'var(--accent-secondary)' }} />
-            <div className="ff-card-header"><h2>Trade Center</h2></div>
-            <div className="ff-card-body" style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 40 }}>
-              League-specific trade center coming soon. Propose trades, analyze values based on your league's scoring, and manage offers.
+        <div className="ff-tab-content ff-tab-content-wide">
+          {draftComplete ? (
+            <TradeCenter rosters={draftedRosters} onRostersChange={setDraftedRosters} scoringPreset={league.scoring_preset} />
+          ) : (
+            <div className="ff-card">
+              <div className="ff-card-top-accent" style={{ background: 'var(--accent-secondary)' }} />
+              <div className="ff-card-body ff-empty-state">
+                <div className="ff-empty-state-title">Complete the Draft First</div>
+                <div className="ff-empty-state-desc">Trade center requires rosters. Complete the draft to begin trading.</div>
+                <div className="ff-empty-state-actions">
+                  <button className="ff-btn ff-btn-primary" onClick={() => setActiveTab('draft')}>Go to Draft</button>
+                </div>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
 
       {activeTab === 'players' && (
-        <div className="ff-tab-content" style={{ padding: '20px clamp(16px, 4vw, 32px)', maxWidth: 1400, margin: '0 auto' }}>
+        <div className="ff-tab-content ff-tab-content-wide">
           <PlayerRankings onPlayerClick={handlePlayerClick} />
         </div>
       )}
 
       {activeTab === 'settings' && (
-        <div className="ff-tab-content" style={{ padding: '20px clamp(16px, 4vw, 32px)', maxWidth: 1400, margin: '0 auto' }}>
+        <div className="ff-tab-content ff-tab-content-wide">
           <div className="ff-card" style={{ marginBottom: 16 }}>
             <div className="ff-card-top-accent" style={{ background: 'var(--charcoal-slate)' }} />
             <div className="ff-card-header"><h2>League Settings</h2></div>
@@ -293,6 +342,13 @@ export default function LeagueDashboard({ league, onBack }) {
         </div>
       )}
       </>}
+      </div>
+      <div className="ff-league-ad-sidebar">
+        <div className="ad-fill">
+          <div className="ad-fill-label">Ad Space</div>
+          <div className="ad-fill-size">160xFull</div>
+        </div>
+      </div>
     </div>
   );
 }

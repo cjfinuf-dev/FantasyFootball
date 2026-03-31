@@ -1,13 +1,13 @@
 export const PLAYERS = [
   // ===== QUARTERBACKS (24) =====
-  { id:'p1', name:'Patrick Mahomes', team:'KC', pos:'QB', pts:26.8, proj:23.5, avg:22.1, status:'healthy' },
-  { id:'p2', name:'Josh Allen', team:'BUF', pos:'QB', pts:24.2, proj:22.8, avg:21.5, status:'healthy' },
-  { id:'p3', name:'Lamar Jackson', team:'BAL', pos:'QB', pts:25.2, proj:24.0, avg:22.8, status:'healthy' },
-  { id:'p4', name:'Jalen Hurts', team:'PHI', pos:'QB', pts:21.0, proj:20.5, avg:19.8, status:'healthy' },
+  { id:'p1', name:'Patrick Mahomes', team:'KC', pos:'QB', pts:24.5, proj:22.0, avg:21.2, status:'healthy' },
+  { id:'p2', name:'Josh Allen', team:'BUF', pos:'QB', pts:28.4, proj:25.5, avg:24.8, status:'healthy' },
+  { id:'p3', name:'Lamar Jackson', team:'BAL', pos:'QB', pts:27.8, proj:25.0, avg:24.2, status:'healthy' },
+  { id:'p4', name:'Jalen Hurts', team:'PHI', pos:'QB', pts:24.2, proj:22.5, avg:21.8, status:'healthy' },
   { id:'p5', name:'Joe Burrow', team:'CIN', pos:'QB', pts:21.9, proj:21.2, avg:20.0, status:'healthy' },
   { id:'p6', name:'CJ Stroud', team:'HOU', pos:'QB', pts:18.4, proj:18.0, avg:17.6, status:'healthy' },
   { id:'p46', name:'Dak Prescott', team:'DAL', pos:'QB', pts:19.9, proj:18.5, avg:18.0, status:'healthy' },
-  { id:'p49', name:'Jayden Daniels', team:'WAS', pos:'QB', pts:20.6, proj:19.8, avg:18.5, status:'healthy' },
+  { id:'p49', name:'Jayden Daniels', team:'WAS', pos:'QB', pts:23.6, proj:21.5, avg:20.8, status:'healthy' },
   { id:'p50', name:'Baker Mayfield', team:'TB', pos:'QB', pts:21.4, proj:19.0, avg:18.2, status:'healthy' },
   { id:'p51', name:'Jared Goff', team:'DET', pos:'QB', pts:18.5, proj:17.8, avg:17.2, status:'healthy' },
   { id:'p52', name:'Bo Nix', team:'DEN', pos:'QB', pts:18.2, proj:17.5, avg:16.8, status:'healthy' },

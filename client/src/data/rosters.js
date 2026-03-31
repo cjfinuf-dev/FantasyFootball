@@ -1,14 +1,17 @@
 import { PLAYERS } from './players';
+import { HEX_SCORES } from '../utils/hexScore';
 
 export const TEAM_ROSTERS_SEED = {
   t1: [], t2: [], t3: [], t4: [], t5: [], t6: [],
   t7: [], t8: [], t9: [], t10: [], t11: [], t12: [],
 };
 
+// PLAYER_VALUES powered by HexScore engine (backward compatible: playerId → 0-100)
 export const PLAYER_VALUES = {};
-PLAYERS.forEach(p => { PLAYER_VALUES[p.id] = (p.proj * 3 + p.avg * 2 + p.pts) / 6; });
-const _maxVal = Math.max(...Object.values(PLAYER_VALUES));
-Object.keys(PLAYER_VALUES).forEach(id => { PLAYER_VALUES[id] = Math.round((PLAYER_VALUES[id] / _maxVal) * 100); });
+PLAYERS.forEach(p => {
+  const entry = HEX_SCORES.get(p.id);
+  PLAYER_VALUES[p.id] = entry ? entry.hexScore : 0;
+});
 
 export const TRADES_SEED = [
   { id:'tr1', status:'pending', fromTeamId:'t3', toTeamId:'t1', offeringPlayerIds:['p8'], requestingPlayerIds:['p15'], message:'Breece is a stud, you need RB depth', proposedAt:Date.now()-3600000, expiresAt:Date.now()+82800000 },

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getNews } from '../../api/news';
+import AdSpace from '../ui/AdSpace';
 
 const CATEGORY_ICONS = {
   injury: null,
@@ -88,7 +89,7 @@ export default function NewsFeed() {
         ))}
       </div>
 
-      <div>
+      <div style={{ maxHeight: 520, overflowY: 'auto' }}>
         {loading && (
           <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
             Loading news...
@@ -107,8 +108,14 @@ export default function NewsFeed() {
           </div>
         )}
 
-        {articles.map(article => (
-          <a key={article.id} href={article.source_url} target="_blank" rel="noopener noreferrer"
+        {articles.map((article, index) => (
+          <div key={article.id}>
+          {index > 0 && index % 8 === 7 && (
+            <div style={{ padding: '12px 20px' }}>
+              <AdSpace size="sm" />
+            </div>
+          )}
+          <a href={article.source_url} target="_blank" rel="noopener noreferrer"
             className="ff-news-item" style={{ textDecoration: 'none', color: 'inherit', display: 'flex' }}>
             {article.image_url ? (
               <div className="ff-news-thumb">
@@ -136,6 +143,7 @@ export default function NewsFeed() {
               </div>
             </div>
           </a>
+          </div>
         ))}
       </div>
 
