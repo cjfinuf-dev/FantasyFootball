@@ -40,4 +40,42 @@ router.put('/:id', requireAuth, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+router.delete('/:id', requireAuth, async (req, res, next) => {
+  try {
+    await leagueService.deleteLeague(Number(req.params.id), req.user.id);
+    res.json({ success: true });
+  } catch (err) { next(err); }
+});
+
+router.delete('/:id/members/:memberId', requireAuth, async (req, res, next) => {
+  try {
+    const league = await leagueService.removeMember(Number(req.params.id), Number(req.params.memberId), req.user.id);
+    res.json({ league });
+  } catch (err) { next(err); }
+});
+
+// Draft endpoints
+router.post('/:id/draft', requireAuth, async (req, res, next) => {
+  try {
+    const { picks, draftOrder } = req.body;
+    if (!picks || !draftOrder) return res.status(400).json({ error: 'picks and draftOrder are required.' });
+    await leagueService.saveDraft(Number(req.params.id), req.user.id, { picks, draftOrder });
+    res.json({ success: true });
+  } catch (err) { next(err); }
+});
+
+router.get('/:id/draft', requireAuth, async (req, res, next) => {
+  try {
+    const draft = await leagueService.getDraft(Number(req.params.id), req.user.id);
+    res.json({ draft });
+  } catch (err) { next(err); }
+});
+
+router.delete('/:id/draft', requireAuth, async (req, res, next) => {
+  try {
+    await leagueService.deleteDraft(Number(req.params.id), req.user.id);
+    res.json({ success: true });
+  } catch (err) { next(err); }
+});
+
 module.exports = router;

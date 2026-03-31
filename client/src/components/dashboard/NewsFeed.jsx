@@ -2,11 +2,11 @@ import { useState, useEffect } from 'react';
 import { getNews } from '../../api/news';
 
 const CATEGORY_ICONS = {
-  injury: '\u{1F3E5}',
-  trade: '\u{1F4E6}',
-  waiver: '\u{1F4C8}',
-  transaction: '\u{1F91D}',
-  news: '\u{1F4F0}',
+  injury: null,
+  trade: null,
+  waiver: null,
+  transaction: null,
+  news: null,
 };
 
 const TABS = ['all', 'injury', 'trade', 'waiver', 'transaction', 'news'];
@@ -69,7 +69,7 @@ export default function NewsFeed() {
       <div className="ff-card-top-accent" style={{ background: 'var(--charcoal-slate)' }} />
       <div className="ff-card-header">
         <h2 style={{ fontSize: 16, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
-          {'\u{1F4F0}'} News Feed
+          News Feed
         </h2>
         <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Live from ESPN, Yahoo, CBS & more</span>
       </div>

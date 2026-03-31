@@ -61,3 +61,13 @@ CREATE TABLE IF NOT EXISTS news_articles (
 CREATE INDEX IF NOT EXISTS idx_news_scraped ON news_articles(scraped_at DESC);
 CREATE INDEX IF NOT EXISTS idx_news_sweep ON news_articles(sweep_id);
 CREATE INDEX IF NOT EXISTS idx_news_category ON news_articles(category);
+
+CREATE TABLE IF NOT EXISTS draft_results (
+  id               INTEGER PRIMARY KEY AUTOINCREMENT,
+  league_id        INTEGER NOT NULL UNIQUE REFERENCES leagues(id) ON DELETE CASCADE,
+  picks_json       TEXT NOT NULL,
+  draft_order_json TEXT NOT NULL,
+  phase            TEXT NOT NULL DEFAULT 'complete',
+  created_at       TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_draft_league ON draft_results(league_id);

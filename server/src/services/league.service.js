@@ -105,4 +105,102 @@ async function updateLeague(leagueId, userId, updates) {
   return getLeagueById(leagueId, userId);
 }
 
-module.exports = { getUserLeagues, createLeague, getLeagueById, updateLeague };
+async function deleteLeague(leagueId, userId) {
+  const db = await getDb();
+
+  const leagueResult = db.exec('SELECT commissioner_id FROM leagues WHERE id = ?', [leagueId]);
+  if (leagueResult.length === 0 || leagueResult[0].values.length === 0) {
+    const err = new Error('League not found.'); err.status = 404; throw err;
+  }
+  if (leagueResult[0].values[0][0] !== userId) {
+    const err = new Error('Only the commissioner can delete a league.'); err.status = 403; throw err;
+  }
+
+  db.run('DELETE FROM league_members WHERE league_id = ?', [leagueId]);
+  db.run('DELETE FROM leagues WHERE id = ?', [leagueId]);
+  saveDb();
+}
+
+async function removeMember(leagueId, memberId, userId) {
+  const db = await getDb();
+
+  const leagueResult = db.exec('SELECT commissioner_id FROM leagues WHERE id = ?', [leagueId]);
+  if (leagueResult.length === 0 || leagueResult[0].values.length === 0) {
+    const err = new Error('League not found.'); err.status = 404; throw err;
+  }
+  if (leagueResult[0].values[0][0] !== userId) {
+    const err = new Error('Only the commissioner can remove members.'); err.status = 403; throw err;
+  }
+
+  // Cannot remove the commissioner
+  const memberResult = db.exec('SELECT role FROM league_members WHERE id = ? AND league_id = ?', [memberId, leagueId]);
+  if (memberResult.length === 0 || memberResult[0].values.length === 0) {
+    const err = new Error('Member not found.'); err.status = 404; throw err;
+  }
+  if (memberResult[0].values[0][0] === 'commissioner') {
+    const err = new Error('Cannot remove the commissioner.'); err.status = 400; throw err;
+  }
+
+  db.run('DELETE FROM league_members WHERE id = ? AND league_id = ?', [memberId, leagueId]);
+  saveDb();
+  return getLeagueById(leagueId, userId);
+}
+
+async function saveDraft(leagueId, userId, { picks, draftOrder }) {
+  const db = await getDb();
+
+  // Verify commissioner
+  const leagueResult = db.exec('SELECT commissioner_id FROM leagues WHERE id = ?', [leagueId]);
+  if (leagueResult.length === 0 || leagueResult[0].values.length === 0) {
+    const err = new Error('League not found.'); err.status = 404; throw err;
+  }
+  if (leagueResult[0].values[0][0] !== userId) {
+    const err = new Error('Only the commissioner can save draft results.'); err.status = 403; throw err;
+  }
+
+  // Upsert: delete existing then insert
+  db.run('DELETE FROM draft_results WHERE league_id = ?', [leagueId]);
+  db.run(
+    'INSERT INTO draft_results (league_id, picks_json, draft_order_json, phase) VALUES (?, ?, ?, ?)',
+    [leagueId, JSON.stringify(picks), JSON.stringify(draftOrder), 'complete']
+  );
+  saveDb();
+}
+
+async function getDraft(leagueId, userId) {
+  const db = await getDb();
+
+  // Verify membership
+  const memCheck = db.exec('SELECT id FROM league_members WHERE league_id = ? AND user_id = ?', [leagueId, userId]);
+  if (memCheck.length === 0 || memCheck[0].values.length === 0) {
+    const err = new Error('Not a member of this league.'); err.status = 403; throw err;
+  }
+
+  const result = db.exec('SELECT picks_json, draft_order_json, phase, created_at FROM draft_results WHERE league_id = ?', [leagueId]);
+  if (result.length === 0 || result[0].values.length === 0) return null;
+
+  const row = result[0].values[0];
+  return {
+    picks: JSON.parse(row[0]),
+    draftOrder: JSON.parse(row[1]),
+    phase: row[2],
+    createdAt: row[3],
+  };
+}
+
+async function deleteDraft(leagueId, userId) {
+  const db = await getDb();
+
+  const leagueResult = db.exec('SELECT commissioner_id FROM leagues WHERE id = ?', [leagueId]);
+  if (leagueResult.length === 0 || leagueResult[0].values.length === 0) {
+    const err = new Error('League not found.'); err.status = 404; throw err;
+  }
+  if (leagueResult[0].values[0][0] !== userId) {
+    const err = new Error('Only the commissioner can reset the draft.'); err.status = 403; throw err;
+  }
+
+  db.run('DELETE FROM draft_results WHERE league_id = ?', [leagueId]);
+  saveDb();
+}
+
+module.exports = { getUserLeagues, createLeague, getLeagueById, updateLeague, deleteLeague, removeMember, saveDraft, getDraft, deleteDraft };

@@ -1,16 +1,18 @@
+export const LEAGUE_NAME = 'VIAM Killas';
+
 export const TEAMS = [
-  { id: 't1', name: 'Gridiron Gladiators', abbr: 'GG', owner: 'Marcus J.', wins: 8, losses: 3, ties: 0, pf: 1247.5, pa: 1089.2, streak: 'W3', rank: 1, logo: '\u{1F3C8}', power: 94 },
-  { id: 't2', name: 'Touchdown Titans', abbr: 'TT', owner: 'Sarah K.', wins: 7, losses: 4, ties: 0, pf: 1198.3, pa: 1102.7, streak: 'W1', rank: 2, logo: '\u{26A1}', power: 89 },
-  { id: 't3', name: 'Blitz Brigade', abbr: 'BB', owner: 'Jake R.', wins: 7, losses: 4, ties: 0, pf: 1175.6, pa: 1098.4, streak: 'L1', rank: 3, logo: '\u{1F4A5}', power: 86 },
-  { id: 't4', name: 'Red Zone Raiders', abbr: 'RZR', owner: 'Emily T.', wins: 6, losses: 5, ties: 0, pf: 1156.2, pa: 1130.5, streak: 'W2', rank: 4, logo: '\u{1F6A8}', power: 80 },
-  { id: 't5', name: 'Pigskin Prophets', abbr: 'PP', owner: 'David L.', wins: 6, losses: 5, ties: 0, pf: 1142.8, pa: 1148.3, streak: 'L2', rank: 5, logo: '\u{1F52E}', power: 76 },
-  { id: 't6', name: 'End Zone Elite', abbr: 'EZE', owner: 'Lisa M.', wins: 5, losses: 6, ties: 0, pf: 1123.4, pa: 1134.9, streak: 'W1', rank: 6, logo: '\u{1F451}', power: 72 },
-  { id: 't7', name: 'Fumble Factory', abbr: 'FF', owner: 'Tom B.', wins: 5, losses: 6, ties: 0, pf: 1098.7, pa: 1156.2, streak: 'L3', rank: 7, logo: '\u{1F3ED}', power: 65 },
-  { id: 't8', name: 'Hail Mary Heroes', abbr: 'HMH', owner: 'Mia W.', wins: 4, losses: 7, ties: 0, pf: 1087.3, pa: 1167.8, streak: 'L1', rank: 8, logo: '\u{1F9B8}', power: 60 },
-  { id: 't9', name: 'Draft Day Divas', abbr: 'DDD', owner: 'Chris P.', wins: 4, losses: 7, ties: 0, pf: 1065.9, pa: 1180.4, streak: 'W1', rank: 9, logo: '\u{1F48E}', power: 55 },
-  { id: 't10', name: 'Sack Attack', abbr: 'SA', owner: 'Nick F.', wins: 3, losses: 8, ties: 0, pf: 1034.2, pa: 1210.6, streak: 'L4', rank: 10, logo: '\u{1F4A2}', power: 48 },
-  { id: 't11', name: 'Benchwarmer Bros', abbr: 'BWB', owner: 'Amy C.', wins: 3, losses: 8, ties: 0, pf: 1012.8, pa: 1225.3, streak: 'L2', rank: 11, logo: '\u{1FA91}', power: 42 },
-  { id: 't12', name: 'Last Place Legends', abbr: 'LPL', owner: 'Dan H.', wins: 2, losses: 9, ties: 0, pf: 978.4, pa: 1267.8, streak: 'L5', rank: 12, logo: '\u{1F3C6}', power: 35 },
+  { id: 't1', name: 'Connor\'s Crushers', abbr: 'CC', owner: 'Connor F.', wins: 9, losses: 2, ties: 0, pf: 1312.6, pa: 1045.8, streak: 'W5', rank: 1, logo: null, power: 96 },
+  { id: 't2', name: 'Audit Trail Blazers', abbr: 'ATB', owner: 'Jordan M.', wins: 8, losses: 3, ties: 0, pf: 1258.4, pa: 1098.2, streak: 'W2', rank: 2, logo: null, power: 91 },
+  { id: 't3', name: 'Ledger Legends', abbr: 'LL', owner: 'Taylor S.', wins: 7, losses: 4, ties: 0, pf: 1201.3, pa: 1112.5, streak: 'W1', rank: 3, logo: null, power: 87 },
+  { id: 't4', name: 'Debit Destroyers', abbr: 'DD', owner: 'Morgan K.', wins: 7, losses: 4, ties: 0, pf: 1185.7, pa: 1120.9, streak: 'L1', rank: 4, logo: null, power: 82 },
+  { id: 't5', name: 'Reconciliation Wreckers', abbr: 'RW', owner: 'Alex P.', wins: 6, losses: 5, ties: 0, pf: 1152.1, pa: 1138.6, streak: 'W2', rank: 5, logo: null, power: 77 },
+  { id: 't6', name: 'Cash Flow Kings', abbr: 'CFK', owner: 'Riley D.', wins: 6, losses: 5, ties: 0, pf: 1134.8, pa: 1147.2, streak: 'L2', rank: 6, logo: null, power: 73 },
+  { id: 't7', name: 'Accrual Assassins', abbr: 'AA', owner: 'Casey B.', wins: 5, losses: 6, ties: 0, pf: 1108.5, pa: 1159.3, streak: 'L1', rank: 7, logo: null, power: 66 },
+  { id: 't8', name: 'Depreciation Nation', abbr: 'DN', owner: 'Jamie W.', wins: 5, losses: 6, ties: 0, pf: 1095.2, pa: 1168.7, streak: 'W1', rank: 8, logo: null, power: 61 },
+  { id: 't9', name: 'GAAP Gangsters', abbr: 'GG', owner: 'Drew L.', wins: 4, losses: 7, ties: 0, pf: 1072.6, pa: 1185.4, streak: 'L3', rank: 9, logo: null, power: 54 },
+  { id: 't10', name: 'Variance Vipers', abbr: 'VV', owner: 'Skyler R.', wins: 3, losses: 8, ties: 0, pf: 1041.3, pa: 1218.9, streak: 'L4', rank: 10, logo: null, power: 47 },
+  { id: 't11', name: 'Write-Off Warriors', abbr: 'WOW', owner: 'Quinn T.', wins: 3, losses: 8, ties: 0, pf: 1018.9, pa: 1232.1, streak: 'W1', rank: 11, logo: null, power: 41 },
+  { id: 't12', name: 'Fiscal Phantoms', abbr: 'FP', owner: 'Avery H.', wins: 1, losses: 10, ties: 0, pf: 962.7, pa: 1296.5, streak: 'L7', rank: 12, logo: null, power: 32 },
 ];
 
 export const USER_TEAM_ID = 't1';

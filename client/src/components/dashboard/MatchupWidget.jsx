@@ -1,43 +1,62 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { TEAMS, USER_TEAM_ID } from '../../data/teams';
 import { MATCHUPS } from '../../data/matchups';
-import { TEAM_ROSTERS_SEED } from '../../data/rosters';
 import { PLAYERS } from '../../data/players';
+import { getEspnId } from '../../data/espnIds';
 import PosBadge from '../ui/PosBadge';
+import PlayerHeadshot from '../ui/PlayerHeadshot';
+import PlayerLink from '../ui/PlayerLink';
+
+const PLAYER_MAP = {};
+PLAYERS.forEach(p => { PLAYER_MAP[p.id] = p; });
+
 
 function calcWinProb(projA, projB) {
   const spread = projA - projB;
   return 1 / (1 + Math.exp(-spread / 7));
 }
 
-function getTopPlayers(teamId, count = 3) {
-  const roster = TEAM_ROSTERS_SEED[teamId] || [];
-  return roster
-    .map(pid => PLAYERS.find(p => p.id === pid))
+function getTeamProjection(teamId, rosters) {
+  if (!rosters || !rosters[teamId]) return 0;
+  return rosters[teamId].reduce((sum, pid) => {
+    const p = PLAYER_MAP[pid];
+    return sum + (p ? p.proj : 0);
+  }, 0);
+}
+
+function getTopPlayers(teamId, rosters, count = 3) {
+  if (!rosters || !rosters[teamId]) return [];
+  return rosters[teamId]
+    .map(pid => PLAYER_MAP[pid])
     .filter(Boolean)
-    .sort((a, b) => b.pts - a.pts)
+    .sort((a, b) => b.proj - a.proj)
     .slice(0, count);
 }
 
 function WinProbBar({ homeProb }) {
   const homePct = Math.round(homeProb * 100);
   const awayPct = 100 - homePct;
-  const isTossUp = homeProb > 0.45 && homeProb < 0.55;
-  const homeColor = isTossUp ? 'var(--wp-even)' : homeProb >= 0.55 ? 'var(--wp-fav)' : 'var(--wp-dog)';
-  const awayColor = isTossUp ? 'var(--wp-even)' : homeProb <= 0.45 ? 'var(--wp-fav)' : 'var(--wp-dog)';
+
   return (
     <div className="ff-winprob">
-      <span className="ff-winprob-label" style={{ color: homeColor }}>{homePct}%</span>
-      <div className="ff-winprob-bar">
-        <div className="ff-winprob-fill" style={{ width: `${homePct}%`, background: homeColor, borderRadius: '3px 0 0 3px' }} />
-        <div className="ff-winprob-fill" style={{ width: `${awayPct}%`, background: awayColor, borderRadius: '0 3px 3px 0' }} />
+      <span className="ff-winprob-label tabular-nums" style={{ color: 'var(--accent)', fontWeight: 700 }}>{homePct}%</span>
+      <div className="ff-winprob-bar" style={{ position: 'relative' }}>
+        <div className="ff-winprob-fill" style={{ width: `${homePct}%`, background: 'var(--accent)', borderRadius: '3px 0 0 3px' }} />
+        <div className="ff-winprob-fill" style={{ width: `${awayPct}%`, background: 'var(--accent-secondary)', borderRadius: '0 3px 3px 0' }} />
+        {/* Divider line at the split point */}
+        <div style={{
+          position: 'absolute', top: -1, bottom: -1,
+          left: `${homePct}%`, transform: 'translateX(-1px)',
+          width: 2, background: 'var(--bg)', zIndex: 1,
+          boxShadow: '0 0 0 1px var(--border)',
+        }} />
       </div>
-      <span className="ff-winprob-label" style={{ color: awayColor }}>{awayPct}%</span>
+      <span className="ff-winprob-label tabular-nums" style={{ color: 'var(--accent-secondary)', fontWeight: 700 }}>{awayPct}%</span>
     </div>
   );
 }
 
-function MatchupCard({ matchup, expanded }) {
+function MatchupCard({ matchup, expanded, rosters, onPlayerClick }) {
   const homeTeam = TEAMS.find(t => t.id === matchup.home.teamId);
   const awayTeam = TEAMS.find(t => t.id === matchup.away.teamId);
   const homeProb = calcWinProb(matchup.home.projected, matchup.away.projected);
@@ -47,8 +66,9 @@ function MatchupCard({ matchup, expanded }) {
   const isLive = matchup.status === 'in_progress';
   const homeWinning = matchup.home.score >= matchup.away.score;
 
-  const homePlayers = expanded ? getTopPlayers(matchup.home.teamId) : [];
-  const awayPlayers = expanded ? getTopPlayers(matchup.away.teamId) : [];
+  const homePlayers = expanded ? getTopPlayers(matchup.home.teamId, rosters, 4) : [];
+  const awayPlayers = expanded ? getTopPlayers(matchup.away.teamId, rosters, 4) : [];
+
 
   return (
     <div className="ff-card">
@@ -56,12 +76,11 @@ function MatchupCard({ matchup, expanded }) {
       {expanded && (
         <div className="ff-card-header">
           <h2>{isLive && <span className="ff-live-dot" style={{ marginRight: 4 }}></span>} This Week's Matchup</h2>
-          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Sunday 1:00 PM</span>
+          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Week 1</span>
         </div>
       )}
       <div className={expanded ? 'ff-matchup' : 'ff-matchup ff-matchup-compact'}>
         <div className="ff-matchup-team">
-          <div style={{ fontSize: expanded ? 24 : 18, marginBottom: 4 }}>{homeTeam.logo}</div>
           <div className="ff-matchup-team-name" style={!expanded ? { fontSize: 13 } : undefined}>{homeTeam.name}</div>
           {isLive ? (
             <div className={`ff-matchup-score ${homeWinning ? 'winning' : 'losing'}`} style={!expanded ? { fontSize: 24 } : undefined}>
@@ -72,7 +91,7 @@ function MatchupCard({ matchup, expanded }) {
               -
             </div>
           )}
-          <div className="ff-matchup-projected">Proj: {matchup.home.projected}</div>
+          <div className="ff-matchup-projected tabular-nums">Proj: {matchup.home.projected.toFixed(1)}</div>
           <span className={`ff-matchup-tag ${isTossUp ? 'ff-tag-even' : homeFavored ? 'ff-tag-fav' : 'ff-tag-dog'}`}>
             {isTossUp ? 'Toss-Up' : homeFavored ? 'Favorite' : 'Underdog'}
           </span>
@@ -80,8 +99,11 @@ function MatchupCard({ matchup, expanded }) {
             <div className="ff-matchup-players">
               {homePlayers.map((p, i) => (
                 <div className="ff-matchup-player" key={i}>
-                  <span className="ff-matchup-player-name"><PosBadge pos={p.pos} /> {p.name}</span>
-                  <span style={{ fontWeight: 600 }}>{p.pts}</span>
+                  <span className="ff-matchup-player-name" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <PlayerHeadshot espnId={getEspnId(p.name)} name={p.name} size="xs" pos={p.pos} team={p.team} />
+                    <PosBadge pos={p.pos} /> <PlayerLink name={p.name} playerId={p.id} onPlayerClick={onPlayerClick} />
+                  </span>
+                  <span style={{ fontWeight: 600 }} className="tabular-nums">{p.proj}</span>
                 </div>
               ))}
             </div>
@@ -89,7 +111,6 @@ function MatchupCard({ matchup, expanded }) {
         </div>
         <div className="ff-matchup-vs"><span>VS</span></div>
         <div className="ff-matchup-team">
-          <div style={{ fontSize: expanded ? 24 : 18, marginBottom: 4 }}>{awayTeam.logo}</div>
           <div className="ff-matchup-team-name" style={!expanded ? { fontSize: 13 } : undefined}>{awayTeam.name}</div>
           {isLive ? (
             <div className={`ff-matchup-score ${!homeWinning ? 'winning' : 'losing'}`} style={!expanded ? { fontSize: 24 } : undefined}>
@@ -100,7 +121,7 @@ function MatchupCard({ matchup, expanded }) {
               -
             </div>
           )}
-          <div className="ff-matchup-projected">Proj: {matchup.away.projected}</div>
+          <div className="ff-matchup-projected tabular-nums">Proj: {matchup.away.projected.toFixed(1)}</div>
           <span className={`ff-matchup-tag ${isTossUp ? 'ff-tag-even' : awayFavored ? 'ff-tag-fav' : 'ff-tag-dog'}`}>
             {isTossUp ? 'Toss-Up' : awayFavored ? 'Favorite' : 'Underdog'}
           </span>
@@ -108,8 +129,11 @@ function MatchupCard({ matchup, expanded }) {
             <div className="ff-matchup-players">
               {awayPlayers.map((p, i) => (
                 <div className="ff-matchup-player" key={i}>
-                  <span className="ff-matchup-player-name"><PosBadge pos={p.pos} /> {p.name}</span>
-                  <span style={{ fontWeight: 600 }}>{p.pts}</span>
+                  <span className="ff-matchup-player-name" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <PlayerHeadshot espnId={getEspnId(p.name)} name={p.name} size="xs" pos={p.pos} team={p.team} />
+                    <PosBadge pos={p.pos} /> <PlayerLink name={p.name} playerId={p.id} onPlayerClick={onPlayerClick} />
+                  </span>
+                  <span style={{ fontWeight: 600 }} className="tabular-nums">{p.proj}</span>
                 </div>
               ))}
             </div>
@@ -123,14 +147,28 @@ function MatchupCard({ matchup, expanded }) {
   );
 }
 
-export default function MatchupWidget({ mode = 'featured' }) {
-  const userMatchup = MATCHUPS.find(
+export default function MatchupWidget({ mode = 'featured', rosters, onPlayerClick }) {
+  // Compute matchups with roster-based projections
+  const matchups = useMemo(() => {
+    if (!rosters) return MATCHUPS;
+    return MATCHUPS.map(m => {
+      const homeProj = getTeamProjection(m.home.teamId, rosters);
+      const awayProj = getTeamProjection(m.away.teamId, rosters);
+      return {
+        ...m,
+        home: { ...m.home, projected: homeProj || m.home.projected },
+        away: { ...m.away, projected: awayProj || m.away.projected },
+      };
+    });
+  }, [rosters]);
+
+  const userMatchup = matchups.find(
     m => m.home.teamId === USER_TEAM_ID || m.away.teamId === USER_TEAM_ID
-  ) || MATCHUPS[0];
+  ) || matchups[0];
 
   const [liveScores, setLiveScores] = useState(() => {
     const live = {};
-    MATCHUPS.filter(m => m.status === 'in_progress').forEach(m => {
+    matchups.filter(m => m.status === 'in_progress').forEach(m => {
       live[m.id] = { home: m.home.score, away: m.away.score };
     });
     return live;
@@ -164,7 +202,7 @@ export default function MatchupWidget({ mode = 'featured' }) {
   };
 
   if (mode === 'featured') {
-    return <MatchupCard matchup={getMatchupWithLive(userMatchup)} expanded />;
+    return <MatchupCard matchup={getMatchupWithLive(userMatchup)} expanded rosters={rosters} onPlayerClick={onPlayerClick} />;
   }
 
   return (
@@ -173,12 +211,12 @@ export default function MatchupWidget({ mode = 'featured' }) {
         <div className="ff-card-top-accent" style={{ background: 'var(--accent)' }} />
         <div className="ff-card-header">
           <h2>This Week's Matchups</h2>
-          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Week 12</span>
+          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Week 1</span>
         </div>
       </div>
       <div className="ff-matchups-grid">
-        {MATCHUPS.map(m => (
-          <MatchupCard key={m.id} matchup={getMatchupWithLive(m)} expanded={false} />
+        {matchups.map(m => (
+          <MatchupCard key={m.id} matchup={getMatchupWithLive(m)} expanded={false} rosters={rosters} onPlayerClick={onPlayerClick} />
         ))}
       </div>
     </div>

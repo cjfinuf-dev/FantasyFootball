@@ -1,10 +1,13 @@
 import { useState, useMemo } from 'react';
 import { PLAYERS } from '../../data/players';
 import { POS_COLORS } from '../../utils/helpers';
+import { getEspnId } from '../../data/espnIds';
 import PosBadge from '../ui/PosBadge';
 import StatusLabel from '../ui/StatusLabel';
+import PlayerHeadshot from '../ui/PlayerHeadshot';
+import PlayerLink from '../ui/PlayerLink';
 
-export default function PlayerRankings() {
+export default function PlayerRankings({ onPlayerClick }) {
   const [sortField, setSortField] = useState('pts');
   const [sortDir, setSortDir] = useState('desc');
   const [posFilter, setPosFilter] = useState('ALL');
@@ -68,11 +71,19 @@ export default function PlayerRankings() {
               {filtered.map((p, i) => (
                 <tr key={p.id}>
                   <td style={{ fontWeight: 600, color: 'var(--text-muted)' }}>{i + 1}</td>
-                  <td><span className="player-name">{p.name}</span><span className="player-team">{p.team}</span></td>
+                  <td>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <PlayerHeadshot espnId={getEspnId(p.name)} name={p.name} size="xs" pos={p.pos} team={p.team} />
+                      <div>
+                        <PlayerLink name={p.name} playerId={p.id} onPlayerClick={onPlayerClick} />
+                        <span className="player-team">{p.team}</span>
+                      </div>
+                    </div>
+                  </td>
                   <td><PosBadge pos={p.pos} /></td>
-                  <td style={{ fontWeight: 600 }}>{p.pts}</td>
-                  <td style={{ color: 'var(--text-muted)' }}>{p.proj}</td>
-                  <td style={{ color: 'var(--text-muted)' }}>{p.avg}</td>
+                  <td style={{ fontWeight: 600 }} className="tabular-nums">{p.pts}</td>
+                  <td style={{ color: 'var(--text-muted)' }} className="tabular-nums">{p.proj}</td>
+                  <td style={{ color: 'var(--text-muted)' }} className="tabular-nums">{p.avg}</td>
                   <td><StatusLabel status={p.status} /></td>
                 </tr>
               ))}
