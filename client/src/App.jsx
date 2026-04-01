@@ -7,7 +7,10 @@ import NewsFeed from './components/dashboard/NewsFeed';
 import HubPage from './components/layout/HubPage';
 import AdSpace from './components/ui/AdSpace';
 import LeagueDashboard from './components/league/LeagueDashboard';
+import QuickTradeCalc from './components/trade/QuickTradeCalc';
 import * as leagueApi from './api/leagues';
+import { getHistoricalStats } from './api/stats';
+import { setHistoricalData } from './utils/hexScore';
 
 export default function App() {
   const { user, loading, signout } = useAuth();
@@ -36,6 +39,13 @@ export default function App() {
       .catch(() => {})
       .finally(() => setLeaguesLoading(false));
   }, [user]);
+
+  // Load historical stats from server and inject into HexScore engine
+  useEffect(() => {
+    getHistoricalStats()
+      .then(data => { if (data?.players) setHistoricalData(data); })
+      .catch(() => {}); // Falls back to players.js avg values
+  }, []);
 
   useEffect(() => {
     const handler = (e) => {
@@ -79,7 +89,7 @@ export default function App() {
       <>
         <nav className="ff-top-navbar">
           <div className="ff-nav-left">
-            <div className="ff-nav-logo" style={{ cursor: 'pointer' }} onClick={() => setActiveLeague(null)}>Hex<span>Metrics</span></div>
+            <div className="ff-nav-logo" style={{ cursor: 'pointer' }} onClick={() => setActiveLeague(null)}><img src="/logo-icon.png" alt="" className="ff-nav-logo-icon" />Hex<span>Metrics</span></div>
             <span className="ff-nav-breadcrumb-sep">/</span>
             <span className="ff-nav-breadcrumb-label">{activeLeague.name}</span>
           </div>
@@ -125,7 +135,17 @@ export default function App() {
           </div>
           <div className="ff-nav-right">
             <TeamPicker value={teamId} onChange={setTeamId} />
-            <button className="ff-dark-toggle" onClick={toggleTheme}>{theme === 'dark' ? 'Light' : 'Dark'}</button>
+            <button className="ff-dark-toggle" onClick={toggleTheme} title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>
+              {theme === 'dark' ? (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FBBF24" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                </svg>
+              ) : (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                </svg>
+              )}
+            </button>
             <div className="auth-avatar">{user.name.charAt(0).toUpperCase()}</div>
             <span className="auth-user-name">{user.name}</span>
             <button className="top-navbar-login" onClick={signout}>Sign Out</button>
@@ -133,10 +153,10 @@ export default function App() {
         </nav>
         <LeagueDashboard league={activeLeague} onBack={() => setActiveLeague(null)} activeTab={leagueTab} onTabChange={setLeagueTab} />
         <footer className="ff-footer">
-          <div className="ff-footer-brand">Hex<span>Metrics</span> <span className="ff-footer-season">2025-26</span></div>
+          <div className="ff-footer-brand"><img src="/logo-icon.png" alt="" className="ff-footer-logo-icon" />Hex<span>Metrics</span> <span className="ff-footer-season">2025-26</span></div>
           <div className="ff-footer-links">
             <button className="ff-footer-link" onClick={() => setActiveLeague(null)}>Home</button>
-            <button className="ff-footer-link">Help</button>
+            <button className="ff-footer-link disabled" disabled>Help</button>
           </div>
           <div className="ff-footer-credit">&copy; 2025 HexMetrics</div>
         </footer>
@@ -148,7 +168,7 @@ export default function App() {
     <>
       <nav className="ff-top-navbar">
         <div className="ff-nav-left">
-          <div className="ff-nav-logo">Hex<span>Metrics</span></div>
+          <div className="ff-nav-logo"><img src="/logo-icon.png" alt="" className="ff-nav-logo-icon" />Hex<span>Metrics</span></div>
         </div>
         <div className="ff-nav-center">
           {user ? (
@@ -161,9 +181,17 @@ export default function App() {
         </div>
         <div className="ff-nav-right">
           <TeamPicker value={teamId} onChange={setTeamId} />
-          <button className="ff-dark-toggle" onClick={toggleTheme} title="Toggle dark mode">
-            {theme === 'dark' ? 'Light' : 'Dark'}
-          </button>
+          <button className="ff-dark-toggle" onClick={toggleTheme} title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>
+              {theme === 'dark' ? (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FBBF24" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                </svg>
+              ) : (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                </svg>
+              )}
+            </button>
           {user ? (
             <div className="ff-nav-user-group">
               <button className="ff-create-league-btn" onClick={() => setShowCreateLeague(true)}>+ Create a League</button>
@@ -187,12 +215,13 @@ export default function App() {
           onSelectLeague={setActiveLeague}
           onCreateLeague={() => setShowCreateLeague(true)}
           onDeleteLeague={setDeleteConfirmId}
+          onLeagueJoined={(league) => { setLeagues(prev => [league, ...prev]); setActiveLeague(league); }}
           userName={user.name}
         />
       ) : (
         <>
           <div className="ff-hero ff-hero-landing" style={{ marginTop: 48 }}>
-            <h1>Hex<span>Metrics</span></h1>
+            <img src="/logo-full.png" alt="HexMetrics" className="ff-hero-logo" />
             <p>Your all-in-one fantasy football dashboard. Manage leagues, analyze trades, track players, and dominate your competition.</p>
             <div className="ff-hero-landing-actions">
               <button className="ff-hero-action ff-hero-landing-action primary" onClick={() => setShowAuthModal('signup')}>Create Account</button>
@@ -205,17 +234,23 @@ export default function App() {
               <div>Custom Scoring</div>
             </div>
           </div>
-          <div className="ff-tab-content-wide">
-            <AdSpace size="sm" />
+          <div className="ff-tab-content-wide" style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 16 }}>
+            <div>
+              <QuickTradeCalc
+                onSignIn={() => setShowAuthModal('signin')}
+                onSignUp={() => setShowAuthModal('signup')}
+              />
+              <div style={{ marginTop: 16 }}><AdSpace size="sm" /></div>
+            </div>
             <NewsFeed />
           </div>
         </>
       )}
 
       <footer className="ff-footer">
-        <div className="ff-footer-brand">Hex<span>Metrics</span> <span className="ff-footer-season">2025-26</span></div>
+        <div className="ff-footer-brand"><img src="/logo-icon.png" alt="" className="ff-footer-logo-icon" />Hex<span>Metrics</span> <span className="ff-footer-season">2025-26</span></div>
         <div className="ff-footer-links">
-          <button className="ff-footer-link">Help</button>
+          <button className="ff-footer-link disabled" disabled>Help</button>
         </div>
         <div className="ff-footer-credit">&copy; 2025 HexMetrics</div>
       </footer>

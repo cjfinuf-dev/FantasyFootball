@@ -15,7 +15,7 @@ import * as leagueApi from '../../api/leagues';
 import { TEAMS } from '../../data/teams';
 
 export default function LeagueDashboard({ league, onBack, activeTab: externalTab, onTabChange }) {
-  const [internalTab, setInternalTab] = useState('draft');
+  const [internalTab, setInternalTab] = useState('overview');
   const activeTab = externalTab || internalTab;
   const setActiveTab = (tab) => { setInternalTab(tab); onTabChange?.(tab); };
   const [draftComplete, setDraftComplete] = useState(false);
@@ -84,17 +84,21 @@ export default function LeagueDashboard({ league, onBack, activeTab: externalTab
     finally { setRemovingMemberId(null); }
   };
 
+  // Tabs that require a completed draft to show real content
+  const draftRequiredTabs = new Set(['overview', 'lineup', 'matchups', 'standings', 'waivers', 'trades']);
+  const isTabDisabled = (id) => !draftComplete && draftRequiredTabs.has(id);
+
   const primaryTabs = [
-    { id: 'draft', label: 'Draft' },
     { id: 'overview', label: 'Overview' },
     { id: 'lineup', label: 'My Lineup' },
-    { id: 'matchups', label: 'Matchups' },
-  ];
-  const moreTabs = [
-    { id: 'standings', label: 'Standings' },
-    { id: 'waivers', label: 'Waivers' },
     { id: 'trades', label: 'Trades' },
     { id: 'players', label: 'Players' },
+    { id: 'standings', label: 'Standings' },
+  ];
+  const moreTabs = [
+    { id: 'matchups', label: 'Matchups' },
+    { id: 'waivers', label: 'Waivers' },
+    { id: 'draft', label: 'Draft' },
   ];
   const allTabs = [...primaryTabs, ...moreTabs, { id: 'settings', label: 'Settings' }];
   const [showMoreMenu, setShowMoreMenu] = useState(false);
@@ -126,8 +130,10 @@ export default function LeagueDashboard({ league, onBack, activeTab: externalTab
           {/* League Nav Tabs */}
           <div className="ff-league-tabs-wrap">
             {primaryTabs.map(t => (
-              <button key={t.id} onClick={() => setActiveTab(t.id)}
-                className={`ff-league-tab${activeTab === t.id ? ' active' : ''}`}>
+              <button key={t.id}
+                onClick={() => !isTabDisabled(t.id) && setActiveTab(t.id)}
+                className={`ff-league-tab${activeTab === t.id ? ' active' : ''}${isTabDisabled(t.id) ? ' disabled' : ''}`}
+                title={isTabDisabled(t.id) ? 'Complete the draft first' : undefined}>
                 {t.label}
               </button>
             ))}
@@ -141,8 +147,9 @@ export default function LeagueDashboard({ league, onBack, activeTab: externalTab
                 <div className="ff-more-dropdown">
                   {moreTabs.map(t => (
                     <button key={t.id}
-                      className={`ff-more-dropdown-item${activeTab === t.id ? ' active' : ''}`}
-                      onClick={() => { setActiveTab(t.id); setShowMoreMenu(false); }}>
+                      className={`ff-more-dropdown-item${activeTab === t.id ? ' active' : ''}${isTabDisabled(t.id) ? ' disabled' : ''}`}
+                      onClick={() => { if (!isTabDisabled(t.id)) { setActiveTab(t.id); setShowMoreMenu(false); } }}
+                      title={isTabDisabled(t.id) ? 'Complete the draft first' : undefined}>
                       {t.label}
                     </button>
                   ))}
@@ -280,6 +287,13 @@ export default function LeagueDashboard({ league, onBack, activeTab: externalTab
                 <div><span style={{ fontWeight: 600, color: 'var(--text-muted)', fontSize: 11, textTransform: 'uppercase' }}>Scoring</span><br/>{league.scoring_preset}</div>
                 <div><span style={{ fontWeight: 600, color: 'var(--text-muted)', fontSize: 11, textTransform: 'uppercase' }}>Teams</span><br/>{league.league_size}</div>
                 <div><span style={{ fontWeight: 600, color: 'var(--text-muted)', fontSize: 11, textTransform: 'uppercase' }}>Season</span><br/>{league.season}</div>
+                {league.invite_code && (
+                  <div style={{ gridColumn: '1 / -1', marginTop: 8, padding: '12px 16px', background: 'var(--surface, var(--bg-alt))', borderRadius: 8, border: '1px solid var(--border)' }}>
+                    <span style={{ fontWeight: 600, color: 'var(--text-muted)', fontSize: 11, textTransform: 'uppercase' }}>Invite Code</span><br/>
+                    <span style={{ fontFamily: 'monospace', fontSize: 18, fontWeight: 700, letterSpacing: '0.15em', color: 'var(--accent)' }}>{league.invite_code}</span>
+                    <span style={{ marginLeft: 12, fontSize: 11, color: 'var(--text-muted)' }}>Share this code so others can join your league</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>

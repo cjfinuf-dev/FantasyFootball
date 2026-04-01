@@ -1,14 +1,21 @@
 /**
  * HexScore — Proprietary Player Valuation Engine
  *
- * A seven-dimensional composite score (0-100) combining:
- *   1. Production (0.28) — 3-year weighted historical production, scoring-format adjusted
- *   2. Positional Scarcity (0.16) — exponential decay with position-specific curves
- *   3. Consistency (0.10) — inverse coefficient of variation
- *   4. Situation (0.18) — team scheme, QB quality, offensive context, situation changes
+ * An eight-dimensional composite score (0-100) combining:
+ *   1. Production (0.25) — 3-year weighted historical production, scoring-format adjusted
+ *   2. Positional Scarcity (0.15) — exponential decay with position-specific curves
+ *   3. Consistency (0.09) — inverse coefficient of variation
+ *   4. Situation (0.17) — team scheme, QB quality, offensive context, situation changes
  *   5. Health (0.08) — current status-based discount
- *   6. Durability (0.13) — 3-year injury history: availability, frequency, severity
+ *   6. Durability (0.11) — 3-year injury history: availability, frequency, severity
  *   7. Roster Context (0.07) — team need multiplier (optional)
+ *   8. Age Factor (0.08) — position-specific career arc depreciation
+ *
+ * Age curves model statistical NFL prime windows per position:
+ *   QB 26-34, RB 22-27, WR 24-30, TE 25-31, K 25-36.
+ *   Players in-prime score 1.0; pre-prime get a mild ramp; post-prime
+ *   decline accelerates past a position-specific cliff age.
+ *   Dynasty format doubles the age weight (0.14) to reflect career runway.
  *
  * Scoring-format-aware: each league preset (PPR, standard, 6pt pass TD, etc.)
  * adjusts position production multipliers and scarcity curves.
@@ -16,12 +23,58 @@
 
 import { PLAYERS } from '../data/players';
 import { computeDurability } from '../data/injuryProfiles';
-import { getWeightedProduction } from '../data/historicalStats';
 import { TEAM_PROFILES, SCHEME_FIT, SITUATION_CHANGES } from '../data/teamProfiles';
 import { getPlayerArchetype } from '../data/playerArchetypes';
+import { getPlayerAge } from '../data/playerAges';
 
 const PLAYER_MAP = {};
 PLAYERS.forEach(p => { PLAYER_MAP[p.id] = p; });
+
+// ─── Memoized per-preset cache ───
+const _hexCache = {};
+
+// ─── Dynamic historical stats (injected from server on app boot) ───
+let _historicalData = null;
+
+export function setHistoricalData(data) {
+  _historicalData = data;
+  // Clear hex cache so scores recompute with new data
+  Object.keys(_hexCache).forEach(k => delete _hexCache[k]);
+}
+
+export function getHistoricalData() {
+  return _historicalData;
+}
+
+/**
+ * Compute weighted historical production for a player.
+ * Weights: 50% most recent, 25% prior, 15% two years ago, 10% three years ago.
+ * Adapts to available data (rookies get full weight on available seasons).
+ */
+function getWeightedProduction(playerId) {
+  if (!_historicalData?.players) {
+    // Fallback: use current avg from players.js if server data not yet loaded
+    const p = PLAYER_MAP[playerId];
+    return p ? p.avg : 0;
+  }
+
+  const history = _historicalData.players[playerId];
+  if (!history) {
+    const p = PLAYER_MAP[playerId];
+    return p ? p.avg : 0;
+  }
+
+  // Get available seasons sorted descending (most recent first)
+  const years = Object.keys(history).map(Number).sort((a, b) => b - a);
+  if (years.length === 0) return 0;
+
+  const avgs = years.map(y => history[String(y)]?.avgPts || 0);
+
+  if (avgs.length >= 4) return avgs[0] * 0.50 + avgs[1] * 0.25 + avgs[2] * 0.15 + avgs[3] * 0.10;
+  if (avgs.length === 3) return avgs[0] * 0.55 + avgs[1] * 0.30 + avgs[2] * 0.15;
+  if (avgs.length === 2) return avgs[0] * 0.65 + avgs[1] * 0.35;
+  return avgs[0];
+}
 
 // ─── Base scarcity curve parameters ───
 const SCARCITY_CURVES = {
@@ -65,6 +118,7 @@ const SCORING_PROFILES = {
   dynasty: {
     prodMultiplier: { QB: 1.0, RB: 1.0, WR: 1.05, TE: 1.0, K: 0.80, DEF: 0.80 },
     scarcityOverrides: {},
+    ageWeightOverride: 0.14,
   },
 };
 
@@ -94,14 +148,59 @@ const HEALTH_MULTIPLIERS = {
 const IDEAL_ROSTER = { QB: 2, RB: 4, WR: 4, TE: 2, K: 1, DEF: 1 };
 
 const WEIGHTS = {
-  production: 0.28,
-  scarcity: 0.16,
-  consistency: 0.10,
-  situation: 0.18,
+  production: 0.25,
+  scarcity: 0.15,
+  consistency: 0.09,
+  situation: 0.17,
   health: 0.08,
-  durability: 0.13,
+  durability: 0.11,
   rosterContext: 0.07,
+  ageFactor: 0.08,
 };
+
+// ─── Position-specific age curve parameters ───
+// primeStart/primeEnd: plateau at 1.0. cliff: onset of accelerated decline.
+// declineRate: quadratic exponential decay rate past the cliff.
+const AGE_CURVES = {
+  QB:  { primeStart: 26, peak: 30, primeEnd: 34, cliff: 38, declineRate: 0.06 },
+  RB:  { primeStart: 22, peak: 25, primeEnd: 27, cliff: 29, declineRate: 0.14 },
+  WR:  { primeStart: 24, peak: 27, primeEnd: 30, cliff: 32, declineRate: 0.09 },
+  TE:  { primeStart: 25, peak: 28, primeEnd: 31, cliff: 33, declineRate: 0.08 },
+  K:   { primeStart: 25, peak: 31, primeEnd: 36, cliff: 40, declineRate: 0.04 },
+};
+
+function calcAgeFactor(age, pos) {
+  if (pos === 'DEF' || age === null) return 1.0;
+
+  const curve = AGE_CURVES[pos];
+  if (!curve) return 1.0;
+
+  // Phase 2: Prime plateau — full value
+  if (age >= curve.primeStart && age <= curve.primeEnd) {
+    return 1.0;
+  }
+
+  // Phase 1: Rising toward prime — gentle ramp
+  if (age < curve.primeStart) {
+    const yearsUntilPrime = curve.primeStart - age;
+    return Math.max(0.70, 1.0 - (yearsUntilPrime * 0.03));
+  }
+
+  // Phase 3: Post-prime decline
+  const yearsPastPrime = age - curve.primeEnd;
+  const yearsToCliff = curve.cliff - curve.primeEnd;
+
+  if (age <= curve.cliff) {
+    // Gradual linear decline between primeEnd and cliff
+    const linearDecay = yearsPastPrime * (0.20 / yearsToCliff);
+    return Math.max(0.10, 1.0 - linearDecay);
+  }
+
+  // Past cliff: quadratic exponential dropoff
+  const yearsPastCliff = age - curve.cliff;
+  const cliffValue = 0.80;
+  return Math.max(0.05, cliffValue * Math.exp(-curve.declineRate * yearsPastCliff * yearsPastCliff));
+}
 
 // ─── Pre-compute position groups ───
 
@@ -266,6 +365,15 @@ export function computeAllHexScores(players = PLAYERS, rosterContext = null, sco
   // Determine if this is a PPR-family format
   const isPPR = ['ppr', 'halfPpr', 'tePremium'].includes(scoringPreset);
 
+  // Resolve age weight — dynasty/keeper formats can override
+  const profile = getScoringProfile(scoringPreset);
+  const ageWeight = profile.ageWeightOverride || WEIGHTS.ageFactor;
+  const baseAgeWeight = WEIGHTS.ageFactor;
+  // When age is overridden, scale other weights proportionally to keep total = 1.0
+  const nonAgeTotal = 1.0 - baseAgeWeight;
+  const extraAge = ageWeight - baseAgeWeight;
+  const weightScale = extraAge > 0 ? (nonAgeTotal - extraAge) / nonAgeTotal : 1.0;
+
   players.forEach(p => {
     const posGroup = posGroups[p.pos] || [p];
     const archetype = getPlayerArchetype(p.id, p.pos);
@@ -278,6 +386,8 @@ export function computeAllHexScores(players = PLAYERS, rosterContext = null, sco
     const health = calcHealth(p);
     const durability = computeDurability(p.id);
     const context = calcRosterContext(p, rosterContext, players);
+    const age = getPlayerAge(p.id);
+    const ageFactor = calcAgeFactor(age, p.pos);
 
     // Apply archetype adjustments
     // Fantasy premium boosts production (dual-threat QBs, bell-cow RBs, alpha WRs)
@@ -288,13 +398,14 @@ export function computeAllHexScores(players = PLAYERS, rosterContext = null, sco
     const pprBonus = isPPR ? archetype.pprAdjust : 0;
 
     const raw =
-      production * WEIGHTS.production +
+      (production * WEIGHTS.production +
       scarcity * WEIGHTS.scarcity +
       consistency * WEIGHTS.consistency +
       situation * WEIGHTS.situation +
       health * WEIGHTS.health +
       durability * WEIGHTS.durability +
-      (context * WEIGHTS.rosterContext) +
+      (context * WEIGHTS.rosterContext)) * weightScale +
+      ageFactor * ageWeight +
       pprBonus;
 
     const hexScore = Math.round(sigmoidShape(raw) * 100);
@@ -302,16 +413,13 @@ export function computeAllHexScores(players = PLAYERS, rosterContext = null, sco
     results.set(p.id, {
       hexScore,
       archetype: archetype.key,
-      dimensions: { production, scarcity, consistency, situation, health, durability, context },
+      dimensions: { production, scarcity, consistency, situation, health, durability, context, ageFactor },
       tier: getHexTier(hexScore),
     });
   });
 
   return results;
 }
-
-// ─── Memoized per-preset cache ───
-const _hexCache = {};
 
 export function getLeagueHexScores(scoringPreset = 'standard') {
   if (!_hexCache[scoringPreset]) {
@@ -336,6 +444,50 @@ export function getHexTier(score) {
 
 const STARTER_SLOTS = { QB: 1, RB: 2, WR: 2, TE: 1, K: 1, DEF: 1 };
 const FLEX_ELIGIBLE = ['RB', 'WR', 'TE'];
+
+// ─── Replacement-level trade value ───
+// Players below replacement level are waiver-wire replaceable and have near-zero
+// trade value. The curve zeroes out quickly below the startable threshold.
+// Kickers and DEFs are heavily discounted — nearly anyone on the wire is "good enough."
+
+const REPLACEMENT_THRESHOLDS = {
+  QB:  { startable: 55, replacement: 35 },
+  RB:  { startable: 50, replacement: 30 },
+  WR:  { startable: 50, replacement: 30 },
+  TE:  { startable: 45, replacement: 25 },
+  K:   { startable: 70, replacement: 55 },
+  DEF: { startable: 65, replacement: 50 },
+};
+
+// Kickers and DEFs are almost always waiver-replaceable. Only truly elite ones
+// carry meaningful trade capital. This multiplier stacks with replacement decay.
+const POSITION_TRADE_DISCOUNT = { K: 0.15, DEF: 0.20 };
+
+function replacementLevelDecay(hexScore, pos) {
+  const thresholds = REPLACEMENT_THRESHOLDS[pos];
+  if (!thresholds) return hexScore;
+
+  // Above startable: full value, no decay
+  if (hexScore >= thresholds.startable) return hexScore;
+
+  // Between replacement and startable: steep curve toward zero
+  if (hexScore >= thresholds.replacement) {
+    const range = thresholds.startable - thresholds.replacement;
+    const above = hexScore - thresholds.replacement;
+    // Quadratic decay — drops fast near the bottom
+    const pct = (above / range);
+    return hexScore * (pct * pct);
+  }
+
+  // Below replacement level: virtually worthless in a trade
+  return hexScore * 0.02;
+}
+
+function applyTradeDiscounts(tradeValue, pos) {
+  const discount = POSITION_TRADE_DISCOUNT[pos];
+  if (discount) tradeValue *= discount;
+  return tradeValue;
+}
 
 function contextualTradeValue(playerId, receivingRoster, outgoingIds = [], scoringPreset = 'standard') {
   const hexScores = getLeagueHexScores(scoringPreset);
@@ -388,21 +540,58 @@ function contextualTradeValue(playerId, receivingRoster, outgoingIds = [], scori
     const upgradeDelta = base - (benchmarkScore || 0);
     rolePremium = 1.0 + Math.min(0.25, upgradeDelta * 0.0125);
   } else if (wouldFlex) {
-    rolePremium = 0.95;
+    rolePremium = 0.85;
   } else {
-    rolePremium = 0.75;
+    rolePremium = 0.40;
   }
 
-  const adjusted = Math.round(base * needMultiplier * rolePremium);
-  return Math.max(0, Math.min(150, adjusted));
+  // Apply replacement-level decay and position discounts
+  let tradeVal = replacementLevelDecay(base, player.pos) * needMultiplier * rolePremium;
+  tradeVal = applyTradeDiscounts(tradeVal, player.pos);
+
+  return Math.max(0, Math.min(150, Math.round(tradeVal)));
 }
 
 export function computeTradeValue(playerIds, scoringPreset = 'standard') {
   const hexScores = getLeagueHexScores(scoringPreset);
   return playerIds.reduce((sum, id) => {
     const entry = hexScores.get(id);
-    return sum + (entry ? entry.hexScore : 0);
+    if (!entry) return sum;
+    const player = PLAYER_MAP[id];
+    let val = replacementLevelDecay(entry.hexScore, player?.pos);
+    val = applyTradeDiscounts(val, player?.pos);
+    return sum + Math.round(val);
   }, 0);
+}
+
+// ─── Star-concentration adjustment ───
+// When one side offers many low-value players against fewer high-value ones,
+// the bulk side is penalized. Real trades require offering comparable talent,
+// not a pile of waiver-level players for an elite asset.
+
+function concentrationPenalty(ids, scoringPreset) {
+  if (ids.length <= 1) return 1.0;
+  const hexScores = getLeagueHexScores(scoringPreset);
+  const scores = ids.map(id => {
+    const entry = hexScores.get(id);
+    const player = PLAYER_MAP[id];
+    let val = entry ? replacementLevelDecay(entry.hexScore, player?.pos) : 0;
+    val = applyTradeDiscounts(val, player?.pos);
+    return val;
+  }).sort((a, b) => b - a);
+
+  const best = scores[0] || 0;
+  const total = scores.reduce((s, v) => s + v, 0);
+  if (total === 0) return 1.0;
+
+  // What fraction of the package's value comes from the best player?
+  // If the best player is < 40% of the total, the package is filler-heavy.
+  const bestPct = best / total;
+  if (bestPct >= 0.40) return 1.0;
+
+  // Penalize proportionally: a package where the best is only 20% of total
+  // (5 equally bad players) gets a 0.50 multiplier.
+  return 0.50 + (bestPct / 0.40) * 0.50;
 }
 
 export function computeTradeTier(sendIds, receiveIds, userRoster = null, partnerRoster = null, scoringPreset = 'standard') {
@@ -415,6 +604,10 @@ export function computeTradeTier(sendIds, receiveIds, userRoster = null, partner
     sendTotal = computeTradeValue(sendIds, scoringPreset);
     receiveTotal = computeTradeValue(receiveIds, scoringPreset);
   }
+
+  // Apply concentration penalty to each side
+  sendTotal = Math.round(sendTotal * concentrationPenalty(sendIds, scoringPreset));
+  receiveTotal = Math.round(receiveTotal * concentrationPenalty(receiveIds, scoringPreset));
 
   const total = sendTotal + receiveTotal;
   const delta = receiveTotal - sendTotal;
@@ -436,15 +629,22 @@ export function computeTradeTier(sendIds, receiveIds, userRoster = null, partner
 
 // ─── Convenience lookups (default = standard) ───
 
-export const HEX_SCORES = computeAllHexScores();
-
 export function getHexScore(playerId, scoringPreset) {
-  const scores = scoringPreset ? getLeagueHexScores(scoringPreset) : HEX_SCORES;
+  const scores = getLeagueHexScores(scoringPreset || 'standard');
   const entry = scores.get(playerId);
   return entry ? entry.hexScore : 0;
 }
 
 export function getHexData(playerId, scoringPreset) {
-  const scores = scoringPreset ? getLeagueHexScores(scoringPreset) : HEX_SCORES;
+  const scores = getLeagueHexScores(scoringPreset || 'standard');
   return scores.get(playerId) || null;
+}
+
+// Legacy compat — lazy getter so it computes on first access, not at import time
+let _defaultScores = null;
+export function getDefaultHexScores() {
+  if (!_defaultScores || !_hexCache['standard']) {
+    _defaultScores = getLeagueHexScores('standard');
+  }
+  return _defaultScores;
 }

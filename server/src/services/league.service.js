@@ -1,4 +1,9 @@
+const crypto = require('crypto');
 const { getDb, saveDb } = require('../db/connection');
+
+function generateInviteCode() {
+  return crypto.randomBytes(4).toString('hex').toUpperCase();
+}
 
 async function getUserLeagues(userId) {
   const db = await getDb();
@@ -22,10 +27,11 @@ async function getUserLeagues(userId) {
 async function createLeague({ name, type, scoringPreset, scoringJson, rosterJson, leagueSize, season, settingsJson, teamName, userId }) {
   const db = await getDb();
 
+  const inviteCode = generateInviteCode();
   db.run(`
-    INSERT INTO leagues (name, type, scoring_preset, scoring_json, roster_json, league_size, season, commissioner_id, settings_json)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `, [name, type, scoringPreset, scoringJson || null, rosterJson || null, leagueSize, season, userId, settingsJson || null]);
+    INSERT INTO leagues (name, type, scoring_preset, scoring_json, roster_json, league_size, season, commissioner_id, settings_json, invite_code)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `, [name, type, scoringPreset, scoringJson || null, rosterJson || null, leagueSize, season, userId, settingsJson || null, inviteCode]);
 
   const idResult = db.exec('SELECT last_insert_rowid()');
   const leagueId = idResult[0].values[0][0];
@@ -203,4 +209,35 @@ async function deleteDraft(leagueId, userId) {
   saveDb();
 }
 
-module.exports = { getUserLeagues, createLeague, getLeagueById, updateLeague, deleteLeague, removeMember, saveDraft, getDraft, deleteDraft };
+async function joinLeague({ inviteCode, teamName, userId }) {
+  const db = await getDb();
+
+  const result = db.exec('SELECT id, league_size FROM leagues WHERE invite_code = ?', [inviteCode.toUpperCase()]);
+  if (result.length === 0 || result[0].values.length === 0) {
+    const err = new Error('Invalid invite code.'); err.status = 404; throw err;
+  }
+
+  const leagueId = result[0].values[0][0];
+  const leagueSize = result[0].values[0][1];
+
+  // Check if already a member
+  const memCheck = db.exec('SELECT id FROM league_members WHERE league_id = ? AND user_id = ?', [leagueId, userId]);
+  if (memCheck.length > 0 && memCheck[0].values.length > 0) {
+    const err = new Error('You are already a member of this league.'); err.status = 400; throw err;
+  }
+
+  // Check if league is full
+  const countResult = db.exec('SELECT COUNT(*) FROM league_members WHERE league_id = ?', [leagueId]);
+  const memberCount = countResult[0].values[0][0];
+  if (memberCount >= leagueSize) {
+    const err = new Error('This league is full.'); err.status = 400; throw err;
+  }
+
+  db.run('INSERT INTO league_members (league_id, user_id, team_name, role) VALUES (?, ?, ?, ?)',
+    [leagueId, userId, teamName, 'member']);
+  saveDb();
+
+  return getLeagueById(leagueId, userId);
+}
+
+module.exports = { getUserLeagues, createLeague, getLeagueById, updateLeague, deleteLeague, removeMember, saveDraft, getDraft, deleteDraft, joinLeague };

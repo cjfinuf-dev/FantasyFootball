@@ -54,6 +54,16 @@ router.delete('/:id/members/:memberId', requireAuth, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// Join league via invite code
+router.post('/join', requireAuth, async (req, res, next) => {
+  try {
+    const { inviteCode, teamName } = req.body;
+    if (!inviteCode || !teamName) return res.status(400).json({ error: 'Invite code and team name are required.' });
+    const league = await leagueService.joinLeague({ inviteCode, teamName, userId: req.user.id });
+    res.json({ league });
+  } catch (err) { next(err); }
+});
+
 // Draft endpoints
 router.post('/:id/draft', requireAuth, async (req, res, next) => {
   try {

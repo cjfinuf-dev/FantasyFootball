@@ -1,4 +1,4 @@
-import { computeTradeTier, computeTradeValue, HEX_SCORES } from '../../utils/hexScore';
+import { computeTradeTier, computeTradeValue } from '../../utils/hexScore';
 import { PLAYERS } from '../../data/players';
 
 const PLAYER_MAP = {};

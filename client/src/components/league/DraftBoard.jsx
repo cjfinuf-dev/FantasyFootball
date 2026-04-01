@@ -3,6 +3,7 @@ import { TEAMS, USER_TEAM_ID } from '../../data/teams';
 import { PLAYERS } from '../../data/players';
 import { ROSTER_PRESETS } from '../../data/scoring';
 import { getEspnId } from '../../data/espnIds';
+import { getHexScore } from '../../utils/hexScore';
 import PosBadge from '../ui/PosBadge';
 import PlayerHeadshot from '../ui/PlayerHeadshot';
 
@@ -53,6 +54,14 @@ function getTeamNeeds(picks, teamId) {
     const have = counts[pos] || 0;
     if (have < needed) needs[pos] = needed - have;
   });
+
+  // FLEX slot: filled by excess RB/WR/TE beyond starter needs
+  const rbExcess = Math.max(0, (counts['RB'] || 0) - (STARTER_NEEDS.RB || 0));
+  const wrExcess = Math.max(0, (counts['WR'] || 0) - (STARTER_NEEDS.WR || 0));
+  const teExcess = Math.max(0, (counts['TE'] || 0) - (STARTER_NEEDS.TE || 0));
+  const flexFilled = rbExcess + wrExcess + teExcess >= 1;
+  if (!flexFilled) needs['FLEX'] = 1;
+
   return needs;
 }
 
@@ -72,7 +81,7 @@ function getBestAvailable(state, teamId) {
       (neededPositions.includes('FLEX') && ['RB','WR','TE'].includes(p.pos))
     );
     if (candidates.length > 0) {
-      candidates.sort((a, b) => b.proj - a.proj);
+      candidates.sort((a, b) => getHexScore(b.id) - getHexScore(a.id));
       const topN = candidates.slice(0, Math.min(3, candidates.length));
       const weights = [0.6, 0.25, 0.15];
       const r = Math.random();
@@ -99,7 +108,7 @@ function getBestAvailable(state, teamId) {
   });
 
   const pool = filtered.length > 0 ? filtered : available;
-  pool.sort((a, b) => b.proj - a.proj);
+  pool.sort((a, b) => getHexScore(b.id) - getHexScore(a.id));
   const topN = pool.slice(0, Math.min(3, pool.length));
   const weights = [0.6, 0.25, 0.15];
   const r = Math.random();
@@ -147,7 +156,7 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
   const timerRef = useRef(null);
   const [posFilter, setPosFilter] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState('proj');
+  const [sortBy, setSortBy] = useState('hex');
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const boardRef = useRef(null);
 
@@ -160,7 +169,11 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
       const q = searchQuery.toLowerCase();
       list = list.filter(p => p.name.toLowerCase().includes(q) || p.team.toLowerCase().includes(q));
     }
-    list.sort((a, b) => b[sortBy] - a[sortBy]);
+    if (sortBy === 'hex') {
+      list.sort((a, b) => getHexScore(b.id) - getHexScore(a.id));
+    } else {
+      list.sort((a, b) => b[sortBy] - a[sortBy]);
+    }
     return list;
   }, [pickedIds, posFilter, searchQuery, sortBy]);
 
@@ -636,6 +649,9 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
                   <th style={{ textAlign: 'right', padding: '6px 8px', fontWeight: 600, fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', cursor: 'pointer' }} onClick={() => setSortBy('avg')}>
                     Avg {sortBy === 'avg' ? '\u25BC' : ''}
                   </th>
+                  <th style={{ textAlign: 'right', padding: '6px 8px', fontWeight: 600, fontSize: 10, color: 'var(--hex-purple, #8B5CF6)', textTransform: 'uppercase', cursor: 'pointer' }} onClick={() => setSortBy('hex')}>
+                    Hex {sortBy === 'hex' ? '\u25BC' : ''}
+                  </th>
                   <th style={{ textAlign: 'center', padding: '6px 8px', width: 80 }}></th>
                 </tr>
               </thead>
@@ -655,6 +671,7 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
                       <td style={{ padding: '6px 4px', color: 'var(--text-muted)' }}>{player.team}</td>
                       <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 600 }}>{player.proj}</td>
                       <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-muted)' }}>{player.avg}</td>
+                      <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 600, color: 'var(--hex-purple, #8B5CF6)' }}>{getHexScore(player.id)}</td>
                       <td style={{ padding: '4px 8px', textAlign: 'center' }}>
                         {isUserTurn ? (
                           <button onClick={() => handleUserPick(player.id)}
@@ -710,6 +727,7 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
                   let match = null;
                   const matchIdx = unassigned.findIndex(r => {
                     if (slot.pos === 'FLEX') return ['RB','WR','TE'].includes(r.player?.pos);
+                    if (slot.pos === 'DST') return r.player?.pos === 'DEF';
                     if (slot.pos === 'BN') return true;
                     return r.player?.pos === slot.pos;
                   });

@@ -9,6 +9,8 @@ const { errorHandler } = require('./middleware/errorHandler');
 const authRoutes = require('./routes/auth');
 const leagueRoutes = require('./routes/leagues');
 const newsRoutes = require('./routes/news');
+const statsRoutes = require('./routes/stats');
+const { syncToDb: syncStats } = require('./services/stats.service');
 const { startScheduler } = require('./services/scheduler');
 
 const app = express();
@@ -35,6 +37,7 @@ app.use('/api/auth/signin', authLimiter);
 app.use('/api/auth', authRoutes);
 app.use('/api/leagues', leagueRoutes);
 app.use('/api/news', newsRoutes);
+app.use('/api/stats', statsRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -47,6 +50,7 @@ app.use(errorHandler);
 // Initialize DB and start
 async function start() {
   await initDatabase();
+  await syncStats();
   app.listen(PORT, () => {
     console.log(`[Server] Running on http://localhost:${PORT}`);
   });

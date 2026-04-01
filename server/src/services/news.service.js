@@ -12,7 +12,8 @@ const parser = new RSSParser({
     ],
   },
 });
-const FORTY_EIGHT_HOURS = 48 * 60 * 60 * 1000;
+const FETCH_WINDOW = 72 * 60 * 60 * 1000; // 72 hours — overlap ensures no gaps between sweeps
+const MAX_ARTICLES_PER_SWEEP = 20;
 
 // --- Helpers ---
 
@@ -119,7 +120,7 @@ async function fetchAllFeeds() {
     })
   );
 
-  const cutoff = Date.now() - FORTY_EIGHT_HOURS;
+  const cutoff = Date.now() - FETCH_WINDOW;
   return results
     .map(r => r.status === 'fulfilled' ? r.value : [])
     .flat()
@@ -174,7 +175,7 @@ function crossReference(articles) {
       if (b.sources.size !== a.sources.size) return b.sources.size - a.sources.size;
       return b.representative.pubDate - a.representative.pubDate;
     })
-    .slice(0, 5);
+    .slice(0, MAX_ARTICLES_PER_SWEEP);
 }
 
 async function storeArticles(clusters, sweepId) {
@@ -204,7 +205,7 @@ async function storeArticles(clusters, sweepId) {
     stored++;
   }
 
-  db.run("DELETE FROM news_articles WHERE scraped_at < datetime('now', '-14 days')");
+  db.run("DELETE FROM news_articles WHERE scraped_at < datetime('now', '-180 days')");
   saveDb();
 
   return stored;

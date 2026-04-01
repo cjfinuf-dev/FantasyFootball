@@ -28,6 +28,13 @@ export async function deleteLeague(id) {
   });
 }
 
+export async function joinLeague({ inviteCode, teamName }) {
+  return apiFetch('/api/leagues/join', {
+    method: 'POST',
+    body: JSON.stringify({ inviteCode, teamName }),
+  });
+}
+
 export async function removeMember(leagueId, memberId) {
   return apiFetch(`/api/leagues/${leagueId}/members/${memberId}`, {
     method: 'DELETE',

@@ -13,27 +13,32 @@
     --gray-800: #262626;
     --gray-900: #171717;
 
-    /* Accent — overridden by team color picker */
-    --accent: #666666;
-    --accent-secondary: #999999;
-    --accent-tertiary: #CCCCCC;
-    --accent-10: rgba(102,102,102,0.1);
-    --accent-15: rgba(102,102,102,0.15);
-    --accent-20: rgba(102,102,102,0.2);
-    --accent-30: rgba(102,102,102,0.3);
-    --accent2-10: rgba(153,153,153,0.1);
-    --accent2-15: rgba(153,153,153,0.15);
-    --accent2-20: rgba(153,153,153,0.2);
-    --accent3-10: rgba(204,204,204,0.1);
-    --accent3-15: rgba(204,204,204,0.15);
+    /* Accent — hex purple default, overridden by team color picker */
+    --accent: #8B5CF6;
+    --accent-secondary: #FFFFFF;
+    --accent-tertiary: #A78BFA;
+    --accent-10: rgba(139,92,246,0.1);
+    --accent-15: rgba(139,92,246,0.15);
+    --accent-20: rgba(139,92,246,0.2);
+    --accent-30: rgba(139,92,246,0.3);
+    --accent2-10: rgba(255,255,255,0.1);
+    --accent2-15: rgba(255,255,255,0.15);
+    --accent2-20: rgba(255,255,255,0.2);
+    --accent3-10: rgba(167,139,250,0.1);
+    --accent3-15: rgba(167,139,250,0.15);
 
     /* Contrast-safe text versions (overridden by JS) */
-    --accent-text: #666666;
-    --accent-secondary-text: #999999;
-    --accent-tertiary-text: #CCCCCC;
+    --accent-text: #8B5CF6;
+    --accent-secondary-text: #111111;
+    --accent-tertiary-text: #A78BFA;
     --on-accent: #FFFFFF;
     --on-accent-secondary: #111111;
     --on-accent-tertiary: #111111;
+
+    /* On-dark variants for navbar/footer (overridden by team picker) */
+    --accent-on-dark: #A78BFA;
+    --accent-secondary-on-dark: #FFFFFF;
+    --accent-tertiary-on-dark: #C4B5FD;
 
     /* Legacy aliases (keeps components working) */
     --brand-green: var(--gray-900);
@@ -187,8 +192,10 @@
   .ff-nav-logo {
     font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 700;
     color: #fff; letter-spacing: -0.3px;
+    display: flex; align-items: center; gap: 6px;
   }
   .ff-nav-logo span { color: var(--accent-secondary-on-dark); }
+  .ff-nav-logo-icon { height: 26px; width: auto; }
   .ff-league-select {
     background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
     color: rgba(255,255,255,0.85); padding: 4px 10px; border-radius: var(--radius-sm);
@@ -213,11 +220,18 @@
   .ff-nav-right { display: flex; align-items: center; gap: 12px; }
   .ff-dark-toggle {
     background: none; border: 1px solid rgba(255,255,255,0.2);
-    color: rgba(255,255,255,0.85); padding: 4px 8px; border-radius: var(--radius-sm);
-    font-size: 14px; display: flex; align-items: center; justify-content: center;
-    transition: background var(--duration-fast) var(--ease);
+    padding: 0; border-radius: var(--radius-sm);
+    display: flex; align-items: center; justify-content: center;
+    width: 34px; height: 34px;
+    transition: background var(--duration-fast) var(--ease),
+                border-color var(--duration-fast) var(--ease),
+                box-shadow var(--duration-fast) var(--ease);
   }
-  .ff-dark-toggle:hover { background: rgba(255,255,255,0.1); }
+  .ff-dark-toggle:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.35);
+  }
+  .ff-dark-toggle svg { display: block; }
   .ff-team-select {
     background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
     color: rgba(255,255,255,0.85); padding: 4px 8px; border-radius: var(--radius-sm);
@@ -363,6 +377,7 @@
   .ff-btn-danger { background: transparent; color: var(--red); border-color: var(--red); }
   .ff-btn-danger:hover { background: var(--red); color: #fff; }
   .ff-btn-sm { padding: 3px 10px; font-size: 11px; border-radius: var(--radius-sm); }
+  .ff-btn.disabled, .ff-btn:disabled { opacity: 0.35; cursor: default; pointer-events: none; }
 
   /* ---- Tabs ---- */
   .ff-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); padding: 0 20px; }
@@ -571,14 +586,17 @@
   .ff-footer-brand {
     font-family: 'Playfair Display', serif; font-size: 16px; font-weight: 700;
     color: rgba(255,255,255,0.7);
+    display: flex; align-items: center; gap: 6px;
   }
   .ff-footer-brand span { color: var(--accent-secondary-on-dark); }
+  .ff-footer-logo-icon { height: 20px; width: auto; opacity: 0.8; }
   .ff-footer-links { display: flex; gap: 16px; justify-content: center; }
   .ff-footer-link {
     background: none; border: none; color: rgba(255,255,255,0.55);
     font-size: 12px; font-weight: 500; transition: color var(--duration-fast) var(--ease);
   }
-  .ff-footer-link:hover { color: var(--accent-tertiary-on-dark); }
+  .ff-footer-link:hover:not(.disabled) { color: var(--accent-tertiary-on-dark); }
+  .ff-footer-link.disabled { opacity: 0.35; cursor: default; }
   .ff-footer-credit { text-align: right; font-size: 11px; color: rgba(255,255,255,0.4); }
 
   /* ---- League Settings Modal ---- */
@@ -1156,7 +1174,10 @@
     cursor: pointer; white-space: nowrap;
     transition: color 0.15s, border-color 0.15s;
   }
-  .ff-league-tab:hover { color: var(--text); }
+  .ff-league-tab:hover:not(.disabled) { color: var(--text); }
+  .ff-league-tab.disabled {
+    opacity: 0.35; cursor: default; pointer-events: auto;
+  }
   .ff-league-tab.active {
     font-weight: 700; color: var(--text);
     border-bottom-color: var(--accent);
@@ -1179,7 +1200,8 @@
     padding: 8px 16px; font-size: 12px; font-weight: 500; color: var(--text);
     cursor: pointer; transition: background var(--duration-fast) var(--ease);
   }
-  .ff-more-dropdown-item:hover { background: var(--tan-10); }
+  .ff-more-dropdown-item:hover:not(.disabled) { background: var(--tan-10); }
+  .ff-more-dropdown-item.disabled { opacity: 0.35; cursor: default; }
   .ff-more-dropdown-item.active { font-weight: 700; color: var(--accent-text); }
   [data-theme="dark"] .ff-more-dropdown { background: var(--gray-800); border-color: var(--border); }
   .ff-league-tab-gear { font-size: 16px; margin-left: auto; }
@@ -1259,6 +1281,7 @@
     color: #fff; margin-bottom: 8px;
   }
   .ff-hero-landing h1 span { color: var(--accent-secondary-text); }
+  .ff-hero-logo { height: 120px; width: auto; margin-bottom: 20px; }
   .ff-hero-landing p { color: rgba(255,255,255,0.6); font-size: 16px; max-width: 480px; margin-bottom: 28px; }
   .ff-hero-landing-actions { display: flex; gap: 12px; }
   .ff-hero-landing-action { font-size: 15px; padding: 14px 28px; }
@@ -1689,3 +1712,58 @@
 
   .ff-league-card { transition: transform var(--duration-base) var(--ease), box-shadow var(--duration-base) var(--ease); }
   .ff-league-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-card-hover); }
+
+  /* ---- Light Mode Overrides ---- */
+  /* Navbar intentionally stays dark in both themes. */
+  /* Hero, content areas, and footer adapt to light mode. */
+
+  [data-theme="light"] .ff-hero,
+  [data-theme="light"] .ff-hero-compact {
+    background: linear-gradient(135deg, var(--gray-100) 0%, var(--gray-200) 100%);
+  }
+  [data-theme="light"] .ff-hero-left h1,
+  [data-theme="light"] .ff-hero-compact h1 { color: var(--text); }
+  [data-theme="light"] .ff-hero-left p { color: var(--text-muted); }
+  [data-theme="light"] .ff-hero-landing h1 { color: var(--text); }
+  [data-theme="light"] .ff-hero-landing p { color: var(--text-muted); }
+  [data-theme="light"] .ff-hero-landing-features { color: var(--text-muted); }
+
+  [data-theme="light"] .ff-footer {
+    background: var(--charcoal-slate);
+  }
+
+  [data-theme="light"] .ff-hub-banner {
+    background: linear-gradient(135deg, var(--gray-100) 0%, var(--gray-200) 100%);
+  }
+  [data-theme="light"] .ff-hub-banner h1 { color: var(--text); }
+  [data-theme="light"] .ff-hub-banner p { color: var(--text-muted); }
+
+  [data-theme="light"] .ff-card {
+    background: var(--bg-white);
+    border: 1px solid var(--border);
+  }
+
+  [data-theme="light"] .ff-leagues-dropdown {
+    background: var(--bg-white);
+    border-color: var(--border);
+    box-shadow: var(--shadow-lg);
+  }
+
+  [data-theme="light"] .ff-more-dropdown {
+    background: var(--bg-white);
+    border-color: var(--border);
+  }
+
+  [data-theme="light"] .ff-search-input {
+    background: var(--bg-white);
+    border-color: var(--border);
+    color: var(--text);
+  }
+
+  [data-theme="light"] .team-picker-dropdown {
+    background: var(--bg-white);
+    border-color: var(--border);
+    box-shadow: var(--shadow-lg);
+  }
+  [data-theme="light"] .team-picker-option { color: var(--text); }
+  [data-theme="light"] .team-picker-option:hover { background: var(--tan-10); }

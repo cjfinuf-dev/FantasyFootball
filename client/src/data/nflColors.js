@@ -5,7 +5,7 @@ const ESPN_ID_MAP = { was: 'wsh', lar: 'lar', lac: 'lac', lv: 'lv' };
 const espnLogo = (id) => `${LOGO_BASE}/${ESPN_ID_MAP[id] || id}.png`;
 
 export const NFL_TEAMS = [
-  { id: 'none', name: 'None', primary: '#666666', secondary: '#999999', tertiary: '#CCCCCC', logo: null },
+  { id: 'none', name: 'None', primary: '#8B5CF6', secondary: '#FFFFFF', tertiary: '#A78BFA', logo: null },
   { id: 'sf', name: '49ers', primary: '#AA0000', secondary: '#B3995D', tertiary: '#000000', logo: espnLogo('sf') },
   { id: 'chi', name: 'Bears', primary: '#0B162A', secondary: '#C83803', tertiary: '#FFFFFF', logo: espnLogo('chi') },
   { id: 'cin', name: 'Bengals', primary: '#FB4F14', secondary: '#000000', tertiary: '#FFFFFF', logo: espnLogo('cin') },

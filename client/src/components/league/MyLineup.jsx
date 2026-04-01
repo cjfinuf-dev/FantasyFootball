@@ -137,7 +137,7 @@ function PlayerRow({ entry, section, index, isSelected, isSwapTarget, onSelect, 
         borderBottom: '1px solid var(--border)',
         opacity: isStarter ? 1 : 0.7,
         background: isSelected
-          ? 'var(--accent-15, rgba(102,102,102,0.15))'
+          ? 'var(--accent-15)'
           : isSwapTarget
             ? 'rgba(22,163,74,0.06)'
             : 'transparent',

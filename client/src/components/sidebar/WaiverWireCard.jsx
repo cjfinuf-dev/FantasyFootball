@@ -1,42 +1,66 @@
-import { useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { WAIVERS } from '../../data/waivers';
 import { PLAYERS } from '../../data/players';
 import { getEspnId } from '../../data/espnIds';
+import { getHexScore, getHexTier } from '../../utils/hexScore';
 import PosBadge from '../ui/PosBadge';
 import PlayerHeadshot from '../ui/PlayerHeadshot';
 import PlayerLink from '../ui/PlayerLink';
 
-export default function WaiverWireCard({ expanded = false, rosters, onPlayerClick }) {
+const TIER_LABELS = {
+  'hex-elite': 'Elite',
+  'hex-starter-plus': 'Starter+',
+  'hex-starter': 'Starter-caliber',
+  'hex-flex': 'Flex-caliber',
+  'hex-bench': 'Bench depth',
+  'hex-depth': 'Deep depth',
+  'hex-waiver': 'Speculative',
+};
+
+export default function WaiverWireCard({ expanded = false, rosters, onPlayerClick, onClaimPlayer }) {
+  const [posFilter, setPosFilter] = useState('ALL');
+  const hasDraftData = rosters && Object.values(rosters).some(r => r.length > 0);
+
   const waiverPlayers = useMemo(() => {
-    if (!rosters || !Object.values(rosters).some(r => r.length > 0)) {
-      // No draft data — show hardcoded waivers
+    if (!hasDraftData) {
       return WAIVERS.map(w => ({ ...w, isDynamic: false }));
     }
 
-    // Draft completed — show top undrafted players
     const draftedSet = new Set();
     Object.values(rosters).forEach(playerIds => {
       playerIds.forEach(pid => draftedSet.add(pid));
     });
 
-    return PLAYERS
-      .filter(p => !draftedSet.has(p.id) && p.pos !== 'DEF')
-      .sort((a, b) => b.proj - a.proj)
-      .slice(0, expanded ? 15 : 5)
-      .map(p => ({
-        playerId: p.id,
-        name: p.name,
-        team: p.team,
-        pos: p.pos,
-        proj: p.proj,
-        trend: p.proj > p.avg ? 'up' : 'down',
-        trendPct: Math.abs(Math.round(((p.proj - p.avg) / (p.avg || 1)) * 100)),
-        reason: p.status !== 'healthy' ? `Status: ${p.status}` : `Avg: ${p.avg} pts`,
-        isDynamic: true,
-      }));
-  }, [rosters, expanded]);
+    let list = PLAYERS.filter(p => !draftedSet.has(p.id));
 
-  const hasDraftData = rosters && Object.values(rosters).some(r => r.length > 0);
+    // In compact mode, skip K/DEF (easily replaceable)
+    if (!expanded) list = list.filter(p => p.pos !== 'K' && p.pos !== 'DEF');
+
+    // Apply position filter when expanded
+    if (expanded && posFilter !== 'ALL') list = list.filter(p => p.pos === posFilter);
+
+    return list
+      .sort((a, b) => getHexScore(b.id) - getHexScore(a.id))
+      .slice(0, expanded ? 25 : 5)
+      .map(p => {
+        const hex = getHexScore(p.id);
+        const tier = getHexTier(hex);
+        return {
+          playerId: p.id,
+          name: p.name,
+          team: p.team,
+          pos: p.pos,
+          hexScore: hex,
+          tier,
+          trend: p.proj > p.avg ? 'up' : 'down',
+          trendPct: Math.abs(Math.round(((p.proj - p.avg) / (p.avg || 1)) * 100)),
+          reason: p.status !== 'healthy'
+            ? `Status: ${p.status}`
+            : TIER_LABELS[tier.cssClass] || `${p.avg} pts/g`,
+          isDynamic: true,
+        };
+      });
+  }, [rosters, expanded, posFilter, hasDraftData]);
 
   return (
     <div className={`ff-sidebar-card${expanded ? ' expanded' : ''}`}>
@@ -44,6 +68,20 @@ export default function WaiverWireCard({ expanded = false, rosters, onPlayerClic
         <h3>{hasDraftData ? 'Free Agents' : 'Top Available'}</h3>
         <span className="ff-badge-count">{waiverPlayers.length}</span>
       </div>
+
+      {/* Position filters (expanded only) */}
+      {expanded && hasDraftData && (
+        <div style={{ padding: '0 12px 8px', display: 'flex', gap: 4 }}>
+          {['ALL', 'QB', 'RB', 'WR', 'TE', 'K', 'DEF'].map(pos => (
+            <button key={pos}
+              className={`ff-tm-filter-pill${posFilter === pos ? ' active' : ''}`}
+              onClick={() => setPosFilter(pos)}>
+              {pos}
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="ff-sidebar-card-body">
         {waiverPlayers.map(w => (
           <div className="ff-waiver-row" key={w.playerId}>
@@ -56,10 +94,16 @@ export default function WaiverWireCard({ expanded = false, rosters, onPlayerClic
               <div className="ff-waiver-detail">{w.reason}</div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
-              <div className="ff-waiver-pts tabular-nums">{w.proj}</div>
+              <div className="ff-waiver-pts tabular-nums" style={{ color: 'var(--hex-purple, #8B5CF6)' }}>
+                {w.isDynamic ? w.hexScore : w.proj}
+              </div>
               <span className={`ff-trend ${w.trend}`}>{w.trend === 'up' ? '\u25B2' : '\u25BC'} {w.trendPct}%</span>
             </div>
-            <button className="ff-btn ff-btn-copper ff-btn-sm">+ Add</button>
+            {onClaimPlayer && hasDraftData && w.isDynamic && (
+              <button className="ff-btn ff-btn-copper ff-btn-sm" onClick={() => onClaimPlayer(w.playerId)}>
+                + Add
+              </button>
+            )}
           </div>
         ))}
       </div>

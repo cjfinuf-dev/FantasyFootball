@@ -16,6 +16,15 @@ async function initDatabase() {
     }
   } catch {}
 
+  // Migrate: add invite_code column to leagues if missing
+  try {
+    const cols = db.exec("PRAGMA table_info(leagues)");
+    const hasInviteCode = cols.length > 0 && cols[0].values.some(row => row[1] === 'invite_code');
+    if (!hasInviteCode) {
+      db.run("ALTER TABLE leagues ADD COLUMN invite_code TEXT UNIQUE");
+    }
+  } catch {}
+
   saveDb();
   console.log('[DB] Schema initialized successfully');
 }
