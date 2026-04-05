@@ -115,12 +115,7 @@ function assignSlots(playerIds) {
   return { starters, bench, ir };
 }
 
-const btnBase = {
-  padding: '5px 12px', borderRadius: 5, fontSize: 11, fontWeight: 600,
-  cursor: 'pointer', whiteSpace: 'nowrap', border: 'none', transition: 'opacity 0.15s',
-};
-
-function PlayerRow({ entry, section, index, isSelected, isSwapTarget, onSelect, onMoveToIR, onActivate, onDrop, onPlayerClick }) {
+function PlayerRow({ entry, section, index, isSelected, isSwapTarget, onSelect, onMoveToIR, onActivate, onPlayerClick }) {
   const { player } = entry;
   const opp = player ? getOpponent(player.team) : null;
   const oppDisplay = opp ? `${opp.location === 'away' ? '@' : 'vs'} ${opp.opp}` : null;
@@ -129,32 +124,12 @@ function PlayerRow({ entry, section, index, isSelected, isSwapTarget, onSelect, 
   const canMoveToIR = player?.status === 'out' && section !== 'ir';
   const canActivate = section === 'ir' && player;
 
+  const rowClass = `ff-lineup-row${!isStarter ? ' bench-row' : ''}${isSelected ? ' selected' : ''}${isSwapTarget ? ' swap-target' : ''}`;
+  const slotColorVar = entry.slotLabel === 'FLEX' ? 'flex' : entry.slotLabel === 'DST' ? 'def' : entry.slotLabel === 'BN' || entry.slotLabel === 'IR' ? '' : entry.slotLabel.toLowerCase();
+
   return (
-    <div
-      style={{
-        display: 'flex', alignItems: 'center', gap: 12,
-        padding: '10px 16px',
-        borderBottom: '1px solid var(--border)',
-        opacity: isStarter ? 1 : 0.7,
-        background: isSelected
-          ? 'var(--accent-15)'
-          : isSwapTarget
-            ? 'rgba(22,163,74,0.06)'
-            : 'transparent',
-        borderLeft: isSelected
-          ? '3px solid var(--accent)'
-          : isSwapTarget
-            ? '3px solid var(--success-green, #22c55e)'
-            : '3px solid transparent',
-        transition: 'background 0.15s, border-left 0.15s',
-      }}
-    >
-      {/* Slot label */}
-      <div style={{
-        minWidth: 40, fontSize: 11, fontWeight: 700,
-        color: `var(--pos-${entry.slotLabel === 'FLEX' ? 'flex' : entry.slotLabel === 'DST' ? 'def' : entry.slotLabel === 'BN' || entry.slotLabel === 'IR' ? '' : entry.slotLabel.toLowerCase()}, var(--text-muted))`,
-        textTransform: 'uppercase',
-      }}>
+    <div className={rowClass}>
+      <div className="ff-lineup-slot" style={{ color: `var(--pos-${slotColorVar}, var(--text-muted))` }}>
         {entry.slot}
       </div>
 
@@ -179,76 +154,43 @@ function PlayerRow({ entry, section, index, isSelected, isSwapTarget, onSelect, 
             </div>
           </div>
 
-          {/* Stats — fixed widths for alignment */}
-          <div style={{ textAlign: 'right', flexShrink: 0, width: 48 }}>
-            <div style={{ fontSize: 16, fontWeight: 700 }} className="tabular-nums">{player.proj}</div>
-            <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>PROJ</div>
+          <div className="ff-lineup-proj">
+            <div className="ff-lineup-proj-val tabular-nums">{player.proj}</div>
+            <div className="ff-lineup-stat-label">PROJ</div>
           </div>
-          <div style={{ textAlign: 'right', flexShrink: 0, width: 40 }}>
-            <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-muted)' }} className="tabular-nums">{player.avg}</div>
-            <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>AVG</div>
+          <div className="ff-lineup-avg">
+            <div className="ff-lineup-avg-val tabular-nums">{player.avg}</div>
+            <div className="ff-lineup-stat-label">AVG</div>
           </div>
 
-          {/* Action buttons — fixed width column for alignment */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0, width: 150, justifyContent: 'flex-end' }}>
+          <div className="ff-lineup-actions">
             {isSwapTarget && (
-              <button onClick={() => onSelect(section, index)}
-                style={{ ...btnBase, background: 'var(--success-green, #22c55e)', color: '#fff' }}>
-                Sub In
-              </button>
+              <button className="ff-lineup-btn ff-lineup-btn-swap" onClick={() => onSelect(section, index)}>Sub In</button>
             )}
-
             {!isSelected && !isSwapTarget && (
-              <button onClick={() => onSelect(section, index)}
-                style={{ ...btnBase, background: 'var(--accent)', color: 'var(--on-accent)' }}>
-                Sub
-              </button>
+              <button className="ff-lineup-btn ff-lineup-btn-sub" onClick={() => onSelect(section, index)}>Sub</button>
             )}
-
             {isSelected && (
-              <button onClick={() => onSelect(section, index)}
-                style={{ ...btnBase, background: 'var(--text-muted)', color: '#fff' }}>
-                Cancel
-              </button>
+              <button className="ff-lineup-btn ff-lineup-btn-cancel" onClick={() => onSelect(section, index)}>Cancel</button>
             )}
-
             {canMoveToIR && !isSelected && !isSwapTarget && (
-              <button onClick={() => onMoveToIR(section, index)}
-                style={{ ...btnBase, background: 'transparent', color: 'var(--red, #ef4444)', border: '1px solid var(--red, #ef4444)' }}>
-                IR
-              </button>
+              <button className="ff-lineup-btn ff-lineup-btn-ir" onClick={() => onMoveToIR(section, index)}>IR</button>
             )}
-
             {canActivate && !isSelected && !isSwapTarget && (
-              <button onClick={() => onActivate(index)}
-                style={{ ...btnBase, background: 'transparent', color: 'var(--success-green, #22c55e)', border: '1px solid var(--success-green, #22c55e)' }}>
-                Activate
-              </button>
-            )}
-
-            {!isSelected && !isSwapTarget && (
-              <button onClick={() => onDrop(section, index)}
-                style={{ ...btnBase, background: 'transparent', color: 'var(--red, #ef4444)', border: '1px solid var(--border)', opacity: 0.6 }}
-                onMouseEnter={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.borderColor = 'var(--red, #ef4444)'; }}
-                onMouseLeave={e => { e.currentTarget.style.opacity = '0.6'; e.currentTarget.style.borderColor = 'var(--border)'; }}>
-                Drop
-              </button>
+              <button className="ff-lineup-btn ff-lineup-btn-activate" onClick={() => onActivate(index)}>Activate</button>
             )}
           </div>
         </>
       ) : (
         <>
-          <div style={{ flex: 1, fontSize: 13, color: isSwapTarget ? 'var(--success-green, #22c55e)' : 'var(--text-muted)', fontStyle: 'italic', padding: '8px 0' }}>
+          <div className={`ff-lineup-empty${isSwapTarget ? ' swap-target' : ''}`}>
             {isSwapTarget ? 'Empty slot' : 'Empty'}
           </div>
-          <div style={{ width: 48 }} />
-          <div style={{ width: 40 }} />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0, width: 110, justifyContent: 'flex-end' }}>
+          <div className="ff-lineup-proj" />
+          <div className="ff-lineup-avg" />
+          <div className="ff-lineup-actions">
             {isSwapTarget && (
-              <button onClick={() => onSelect(section, index)}
-                style={{ ...btnBase, background: 'var(--success-green, #22c55e)', color: '#fff' }}>
-                Move Here
-              </button>
+              <button className="ff-lineup-btn ff-lineup-btn-swap" onClick={() => onSelect(section, index)}>Move Here</button>
             )}
           </div>
         </>
@@ -374,23 +316,6 @@ export default function MyLineup({ rosters, onPlayerClick }) {
 
   const handleCancel = () => setSelected(null);
 
-  const handleDrop = (section, index) => {
-    const entry = getEntry(section, index);
-    if (!entry?.player) return;
-    if (!confirm(`Drop ${entry.player.name} from your roster?`)) return;
-    setLineup(prev => {
-      const next = { starters: [...prev.starters], bench: [...prev.bench], ir: [...prev.ir] };
-      if (section === 'bench') {
-        next.bench.splice(index, 1);
-      } else if (section === 'ir') {
-        next.ir[index] = { ...next.ir[index], player: null };
-      } else {
-        next[section][index] = { ...next[section][index], player: null };
-      }
-      return next;
-    });
-    setSelected(null);
-  };
 
   if (playerIds.length === 0) {
     return (
@@ -414,8 +339,15 @@ export default function MyLineup({ rosters, onPlayerClick }) {
     return canSwapWith(selectedEntry, target);
   }
 
+  const selectedPlayerName = selected ? getEntry(selected.section, selected.index)?.player?.name : null;
+
   return (
     <div>
+      {/* Screen reader swap announcement */}
+      <div aria-live="polite" className="ff-skip-link" style={{ position: 'absolute' }}>
+        {selectedPlayerName ? `Selected ${selectedPlayerName}. Choose a player to swap.` : ''}
+      </div>
+
       {/* Header */}
       <div className="ff-card" style={{ marginBottom: 16 }}>
         <div className="ff-card-top-accent" style={{ background: 'var(--accent)' }} />
@@ -423,7 +355,7 @@ export default function MyLineup({ rosters, onPlayerClick }) {
           <div>
             <h2 style={{ fontSize: 18, fontWeight: 700 }}>{userTeam?.name || 'My Team'}</h2>
             <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
-              Week 1 &middot; {playerIds.length} players &middot; {lineup.starters.filter(s => s.player).length} starters
+              {playerIds.length} players &middot; {lineup.starters.filter(s => s.player).length} starters
               {selected && <span style={{ marginLeft: 8, color: 'var(--accent)', fontWeight: 600 }}>Select a player to swap</span>}
             </div>
           </div>
@@ -467,7 +399,6 @@ export default function MyLineup({ rosters, onPlayerClick }) {
               onSelect={handleSelect}
               onMoveToIR={handleMoveToIR}
               onActivate={handleActivate}
-              onDrop={handleDrop}
               onPlayerClick={onPlayerClick}
             />
           ))}
@@ -496,7 +427,6 @@ export default function MyLineup({ rosters, onPlayerClick }) {
               onSelect={handleSelect}
               onMoveToIR={handleMoveToIR}
               onActivate={handleActivate}
-              onDrop={handleDrop}
               onPlayerClick={onPlayerClick}
             />
           )) : (
@@ -527,7 +457,6 @@ export default function MyLineup({ rosters, onPlayerClick }) {
               onSelect={handleSelect}
               onMoveToIR={handleMoveToIR}
               onActivate={handleActivate}
-              onDrop={handleDrop}
               onPlayerClick={onPlayerClick}
             />
           ))}

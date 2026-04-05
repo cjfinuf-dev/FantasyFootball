@@ -22,10 +22,13 @@
  */
 
 import { PLAYERS } from '../data/players';
+import { ROSTER_PRESETS } from '../data/scoring';
+import { PLAYER_USAGE } from '../data/playerUsage';
 import { computeDurability } from '../data/injuryProfiles';
 import { TEAM_PROFILES, SCHEME_FIT, SITUATION_CHANGES } from '../data/teamProfiles';
 import { getPlayerArchetype } from '../data/playerArchetypes';
 import { getPlayerAge } from '../data/playerAges';
+import { HISTORICAL_STATS } from '../data/historicalStats';
 
 const PLAYER_MAP = {};
 PLAYERS.forEach(p => { PLAYER_MAP[p.id] = p; });
@@ -33,13 +36,36 @@ PLAYERS.forEach(p => { PLAYER_MAP[p.id] = p; });
 // ─── Memoized per-preset cache ───
 const _hexCache = {};
 
-// ─── Dynamic historical stats (injected from server on app boot) ───
-let _historicalData = null;
+// ─── Historical stats — loaded immediately at module level so the first
+// HexScore computation has full multi-year data. Server API can override later.
+let _historicalData = HISTORICAL_STATS?.players ? HISTORICAL_STATS : null;
 
 export function setHistoricalData(data) {
   _historicalData = data;
-  // Clear hex cache so scores recompute with new data
   Object.keys(_hexCache).forEach(k => delete _hexCache[k]);
+  Object.keys(_slotValueCache).forEach(k => delete _slotValueCache[k]);
+}
+
+// ─── Dynamic situation events (injected from server news pipeline) ───
+let _dynamicSituationChanges = [];
+
+export function setSituationEvents(events) {
+  _dynamicSituationChanges = (events || [])
+    .filter(e => e.active)
+    .map(e => ({
+      playerId: e.player_id || null,
+      team: e.team || null,
+      impact: e.impact,
+      note: e.description || e.event_type,
+      eventType: e.event_type,
+      confidence: e.confidence,
+      articleId: e.source_article_id,
+    }));
+  Object.keys(_hexCache).forEach(k => delete _hexCache[k]);
+}
+
+export function getDynamicSituationEvents() {
+  return _dynamicSituationChanges;
 }
 
 export function getHistoricalData() {
@@ -70,18 +96,24 @@ function getWeightedProduction(playerId) {
 
   const avgs = years.map(y => history[String(y)]?.avgPts || 0);
 
-  if (avgs.length >= 4) return avgs[0] * 0.50 + avgs[1] * 0.25 + avgs[2] * 0.15 + avgs[3] * 0.10;
-  if (avgs.length === 3) return avgs[0] * 0.55 + avgs[1] * 0.30 + avgs[2] * 0.15;
-  if (avgs.length === 2) return avgs[0] * 0.65 + avgs[1] * 0.35;
+  // 2025 stats weighted heavily — recent production matters most.
+  // Old weighting was 50/25/15/10 which let legacy seasons prop up declining players.
+  if (avgs.length >= 4) return avgs[0] * 0.65 + avgs[1] * 0.20 + avgs[2] * 0.10 + avgs[3] * 0.05;
+  if (avgs.length === 3) return avgs[0] * 0.65 + avgs[1] * 0.25 + avgs[2] * 0.10;
+  if (avgs.length === 2) return avgs[0] * 0.70 + avgs[1] * 0.30;
   return avgs[0];
 }
 
 // ─── Base scarcity curve parameters ───
+// k controls how fast value drops off by rank. Higher k = steeper drop = more top-heavy.
+// QB k raised because the gap between QB1 and QB12 is massive in real fantasy.
+// TE k lowered because replacement TEs are readily available — the TE1-TE8 gap is
+// much smaller than other positions. The old k=0.14 made TE1 feel as scarce as QB1.
 const SCARCITY_CURVES = {
-  QB:  { k: 0.06, startable: 12 },
+  QB:  { k: 0.09, startable: 12 },
   RB:  { k: 0.10, startable: 24 },
   WR:  { k: 0.08, startable: 24 },
-  TE:  { k: 0.14, startable: 12 },
+  TE:  { k: 0.08, startable: 12 },
   K:   { k: 0.04, startable: 12 },
   DEF: { k: 0.05, startable: 12 },
 };
@@ -94,30 +126,37 @@ const SCORING_PROFILES = {
   standard: {
     prodMultiplier: { QB: 1.0, RB: 1.15, WR: 0.95, TE: 0.90, K: 1.0, DEF: 1.0 },
     scarcityOverrides: { RB: { k: 0.12 } },
+    slotValueOverrides: {},
   },
   ppr: {
-    prodMultiplier: { QB: 1.0, RB: 1.0, WR: 1.15, TE: 1.10, K: 1.0, DEF: 1.0 },
-    scarcityOverrides: { TE: { k: 0.11 } },
+    prodMultiplier: { QB: 1.0, RB: 1.0, WR: 1.15, TE: 1.05, K: 1.0, DEF: 1.0 },
+    scarcityOverrides: { TE: { k: 0.09 } },
+    slotValueOverrides: {},
   },
   halfPpr: {
     prodMultiplier: { QB: 1.0, RB: 1.05, WR: 1.08, TE: 1.05, K: 1.0, DEF: 1.0 },
     scarcityOverrides: {},
+    slotValueOverrides: {},
   },
   sixPtPassTd: {
     prodMultiplier: { QB: 1.25, RB: 0.95, WR: 0.95, TE: 0.95, K: 1.0, DEF: 1.0 },
     scarcityOverrides: { QB: { k: 0.09 } },
+    slotValueOverrides: { productionOverride: { QB: 1.10 } },
   },
   tePremium: {
-    prodMultiplier: { QB: 1.0, RB: 1.0, WR: 1.10, TE: 1.30, K: 1.0, DEF: 1.0 },
-    scarcityOverrides: { TE: { k: 0.08 } },
+    prodMultiplier: { QB: 1.0, RB: 1.0, WR: 1.10, TE: 1.20, K: 1.0, DEF: 1.0 },
+    scarcityOverrides: { TE: { k: 0.10 } },
+    slotValueOverrides: { productionOverride: { TE: 0.60 } },
   },
   superflex: {
     prodMultiplier: { QB: 1.20, RB: 0.95, WR: 0.95, TE: 0.95, K: 1.0, DEF: 1.0 },
     scarcityOverrides: { QB: { k: 0.09 } },
+    slotValueOverrides: { extraFlexSlots: { QB: ['SFLEX'] } },
   },
   dynasty: {
     prodMultiplier: { QB: 1.0, RB: 1.0, WR: 1.05, TE: 1.0, K: 0.80, DEF: 0.80 },
     scarcityOverrides: {},
+    slotValueOverrides: {},
     ageWeightOverride: 0.14,
   },
 };
@@ -145,6 +184,52 @@ const HEALTH_MULTIPLIERS = {
   ir: 0.05,
 };
 
+// ─── Slot Value sub-factors ───
+// Positional value is derived from roster economics, not hardcoded ceilings.
+// Four sub-factors: slot eligibility (how many roster slots can you fill?),
+// demand pressure (league-wide demand vs supply), attrition (injury risk at
+// the position), and production profile (raw point output characteristics).
+const FLEX_SLOT_ELIGIBILITY = {
+  FLEX:  ['RB', 'WR', 'TE'],
+  SFLEX: ['QB', 'RB', 'WR', 'TE'],
+};
+
+// Position-level injury attrition — higher = scarcer healthy players
+const POSITION_ATTRITION = {
+  QB: 0.75, RB: 1.00, WR: 0.85, TE: 0.90, K: 0.50, DEF: 0.50,
+};
+
+// Raw point production characteristics — QB is highest floor/ceiling
+const PRODUCTION_PROFILE = {
+  QB: 1.00, RB: 0.70, WR: 0.68, TE: 0.50, K: 0.30, DEF: 0.35,
+};
+
+const SLOT_SUB_WEIGHTS = { eligibility: 0.25, demand: 0.20, attrition: 0.20, production: 0.35 };
+const DEFAULT_LEAGUE_SIZE = 12;
+
+// Position HexScore caps — applied on final score after sigmoid.
+// QB capped at 85: no QB should rank in the top 20 overall (elite RBs/WRs fill those slots).
+// K/DEF capped at 60: kickers and defenses are always end-of-draft value.
+const POSITION_HEXSCORE_CAP = { TE: 99.5, K: 65, DEF: 60 };
+
+// ─── Draft Value ───
+// How many players at each position are worth spending a draft pick on.
+// Multiplied by league size to get the draftable threshold.
+// Beyond this threshold, players are considered undraftable (waiver-wire)
+// and their HexScore is heavily penalized.
+const DRAFTABLE_MULTIPLIER = {
+  QB: 1.67, // ~20 in a 12-team league — top 20 QBs are draftable
+  RB: 4,    // 3-5 per team worth drafting — leagueSize * 4
+  WR: 4,    // 3-5 per team worth drafting — leagueSize * 4
+  TE: 2,    // backup TEs worth grabbing — leagueSize * 2
+  K: 1,     // only starters, no backup kickers
+  DEF: 1,   // only starters, no backup defenses
+};
+
+function getDraftableDepth(pos, leagueSize = DEFAULT_LEAGUE_SIZE) {
+  return Math.round(leagueSize * (DRAFTABLE_MULTIPLIER[pos] || 1));
+}
+
 const IDEAL_ROSTER = { QB: 2, RB: 4, WR: 4, TE: 2, K: 1, DEF: 1 };
 
 const WEIGHTS = {
@@ -153,9 +238,10 @@ const WEIGHTS = {
   consistency: 0.09,
   situation: 0.17,
   health: 0.08,
-  durability: 0.11,
+  durability: 0.14,
   rosterContext: 0.07,
   ageFactor: 0.08,
+  slotValue: 0.08, // additive on top — total 1.08, not redistributed
 };
 
 // ─── Position-specific age curve parameters ───
@@ -165,7 +251,7 @@ const AGE_CURVES = {
   QB:  { primeStart: 26, peak: 30, primeEnd: 34, cliff: 38, declineRate: 0.06 },
   RB:  { primeStart: 22, peak: 25, primeEnd: 27, cliff: 29, declineRate: 0.14 },
   WR:  { primeStart: 24, peak: 27, primeEnd: 30, cliff: 32, declineRate: 0.09 },
-  TE:  { primeStart: 25, peak: 28, primeEnd: 31, cliff: 33, declineRate: 0.08 },
+  TE:  { primeStart: 25, peak: 28, primeEnd: 31, cliff: 33, declineRate: 0.12 },
   K:   { primeStart: 25, peak: 31, primeEnd: 36, cliff: 40, declineRate: 0.04 },
 };
 
@@ -219,19 +305,31 @@ function buildPositionGroups(players, preset) {
 }
 
 function rawProduction(p) {
-  // Use 3-year weighted historical production, with current-week proj as a tiebreaker
   const historical = getWeightedProduction(p.id);
-  // Blend: 80% historical trajectory, 20% current-week projection
-  return (historical * 0.80) + (p.proj * 0.20);
+  // Current-season signal: blend season avg (stable) + weekly proj (timely)
+  const currentSeason = (p.avg * 0.6) + (p.proj * 0.4);
+  // 60% historical (already heavily weights most recent year), 40% current season
+  return (historical * 0.60) + (currentSeason * 0.40);
 }
 
 // ─── Dimension calculators ───
 
+// SOS adjustment: players who faced easy schedules get production discounted.
+// sosRank 1 (easiest) → 0.94 multiplier, sosRank 32 (hardest) → 1.06 multiplier.
+// Neutral at rank 16-17. Range is intentionally narrow (±6%) — SOS is a tiebreaker, not dominant.
+function getSosMultiplier(team) {
+  const profile = TEAM_PROFILES[team];
+  if (!profile || !profile.sosRank) return 1.0;
+  // Normalize 1-32 to -1..+1, then scale to ±0.06
+  return 1.0 + ((profile.sosRank - 16.5) / 15.5) * 0.06;
+}
+
 function calcProduction(player, posGroup, preset) {
   const profile = getScoringProfile(preset);
   const mult = profile.prodMultiplier[player.pos] || 1.0;
-  const raw = rawProduction(player) * mult;
-  const values = posGroup.map(p => rawProduction(p) * mult);
+  const sosMult = getSosMultiplier(player.team);
+  const raw = rawProduction(player) * mult * sosMult;
+  const values = posGroup.map(p => rawProduction(p) * mult * getSosMultiplier(p.team));
   const max = Math.max(...values);
   const min = Math.min(...values);
   const range = max - min;
@@ -309,15 +407,17 @@ function calcSituation(player, allPlayers) {
     case 'TE': {
       const teUsage = TE_USAGE_MAP[teamProfile.teUsage] || 0.50;
       // Competition factor: if team lacks elite WRs, TE gets more targets
+      // Capped lower than before — even favorable target share doesn't make a TE as
+      // valuable as an elite skill player. The old 0.90 ceiling was too generous.
       const teamWrs = allPlayers.filter(p => p.team === player.team && p.pos === 'WR');
       const topWrProd = teamWrs.length > 0 ? Math.max(...teamWrs.map(rawProduction)) : 0;
-      const competitionFactor = topWrProd > 15 ? 0.40 : topWrProd > 10 ? 0.65 : 0.90;
+      const competitionFactor = topWrProd > 15 ? 0.35 : topWrProd > 10 ? 0.50 : 0.65;
 
       score =
-        (teUsage * 0.35) +
+        (teUsage * 0.40) +
         (teamProfile.qbRating * 0.25) +
         (teamProfile.passRate * 0.20) +
-        (competitionFactor * 0.20);
+        (competitionFactor * 0.15);
       break;
     }
 
@@ -325,8 +425,12 @@ function calcSituation(player, allPlayers) {
       score = 0.50;
   }
 
-  // Apply situation change events
-  const change = SITUATION_CHANGES.find(c => c.playerId === player.id);
+  // Apply dynamic situation events (news-driven) first, then static fallback
+  const dynamicChange =
+    _dynamicSituationChanges.find(c => c.playerId === player.id) ||
+    _dynamicSituationChanges.find(c => !c.playerId && c.team === player.team && c.eventType?.endsWith('_cascade'));
+  const staticChange = SITUATION_CHANGES.find(c => c.playerId === player.id);
+  const change = dynamicChange || staticChange;
   if (change) {
     score = Math.max(0, Math.min(1, score + change.impact));
   }
@@ -351,9 +455,147 @@ function calcRosterContext(player, rosterPlayerIds, allPlayers) {
   return 1.0 + (Math.min(deficit, 2) * 0.125);
 }
 
+// ─── Slot Value ───
+// Computes positional value from roster economics: how many slots can you fill,
+// how much demand vs supply exists, how risky is the position, and how much
+// raw production does the position generate?
+
+const _slotValueCache = {};
+
+function calcSlotValue(pos, scoringPreset) {
+  const cacheKey = `${pos}_${scoringPreset}`;
+  if (_slotValueCache[cacheKey] !== undefined) return _slotValueCache[cacheKey];
+
+  const profile = getScoringProfile(scoringPreset);
+  const overrides = profile.slotValueOverrides || {};
+
+  // Determine which roster preset maps to this scoring format
+  const rosterKey = scoringPreset === 'superflex' ? 'superflex'
+    : scoringPreset === 'twoQb' ? 'twoQb'
+    : scoringPreset === 'bestBall' ? 'bestBall'
+    : scoringPreset === 'dynasty' ? 'dynasty'
+    : 'standard';
+  const roster = ROSTER_PRESETS[rosterKey] || ROSTER_PRESETS.standard;
+
+  const allPositions = ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'];
+
+  // Helper: count eligible slots for a given position
+  function countEligible(p) {
+    const dedicated = overrides.dedicatedOverride?.[p] ?? (roster[p] || 0);
+    let flex = 0;
+    for (const [slotType, eligible] of Object.entries(FLEX_SLOT_ELIGIBILITY)) {
+      const extra = overrides.extraFlexSlots?.[p] || [];
+      if (eligible.includes(p) || extra.includes(slotType)) {
+        flex += (roster[slotType] || 0);
+      }
+    }
+    return dedicated + flex;
+  }
+
+  const totalEligible = countEligible(pos);
+  const maxEligible = Math.max(...allPositions.map(countEligible));
+
+  // 1. Slot eligibility: what fraction of the max slots can this position fill?
+  const slotEligibility = maxEligible > 0 ? totalEligible / maxEligible : 0.5;
+
+  // 2. Demand pressure: effective demand (including flex competition) vs supply
+  const curve = getScarcityCurve(pos, scoringPreset);
+  const dedicated = overrides.dedicatedOverride?.[pos] ?? (roster[pos] || 0);
+  const isFlexEligible = Object.values(FLEX_SLOT_ELIGIBILITY).some(e => e.includes(pos));
+  const flexSlots = totalEligible - dedicated;
+  const flexCompetition = isFlexEligible ? 0.33 : 0; // 3-way share of flex
+  const effectiveDemand = DEFAULT_LEAGUE_SIZE * (dedicated + (flexSlots * flexCompetition));
+  const demandRatio = curve.startable > 0 ? effectiveDemand / curve.startable : 1.0;
+  const demandPressure = Math.min(1.0, demandRatio * 0.5);
+
+  // 3. Attrition: position-level injury risk (higher = scarcer healthy players)
+  const attrition = POSITION_ATTRITION[pos] || 0.50;
+
+  // 4. Production profile: raw point output characteristics
+  const prodProfile = overrides.productionOverride?.[pos] ?? (PRODUCTION_PROFILE[pos] || 0.50);
+
+  const sw = SLOT_SUB_WEIGHTS;
+  const value = (slotEligibility * sw.eligibility) +
+    (demandPressure * sw.demand) +
+    (attrition * sw.attrition) +
+    (prodProfile * sw.production);
+
+  _slotValueCache[cacheKey] = value;
+  return value;
+}
+
+// ─── X-Factor (Usage Rating) ───
+// Measures how much a team relies on a specific player — target share,
+// touch share, snap dominance. Players who are hyper-targeted (McBride,
+// Bowers) get a meaningful boost over low-usage players at the same position.
+
+const XFACTOR_DEFAULTS = {
+  QB:  { rushShare: 0.08, snapShare: 0.95 },
+  RB:  { touchShare: 0.12, snapShare: 0.45, redZoneShare: 0.12 },
+  WR:  { targetShare: 0.14, snapShare: 0.75, redZoneShare: 0.10 },
+  TE:  { targetShare: 0.10, snapShare: 0.65, redZoneShare: 0.08 },
+  K:   {},
+  DEF: {},
+};
+
+function calcXFactor(player) {
+  const usage = PLAYER_USAGE[player.id] || XFACTOR_DEFAULTS[player.pos] || {};
+
+  switch (player.pos) {
+    case 'QB': {
+      // QB X-Factor = rushing involvement (dual-threat premium)
+      const rush = usage.rushShare || 0.08;
+      return Math.min(1.0, rush * 3.5);
+    }
+    case 'RB': {
+      // RB X-Factor = touch dominance + red zone role + snap share
+      const touch = usage.touchShare || 0.12;
+      const rz = usage.redZoneShare || 0.12;
+      const snap = usage.snapShare || 0.45;
+      return Math.min(1.0, (touch * 2.0) * 0.45 + (rz * 2.5) * 0.30 + snap * 0.25);
+    }
+    case 'WR':
+    case 'TE': {
+      // WR/TE X-Factor = target dominance + red zone + snap share
+      const target = usage.targetShare || 0.14;
+      const rz = usage.redZoneShare || 0.10;
+      const snap = usage.snapShare || 0.70;
+      return Math.min(1.0, (target * 2.8) * 0.50 + (rz * 3.0) * 0.25 + snap * 0.25);
+    }
+    default:
+      return 0.5;
+  }
+}
+
+// ─── Draft Value ───
+// Determines if a player is worth spending a draft pick on, based on their
+// rank within their position group vs the draftable depth threshold.
+// Within draftable range: smooth curve from 1.0 (rank 1) to 0.5 (last draftable).
+// Beyond draftable: sharp exponential dropoff that caps effective HexScore below 50.
+
+function calcDraftValue(player, posGroup) {
+  const rank = posGroup.indexOf(player) + 1;
+  const draftable = getDraftableDepth(player.pos);
+
+  if (rank <= draftable) {
+    // Top 5 at any position get full value — no penalty for being elite
+    if (rank <= 5) return 1.0;
+    // Ranks 6+: sqrt curve separates mid-pack from elite
+    const pct = (rank - 5) / (draftable - 5 || 1);
+    return Math.max(0.45, 1.0 - (Math.sqrt(pct) * 0.55));
+  }
+
+  // Non-draftable: sharp dropoff — backups get crushed
+  const overshoot = rank - draftable;
+  return Math.max(0.05, 0.40 * Math.exp(-0.15 * overshoot));
+}
+
 // ─── Sigmoid shaping ───
+// Steepness 8 with inflection at 0.40. The left-shifted inflection
+// accommodates the additive slotValue (total weights = 1.08) and lets
+// truly elite players (Bijan at raw ~0.99) reach 99.
 function sigmoidShape(raw) {
-  return 1 / (1 + Math.exp(-8 * (raw - 0.5)));
+  return 1 / (1 + Math.exp(-8 * (raw - 0.40)));
 }
 
 // ─── Main computation ───
@@ -397,23 +639,40 @@ export function computeAllHexScores(players = PLAYERS, rosterContext = null, sco
     // PPR format bonus (pass-catching players get extra value)
     const pprBonus = isPPR ? archetype.pprAdjust : 0;
 
-    const raw =
+    const slotValue = calcSlotValue(p.pos, scoringPreset);
+
+    const rawBase =
       (production * WEIGHTS.production +
       scarcity * WEIGHTS.scarcity +
       consistency * WEIGHTS.consistency +
       situation * WEIGHTS.situation +
       health * WEIGHTS.health +
       durability * WEIGHTS.durability +
-      (context * WEIGHTS.rosterContext)) * weightScale +
+      (context * WEIGHTS.rosterContext) +
+      slotValue * WEIGHTS.slotValue) * weightScale +
       ageFactor * ageWeight +
       pprBonus;
 
-    const hexScore = Math.round(sigmoidShape(raw) * 100);
+    // X-Factor: usage/target share multiplier — hyper-targeted players get boosted
+    const xFactor = calcXFactor(p);
+    const xFactorMultiplier = 0.85 + (xFactor * 0.25); // scales 0.85 (low usage) → 1.10 (hyper-targeted)
+    const rawXFactored = rawBase * xFactorMultiplier;
+
+    // Draft value: multiplier based on position rank vs draftable depth.
+    // Non-draftable players (backups beyond threshold) get crushed below 50.
+    const draftValue = calcDraftValue(p, posGroup);
+    const raw = rawXFactored * draftValue;
+
+    let hexScore = parseFloat((sigmoidShape(raw) * 100).toFixed(3));
+
+    // Hard cap for K/DEF — no kicker or defense above 60
+    const posCap = POSITION_HEXSCORE_CAP[p.pos];
+    if (posCap && hexScore > posCap) hexScore = posCap;
 
     results.set(p.id, {
       hexScore,
       archetype: archetype.key,
-      dimensions: { production, scarcity, consistency, situation, health, durability, context, ageFactor },
+      dimensions: { production, scarcity, consistency, situation, health, durability, context, ageFactor, slotValue, xFactor, draftValue },
       tier: getHexTier(hexScore),
     });
   });
@@ -454,7 +713,7 @@ const REPLACEMENT_THRESHOLDS = {
   QB:  { startable: 55, replacement: 35 },
   RB:  { startable: 50, replacement: 30 },
   WR:  { startable: 50, replacement: 30 },
-  TE:  { startable: 45, replacement: 25 },
+  TE:  { startable: 50, replacement: 30 },
   K:   { startable: 70, replacement: 55 },
   DEF: { startable: 65, replacement: 50 },
 };
@@ -628,6 +887,11 @@ export function computeTradeTier(sendIds, receiveIds, userRoster = null, partner
 }
 
 // ─── Convenience lookups (default = standard) ───
+
+// Format a HexScore to always show 3 decimal places (e.g., 97.000, 85.234)
+export function formatHex(score) {
+  return Number(score).toFixed(3);
+}
 
 export function getHexScore(playerId, scoringPreset) {
   const scores = getLeagueHexScores(scoringPreset || 'standard');

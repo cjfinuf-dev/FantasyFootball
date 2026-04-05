@@ -1,276 +1,270 @@
 /**
- * Player Ages — 2025 NFL Season
- *
- * Age as of September 1, 2025 (season start).
- * Keyed by player ID for O(1) lookup.
- * DEF entries omitted (team units have no individual age).
+ * Player Ages for 2025-26 season
  */
 
 export const PLAYER_AGES = {
-  // ===== QUARTERBACKS =====
-  p1:   29,  // Patrick Mahomes (Sep 17, 1995)
-  p2:   29,  // Josh Allen (May 21, 1996)
-  p3:   28,  // Lamar Jackson (Jan 7, 1997)
-  p4:   27,  // Jalen Hurts (Aug 7, 1998)
-  p5:   28,  // Joe Burrow (Dec 10, 1996)
-  p6:   23,  // CJ Stroud (Oct 3, 2001)
-  p46:  32,  // Dak Prescott (Jul 29, 1993)
-  p49:  24,  // Jayden Daniels (Dec 4, 2000)
-  p50:  30,  // Baker Mayfield (Apr 14, 1995)
-  p51:  31,  // Jared Goff (Oct 14, 1994)
-  p52:  25,  // Bo Nix (Feb 27, 2000)
-  p53:  28,  // Sam Darnold (Jun 5, 1997)
-  p54:  28,  // Kyler Murray (Aug 7, 1997)
-  p55:  27,  // Justin Herbert (Mar 10, 1998)
-  p56:  25,  // Brock Purdy (Dec 9, 1999)
-  p57:  26,  // Jordan Love (Nov 2, 1998)
-  p58:  27,  // Tua Tagovailoa (Mar 2, 1998)
-  p59:  23,  // Caleb Williams (Nov 18, 2001)
-  p60:  35,  // Geno Smith (Oct 10, 1990)
-  p61:  41,  // Aaron Rodgers (Dec 2, 1983)
-  p62:  37,  // Matthew Stafford (Feb 7, 1988)
-  p63:  25,  // Trevor Lawrence (Oct 6, 1999)
-  p64:  36,  // Russell Wilson (Nov 29, 1988)
-  p65:  34,  // Derek Carr (Mar 28, 1991)
-  p221: 23,  // Drake Maye (Aug 2, 2002)
-  p222: 23,  // Anthony Richardson (May 19, 2002)
-  p223: 24,  // Bryce Young (Jul 25, 2001)
-  p224: 26,  // Aidan O'Connell (Jun 17, 1999)
-  p225: 25,  // Will Levis (Jun 27, 2000)
-  p226: 29,  // Deshaun Watson (Sep 14, 1995)
-  p227: 27,  // Daniel Jones (May 27, 1997)
-  p228: 24,  // Michael Penix Jr. (Mar 14, 2001)
-  p229: 31,  // Jacoby Brissett (Dec 11, 1992)
-  p230: 29,  // Gardner Minshew (May 16, 1996)
-  p231: 29,  // Mason Rudolph (Jul 17, 1995)
-  p232: 31,  // Jameis Winston (Jan 6, 1994)
-  p233: 26,  // Justin Fields (Mar 5, 1999)
-  p234: 27,  // Tyler Huntley (Feb 3, 1998)
-  p235: 25,  // Tanner McKee (Sep 16, 2000)
-  p236: 28,  // Kyle Allen (Mar 8, 1996)
-  p237: 32,  // Teddy Bridgewater (Nov 10, 1992)
-  p238: 25,  // Jake Browning (Apr 10, 2000)
-  p239: 24,  // Sam Howell (Sep 16, 2000)
-  p240: 25,  // Desmond Ridder (Jun 6, 2000)
-  p241: 26,  // Mac Jones (Sep 5, 1998)
-  p242: 31,  // Marcus Mariota (Oct 30, 1993)
-  p243: 26,  // Davis Mills (Oct 21, 1998)
-  p244: 24,  // Spencer Rattler (Sep 28, 2000)
-  p245: 25,  // Malik Willis (May 25, 2000)
-  p246: 28,  // Drew Lock (Nov 10, 1996)
-  p247: 28,  // Jarrett Stidham (Aug 8, 1996)
-  p248: 27,  // Kenny Pickett (Jun 6, 1998)
-  p249: 25,  // Trey Lance (May 9, 2000)
-  p250: 26,  // Tommy DeVito (Nov 24, 1998)
-  p251: 30,  // Nick Mullens (Mar 29, 1995)
-  p252: 30,  // Mitchell Trubisky (Aug 20, 1994)
-  p253: 22,  // Shedeur Sanders (Feb 7, 2003)
-  p254: 22,  // Cam Ward (Jul 7, 2003)
-  p255: 22,  // Jaxson Dart (Jan 9, 2003)
-
-  // ===== RUNNING BACKS =====
-  p9:   23,  // Bijan Robinson (Feb 1, 2002)
-  p10:  28,  // Saquon Barkley (Feb 9, 1997)
-  p13:  31,  // Derrick Henry (Jan 4, 1994)
-  p11:  22,  // Jahmyr Gibbs (Oct 19, 2002)
-  p39:  23,  // De'Von Achane (Mar 26, 2002)
-  p8:   24,  // Breece Hall (Jun 19, 2001)
-  p7:   29,  // Christian McCaffrey (Jun 7, 1996)
-  p12:  26,  // Jonathan Taylor (Jan 19, 1999)
-  p45:  25,  // Kyren Williams (Apr 25, 2000)
-  p42:  25,  // Isiah Pacheco (Mar 2, 2000)
-  p66:  27,  // Josh Jacobs (Feb 11, 1998)
-  p67:  25,  // James Cook (Sep 25, 1999)
-  p68:  29,  // Joe Mixon (Jul 24, 1996)
-  p14:  26,  // Travis Etienne (Jan 26, 1999)
-  p69:  30,  // James Conner (May 5, 1995)
-  p70:  24,  // Chase Brown (Dec 24, 2000)
-  p71:  23,  // Bucky Irving (Nov 13, 2001)
-  p72:  30,  // Alvin Kamara (Jul 25, 1995)
-  p73:  25,  // Chuba Hubbard (Jun 21, 2000)
-  p74:  30,  // Aaron Jones (Dec 2, 1994)
-  p75:  28,  // David Montgomery (Jun 7, 1997)
-  p76:  27,  // Najee Harris (Mar 9, 1998)
-  p77:  26,  // D'Andre Swift (Jan 14, 1999)
-  p78:  33,  // Raheem Mostert (Apr 9, 1992)
-  p79:  25,  // Kenneth Walker III (Oct 20, 2000)
-  p80:  27,  // Tony Pollard (Apr 30, 1997)
-  p81:  25,  // Rhamondre Stevenson (Apr 14, 2000)
-  p82:  29,  // Nick Chubb (Dec 27, 1995)
-  p83:  26,  // Rachaad White (Sep 10, 1999)
-  p84:  25,  // Javonte Williams (Mar 15, 2000)
-  p85:  25,  // Zamir White (Mar 19, 2000)
-  p86:  25,  // Jerome Ford (Jun 21, 2000)
-  p87:  27,  // Zack Moss (Dec 15, 1997)
-  p88:  26,  // Brian Robinson Jr. (Sep 22, 1999)
-  p89:  25,  // Jaylen Warren (Oct 22, 1999)
-  p90:  25,  // Tyler Allgeier (Apr 19, 2000)
-  p91:  27,  // AJ Dillon (May 2, 1998)
-  p92:  27,  // Devin Singletary (Sep 3, 1997)
-  p93:  30,  // Gus Edwards (Apr 13, 1995)
-  p94:  24,  // Rico Dowdle (Jun 16, 2001)
-  p95:  23,  // Trey Benson (Jul 31, 2002)
-  p96:  30,  // Kareem Hunt (Aug 6, 1995)
-  p97:  26,  // Antonio Gibson (Jun 24, 1998)
-  p98:  24,  // Tyjae Spears (Jun 30, 2001)
-  p99:  22,  // Jaylen Wright (May 7, 2003)
-  p100: 24,  // Dameon Pierce (Mar 2, 2001)
-  p101: 24,  // Roschon Johnson (Apr 10, 2001)
-  p102: 29,  // Samaje Perine (Jan 2, 1996)
-  p103: 29,  // Chase Edmonds (Apr 14, 1996)
-  p104: 24,  // Emari Demercado (Jul 10, 2001)
-  p105: 24,  // Ty Chandler (Jan 22, 2001)
-  p106: 29,  // Craig Reynolds (Jul 26, 1996)
-  p107: 26,  // Khalil Herbert (May 4, 1999)
-  p108: 25,  // Clyde Edwards-Helaire (Apr 11, 2000)
-  p109: 29,  // Justice Hill (Nov 14, 1996)
-  p110: 24,  // Jaleel McLaughlin (Sep 14, 2000)
-  p111: 23,  // Israel Abanikanda (Nov 2, 2001)
-  p112: 23,  // Keaton Mitchell (Sep 12, 2001)
-  p113: 29,  // D'Onta Foreman (Apr 24, 1996)
-  p114: 25,  // Pierre Strong Jr. (Dec 10, 1999)
-  p272: 26,  // J.K. Dobbins (Dec 17, 1998)
-  p273: 24,  // Blake Corum (Oct 7, 2001)
-  p274: 22,  // Jonathon Brooks (Dec 4, 2002)
-  p281: 24,  // Isaac Guerendo (Aug 29, 2000)
-  p282: 23,  // MarShawn Lloyd (Sep 18, 2001)
-  p283: 23,  // Ray Davis (Oct 22, 2001)
-
-  // ===== WIDE RECEIVERS =====
-  p15:  31,  // Tyreek Hill (Mar 1, 1994)
-  p16:  26,  // CeeDee Lamb (Apr 8, 1999)
-  p17:  25,  // Ja'Marr Chase (Mar 1, 2000)
-  p18:  25,  // Amon-Ra St. Brown (Oct 24, 1999)
-  p115: 26,  // Justin Jefferson (Jun 16, 1999)
-  p40:  24,  // Puka Nacua (Jun 29, 2001)
-  p19:  32,  // Davante Adams (Dec 24, 1992)
-  p20:  28,  // AJ Brown (Jun 30, 1997)
-  p116: 22,  // Brian Thomas Jr. (Jun 16, 2003)
-  p117: 29,  // Terry McLaurin (Sep 15, 1995)
-  p118: 24,  // Drake London (Jul 24, 2001)
-  p119: 31,  // Mike Evans (Aug 21, 1993)
-  p120: 22,  // Malik Nabers (Jul 27, 2003)
-  p43:  29,  // Deebo Samuel (Jan 15, 1996)
-  p21:  32,  // Stefon Diggs (Nov 29, 1993)
-  p22:  27,  // DK Metcalf (Dec 14, 1997)
-  p23:  24,  // Chris Olave (Jun 27, 2001)
-  p24:  25,  // Garrett Wilson (Nov 22, 1999)
-  p41:  23,  // Jordan Addison (Sep 28, 2001)
-  p121: 23,  // Ladd McConkey (Aug 30, 2002)
-  p122: 24,  // Jameson Williams (Mar 31, 2001)
-  p123: 29,  // Courtland Sutton (Oct 10, 1995)
-  p124: 22,  // Jaxon Smith-Njigba (Apr 23, 2003)
-  p125: 26,  // Tee Higgins (Jan 18, 1999)
-  p126: 26,  // Jerry Jeudy (Apr 24, 1999)
-  p127: 26,  // Nico Collins (Apr 20, 1999)
-  p128: 24,  // George Pickens (Mar 4, 2001)
-  p129: 24,  // Rashee Rice (Sep 25, 2000)
-  p130: 25,  // DeVonta Smith (Nov 14, 1998)
-  p131: 33,  // Keenan Allen (Apr 27, 1992)
-  p132: 32,  // Cooper Kupp (Jun 15, 1993)
-  p133: 27,  // Michael Pittman Jr. (Oct 5, 1997)
-  p134: 28,  // Diontae Johnson (Jul 5, 1996)
-  p135: 32,  // Tyler Lockett (Sep 28, 1992)
-  p136: 28,  // Christian Kirk (Nov 18, 1996)
-  p137: 30,  // Calvin Ridley (Dec 20, 1994)
-  p138: 28,  // DJ Moore (Apr 14, 1997)
-  p139: 27,  // Brandon Aiyuk (Mar 17, 1998)
-  p140: 24,  // Zay Flowers (Oct 31, 2000)
-  p141: 25,  // Rashod Bateman (Nov 29, 1999)
-  p142: 25,  // Romeo Doubs (Apr 22, 2000)
-  p143: 24,  // Jayden Reed (Apr 12, 2001)
-  p144: 23,  // Tank Dell (Sep 29, 2001)
-  p145: 23,  // Quentin Johnston (Jan 28, 2002)
-  p146: 24,  // Josh Downs (Mar 8, 2001)
-  p147: 24,  // Dontayvion Wicks (Jul 29, 2001)
-  p148: 24,  // Wan'Dale Robinson (Jun 18, 2001)
-  p149: 28,  // Curtis Samuel (Aug 11, 1996)
-  p150: 25,  // Kadarius Toney (Jan 27, 2000)
-  p151: 22,  // Marvin Harrison Jr. (Jan 5, 2003)
-  p152: 22,  // Xavier Worthy (Jun 1, 2003)
-  p153: 22,  // Rome Odunze (Feb 21, 2003)
-  p154: 22,  // Adonai Mitchell (Jun 20, 2003)
-  p155: 28,  // Jakobi Meyers (Nov 6, 1996)
-  p156: 35,  // Adam Thielen (Aug 22, 1990)
-  p157: 25,  // Josh Palmer (Sep 27, 1999)
-  p158: 30,  // Demarcus Robinson (Sep 21, 1994)
-  p159: 27,  // Darnell Mooney (Feb 24, 1998)
-  p160: 29,  // Allen Lazard (Dec 11, 1995)
-  p161: 25,  // Elijah Moore (May 27, 2000)
-  p268: 29,  // Chris Godwin (Feb 27, 1996)
-  p269: 27,  // Marquise Brown (Jun 4, 1997)
-  p270: 28,  // Darius Slayton (Jan 12, 1997)
-  p271: 22,  // Troy Franklin (Dec 18, 2002)
-  p284: 26,  // Rashid Shaheed (Apr 22, 1999)
-  p285: 25,  // Khalil Shakir (Dec 22, 1999)
-
-  // ===== TIGHT ENDS =====
-  p25:  35,  // Travis Kelce (Oct 5, 1989)
-  p26:  23,  // Sam LaPorta (Jun 11, 2002)
-  p27:  29,  // Mark Andrews (Sep 6, 1995)
-  p28:  28,  // TJ Hockenson (Jul 3, 1997)
-  p29:  31,  // George Kittle (Jan 9, 1994)
-  p30:  30,  // Dallas Goedert (Jan 3, 1995)
-  p44:  25,  // Trey McBride (Oct 21, 1999)
-  p47:  30,  // Evan Engram (Sep 2, 1994)
-  p162: 22,  // Brock Bowers (Dec 11, 2002)
-  p163: 29,  // Jonnu Smith (Aug 22, 1995)
-  p164: 24,  // Tucker Kraft (Jun 10, 2001)
-  p165: 34,  // Zach Ertz (Nov 10, 1990)
-  p166: 26,  // Pat Freiermuth (Oct 25, 1998)
-  p167: 24,  // Kyle Pitts (Oct 6, 2000)
-  p168: 25,  // Isaiah Likely (Apr 12, 2000)
-  p169: 24,  // Cade Otton (Mar 20, 2001)
-  p170: 28,  // David Njoku (Jul 10, 1996)
-  p171: 30,  // Hunter Henry (Dec 7, 1994)
-  p172: 23,  // Dalton Kincaid (Nov 5, 2001)
-  p173: 25,  // Jake Ferguson (Oct 21, 1999)
-  p174: 25,  // Cole Kmet (Mar 10, 2000)
-  p175: 24,  // Chigoziem Okonkwo (Aug 16, 2000)
-  p176: 23,  // Luke Musgrave (May 10, 2002)
-  p177: 23,  // Michael Mayer (Jul 6, 2002)
-  p275: 28,  // Dalton Schultz (Jul 11, 1996)
-  p276: 27,  // Noah Fant (Nov 20, 1997)
-  p277: 28,  // Dawson Knox (Nov 14, 1996)
-  p278: 29,  // Tyler Conklin (Jul 8, 1995)
-  p279: 29,  // Mike Gesicki (Oct 3, 1995)
-  p280: 25,  // Colby Parkinson (Jan 23, 2000)
-
-  // ===== KICKERS =====
-  p48:  30,  // Brandon Aubrey (Mar 14, 1995)
-  p31:  35,  // Justin Tucker (Nov 21, 1989)
-  p32:  30,  // Harrison Butker (Jul 14, 1995)
-  p33:  29,  // Jake Elliott (Jan 21, 1996)
-  p34:  28,  // Tyler Bass (Nov 23, 1996)
-  p178: 31,  // Younghoe Koo (Sep 22, 1994)
-  p179: 30,  // Ka'imi Fairbairn (Jan 22, 1994)
-  p180: 29,  // Jason Sanders (Oct 23, 1995)
-  p181: 34,  // Chris Boswell (Jan 16, 1991)
-  p182: 27,  // Cameron Dicker (Aug 19, 1998)
-  p183: 30,  // Matt Gay (Jan 28, 1994)
-  p184: 33,  // Jason Myers (May 12, 1991)
-  p185: 26,  // Blake Grupe (Sep 15, 1998)
-  p186: 25,  // Evan McPherson (Oct 5, 1999)
-  p187: 37,  // Greg Zuerlein (Dec 27, 1987)
-  p188: 34,  // Daniel Carlson (Sep 23, 1991)
-  p189: 33,  // Dustin Hopkins (Oct 1, 1991)
-  p190: 38,  // Graham Gano (Apr 9, 1987)
-  p191: 30,  // Wil Lutz (Jan 19, 1995)
-  p192: 34,  // Cairo Santos (Mar 3, 1991)
-  p256: 25,  // Jake Moody (Feb 12, 2000)
-  p257: 27,  // Jake Bates (Jul 7, 1998)
-  p258: 27,  // Chase McLaughlin (Sep 2, 1997)
-  p259: 23,  // Will Reichard (Aug 31, 2001)
-  p260: 24,  // Brayden Narveson (Dec 3, 2000)
-  p261: 22,  // Cam Little (Sep 10, 2002)
-  p262: 40,  // Matt Prater (Aug 10, 1984)
-  p263: 29,  // Zane Gonzalez (Jan 15, 1996)
-  p264: 39,  // Nick Folk (Nov 5, 1984)
-  p265: 24,  // Joshua Karty (Aug 7, 2001)
-  p266: 25,  // Chad Ryland (Aug 14, 2000)
-  p267: 27,  // Eddy Pineiro (Sep 1, 1995)
+  p1: 29, // Josh Allen
+  p2: 23, // Drake Maye
+  p3: 37, // Matthew Stafford
+  p4: 29, // Patrick Mahomes
+  p5: 26, // Trevor Lawrence
+  p6: 25, // Brock Purdy
+  p7: 27, // Jalen Hurts
+  p8: 23, // Caleb Williams
+  p9: 32, // Dak Prescott
+  p10: 27, // Justin Herbert
+  p11: 25, // Bo Nix
+  p12: 30, // Jared Goff
+  p13: 27, // Daniel Jones
+  p14: 22, // Jaxson Dart
+  p15: 28, // Joe Burrow
+  p16: 28, // Lamar Jackson
+  p17: 24, // Jayden Daniels
+  p18: 32, // Jacoby Brissett
+  p19: 30, // Baker Mayfield
+  p20: 26, // Justin Fields
+  p21: 26, // Jordan Love
+  p22: 27, // Kyler Murray
+  p23: 23, // C.J. Stroud
+  p24: 27, // Jameis Winston
+  p25: 25, // Tyler Shough
+  p26: 42, // Aaron Rodgers
+  p27: 27, // Carson Wentz
+  p28: 27, // Sam Darnold
+  p29: 27, // Bryce Young
+  p30: 27, // Michael Penix Jr.
+  p31: 27, // Malik Willis
+  p32: 27, // Marcus Mariota
+  p33: 29, // Christian McCaffrey
+  p34: 23, // Bijan Robinson
+  p35: 23, // Jahmyr Gibbs
+  p36: 26, // Jonathan Taylor
+  p37: 23, // De'Von Achane
+  p38: 25, // James Cook
+  p39: 24, // Chase Brown
+  p40: 31, // Derrick Henry
+  p41: 23, // Cam Skattebo
+  p42: 27, // Josh Jacobs
+  p43: 25, // Kyren Williams
+  p44: 25, // Javonte Williams
+  p45: 22, // Omarion Hampton
+  p46: 26, // Travis Etienne
+  p47: 28, // Saquon Barkley
+  p48: 21, // Ashton Jeanty
+  p49: 26, // D'Andre Swift
+  p50: 23, // Bucky Irving
+  p51: 26, // Jaylen Warren
+  p52: 26, // Kenneth Gainwell
+  p53: 24, // Breece Hall
+  p54: 27, // Rhamondre Stevenson
+  p55: 26, // Rico Dowdle
+  p56: 23, // RJ Harvey
+  p57: 23, // TreVeyon Henderson
+  p58: 22, // Quinshon Judkins
+  p59: 26, // J.K. Dobbins
+  p60: 25, // Kenneth Walker III
+  p61: 24, // Zach Charbonnet
+  p62: 25, // James Conner
+  p63: 28, // Tony Pollard
+  p64: 23, // Tyrone Tracy Jr.
+  p65: 30, // Aaron Jones
+  p66: 28, // David Montgomery
+  p67: 25, // Audric Estimé
+  p68: 30, // Alvin Kamara
+  p69: 25, // Kimani Vidal
+  p70: 25, // Woody Marks
+  p71: 25, // Trey Benson
+  p72: 25, // Kareem Hunt
+  p73: 25, // Tyjae Spears
+  p74: 25, // Kyle Monangai
+  p75: 26, // Chuba Hubbard
+  p76: 25, // Rachaad White
+  p77: 25, // Jacory Croskey-Merritt
+  p78: 25, // Jordan Mason
+  p79: 25, // Bam Knight
+  p80: 25, // Chris Rodriguez Jr.
+  p81: 25, // Michael Carter
+  p82: 25, // Jawhar Jordan
+  p83: 25, // Tyler Allgeier
+  p84: 25, // Blake Corum
+  p85: 25, // Miles Sanders
+  p86: 26, // Isiah Pacheco
+  p87: 25, // Devin Neal
+  p88: 25, // Justice Hill
+  p89: 25, // Devin Singletary
+  p90: 29, // Nick Chubb
+  p91: 25, // Ty Johnson
+  p92: 25, // Bhayshul Tuten
+  p93: 25, // Dylan Sampson
+  p94: 25, // Emanuel Wilson
+  p95: 25, // Sean Tucker
+  p96: 25, // Jaylen Wright
+  p97: 25, // Samaje Perine
+  p98: 25, // Raheim Sanders
+  p99: 25, // Emari Demercado
+  p100: 25, // Kendre Miller
+  p101: 25, // Antonio Gibson
+  p102: 25, // Jeremy McNichols
+  p103: 25, // Isaiah Davis
+  p104: 25, // Jaret Patterson
+  p105: 25, // Keaton Mitchell
+  p106: 25, // Malik Davis
+  p107: 25, // Jaydon Blue
+  p108: 27, // Najee Harris
+  p109: 25, // Jaleel McLaughlin
+  p110: 25, // Braelon Allen
+  p111: 25, // Ray Davis
+  p112: 25, // Brian Robinson
+  p113: 24, // Puka Nacua
+  p114: 23, // Jaxon Smith-Njigba
+  p115: 25, // Ja'Marr Chase
+  p116: 25, // Amon-Ra St. Brown
+  p117: 25, // Rashee Rice
+  p118: 24, // George Pickens
+  p119: 24, // Drake London
+  p120: 25, // Chris Olave
+  p121: 32, // Davante Adams
+  p122: 26, // CeeDee Lamb
+  p123: 26, // Nico Collins
+  p124: 27, // A.J. Brown
+  p125: 24, // Zay Flowers
+  p126: 22, // Malik Nabers
+  p127: 25, // Garrett Wilson
+  p128: 26, // Tee Higgins
+  p129: 24, // Wan'Dale Robinson
+  p130: 31, // Tyreek Hill
+  p131: 25, // Christian Watson
+  p132: 24, // Quentin Johnston
+  p133: 25, // Michael Wilson
+  p134: 29, // Courtland Sutton
+  p135: 24, // Jameson Williams
+  p136: 22, // Tetairoa McMillan
+  p137: 28, // DK Metcalf
+  p138: 32, // Stefon Diggs
+  p139: 25, // Alec Pierce
+  p140: 23, // Rome Odunze
+  p141: 26, // Jaylen Waddle
+  p142: 27, // Michael Pittman
+  p143: 26, // Justin Jefferson
+  p144: 26, // DeVonta Smith
+  p145: 29, // Deebo Samuel Sr.
+  p146: 27, // Jauan Jennings
+  p147: 23, // Parker Washington
+  p148: 23, // Emeka Egbuka
+  p149: 30, // Terry McLaurin
+  p150: 24, // Ladd McConkey
+  p151: 28, // Jakobi Meyers
+  p152: 33, // Keenan Allen
+  p153: 22, // Marvin Harrison Jr.
+  p154: 32, // Mike Evans
+  p155: 25, // Khalil Shakir
+  p156: 22, // Troy Franklin
+  p157: 25, // Romeo Doubs
+  p158: 28, // DJ Moore
+  p159: 23, // Brian Thomas Jr.
+  p160: 24, // Ricky Pearsall
+  p161: 23, // Jordan Addison
+  p162: 26, // Jayden Reed
+  p163: 24, // Tre Tucker
+  p164: 29, // Chris Godwin Jr.
+  p165: 26, // Travis Hunter
+  p166: 26, // Kayshon Boutte
+  p167: 26, // Rashid Shaheed
+  p168: 26, // Josh Downs
+  p169: 26, // Marquise Brown
+  p170: 26, // Theo Wease Jr.
+  p171: 26, // Keon Coleman
+  p172: 26, // Luther Burden III
+  p173: 26, // Jalen Coker
+  p174: 26, // Mack Hollins
+  p175: 26, // Tory Horton
+  p176: 26, // Xavier Worthy
+  p177: 26, // Ryan Flournoy
+  p178: 26, // Jayden Higgins
+  p179: 26, // Jalen McMillan
+  p180: 26, // Chimere Dike
+  p181: 26, // Devaughn Vele
+  p182: 32, // Cooper Kupp
+  p183: 26, // Elic Ayomanor
+  p184: 26, // Darius Slayton
+  p185: 26, // Jerry Jeudy
+  p186: 26, // Malik Washington
+  p187: 26, // Calvin Ridley
+  p188: 26, // Tyquan Thornton
+  p189: 26, // Kendrick Bourne
+  p190: 26, // Kevin Austin Jr.
+  p191: 26, // Sterling Shepard
+  p192: 26, // Greg Dortch
+  p193: 25, // Trey McBride
+  p194: 32, // George Kittle
+  p195: 24, // Tucker Kraft
+  p196: 22, // Brock Bowers
+  p197: 25, // Kyle Pitts
+  p198: 30, // Dallas Goedert
+  p199: 24, // Sam LaPorta
+  p200: 22, // Harold Fannin Jr.
+  p201: 36, // Travis Kelce
+  p202: 26, // Jake Ferguson
+  p203: 24, // Tyler Warren
+  p204: 28, // Juwan Johnson
+  p205: 31, // Hunter Henry
+  p206: 29, // Dalton Schultz
+  p207: 25, // Dalton Kincaid
+  p208: 22, // Colston Loveland
+  p209: 32, // Darren Waller
+  p210: 24, // Brenton Strange
+  p211: 35, // Zach Ertz
+  p212: 27, // Colby Parkinson
+  p213: 25, // Jake Tonges
+  p214: 23, // Oronde Gadsden II
+  p215: 24, // AJ Barner
+  p216: 24, // Theo Johnson
+  p217: 26, // Cade Otton
+  p218: 26, // David Njoku
+  p219: 30, // Mark Andrews
+  p220: 27, // Pat Freiermuth
+  p221: 26, // T.J. Hockenson
+  p222: 26, // Chig Okonkwo
+  p223: 26, // Tyler Higbee
+  p224: 26, // Greg Dulcich
+  p225: 26, // Mason Taylor
+  p226: 26, // Dawson Knox
+  p227: 26, // Evan Engram
+  p228: 26, // Mike Gesicki
+  p229: 28, // Ka'imi Fairbairn
+  p230: 28, // Jason Myers
+  p231: 28, // Spencer Shrader
+  p232: 28, // Brandon Aubrey
+  p233: 28, // Zane Gonzalez
+  p234: 28, // Ben Sauls
+  p235: 28, // Eddy Pineiro
+  p236: 28, // Cameron Dicker
+  p237: 28, // Charlie Smyth
+  p238: 28, // Cam Little
+  p239: 28, // Will Reichard
+  p240: 28, // Chase McLaughlin
+  p241: 28, // Harrison Mevis
+  p242: 28, // Jake Moody
+  p243: 28, // Chris Boswell
+  p244: 28, // Jake Bates
+  p245: 28, // Cairo Santos
+  p246: 28, // Harrison Butker
+  p247: 28, // Andy Borregales
+  p248: 28, // Tyler Loop
+  p249: 28, // Joey Slye
+  p250: 28, // Brandon McManus
+  p251: 28, // Blake Grupe
+  p252: 28, // Evan McPherson
+  p253: 28, // Nick Folk
+  p254: 28, // Wil Lutz
+  p255: 28, // Graham Gano
+  p256: 28, // Riley Patterson
+  p257: 28, // Matt Gay
+  p258: 28, // Chad Ryland
+  p259: 28, // Lucas Havrisik
+  p260: 28, // Matt Prater
 };
 
 export function getPlayerAge(playerId) {
-  return PLAYER_AGES[playerId] ?? null;
+  return PLAYER_AGES[playerId] || null;
 }

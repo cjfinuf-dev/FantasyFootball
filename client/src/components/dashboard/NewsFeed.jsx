@@ -1,14 +1,67 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { getNews } from '../../api/news';
-import AdSpace from '../ui/AdSpace';
+import { PLAYERS } from '../../data/players';
+import { getDynamicSituationEvents } from '../../utils/hexScore';
 
-const CATEGORY_ICONS = {
-  injury: null,
-  trade: null,
-  waiver: null,
-  transaction: null,
-  news: null,
-};
+const PLAYER_NAME_MAP = {};
+PLAYERS.forEach(p => { PLAYER_NAME_MAP[p.name.toLowerCase()] = p; });
+
+// Sort by name length descending so "Patrick Mahomes" matches before "Pat"
+const PLAYER_NAMES_SORTED = PLAYERS.map(p => p.name).sort((a, b) => b.length - a.length);
+
+// Build unique last-name map — only include surnames that belong to exactly one player
+const LAST_NAME_MAP = {};
+const _lastNameCounts = {};
+PLAYERS.forEach(p => {
+  const parts = p.name.split(' ');
+  const last = parts[parts.length - 1].toLowerCase();
+  _lastNameCounts[last] = (_lastNameCounts[last] || 0) + 1;
+  LAST_NAME_MAP[last] = p;
+});
+// Build set of all first names to detect collisions
+const _firstNames = new Set(PLAYERS.map(p => p.name.split(' ')[0].toLowerCase()));
+// Remove ambiguous last names (shared by 2+ players), very short ones, or names that collide with first names
+Object.keys(LAST_NAME_MAP).forEach(last => {
+  if (_lastNameCounts[last] > 1 || last.length < 4 || _firstNames.has(last)) delete LAST_NAME_MAP[last];
+});
+const UNIQUE_LAST_NAMES = Object.keys(LAST_NAME_MAP).sort((a, b) => b.length - a.length);
+
+function findPlayersInText(text) {
+  if (!text) return [];
+  const lower = text.toLowerCase();
+  const found = [];
+  const seen = new Set();
+
+  // Full name matches first
+  for (const name of PLAYER_NAMES_SORTED) {
+    if (lower.includes(name.toLowerCase()) && !seen.has(name)) {
+      const p = PLAYER_NAME_MAP[name.toLowerCase()];
+      found.push(p);
+      seen.add(p.id);
+      if (found.length >= 3) return found;
+    }
+  }
+
+  // Then unique last name matches (word-bounded to avoid partial matches)
+  for (const last of UNIQUE_LAST_NAMES) {
+    const regex = new RegExp('\\b' + last + '\\b', 'i');
+    if (regex.test(text)) {
+      const p = LAST_NAME_MAP[last];
+      if (!seen.has(p.id)) {
+        found.push(p);
+        seen.add(p.id);
+        if (found.length >= 3) return found;
+      }
+    }
+  }
+
+  return found;
+}
+
+function findPlayerByName(name) {
+  if (!name) return null;
+  return PLAYER_NAME_MAP[name.toLowerCase()] || null;
+}
 
 const TABS = ['all', 'injury', 'trade', 'waiver', 'transaction', 'news'];
 
@@ -22,14 +75,54 @@ function timeAgo(dateStr) {
   return `${days}d ago`;
 }
 
-export default function NewsFeed() {
+function getReadIds() {
+  try {
+    return new Set(JSON.parse(localStorage.getItem('ff-read-articles') || '[]'));
+  } catch { return new Set(); }
+}
+
+function markRead(articleId) {
+  const read = getReadIds();
+  read.add(articleId);
+  const arr = [...read].slice(-500);
+  localStorage.setItem('ff-read-articles', JSON.stringify(arr));
+  return new Set(arr);
+}
+
+export default function NewsFeed({ onPlayerClick }) {
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('all');
-  const [categoryCounts, setCategoryCounts] = useState({});
+  const [readIds, setReadIds] = useState(getReadIds);
   const [nextCursor, setNextCursor] = useState(null);
   const [loadingMore, setLoadingMore] = useState(false);
+
+  // Build a map of article ID → situation event for impact badges
+  const articleImpactMap = useMemo(() => {
+    const map = {};
+    getDynamicSituationEvents().forEach(e => {
+      if (e.articleId) map[e.articleId] = e;
+    });
+    return map;
+  }, [articles]); // recompute when articles change (events are stable per session)
+
+  const unreadCounts = (() => {
+    const counts = {};
+    let total = 0;
+    articles.forEach(a => {
+      if (!readIds.has(a.id)) {
+        counts[a.category] = (counts[a.category] || 0) + 1;
+        total++;
+      }
+    });
+    counts.all = total;
+    return counts;
+  })();
+
+  const handleArticleClick = (articleId) => {
+    setReadIds(markRead(articleId));
+  };
 
   useEffect(() => {
     setLoading(true);
@@ -39,13 +132,6 @@ export default function NewsFeed() {
       .then(data => {
         setArticles(data.articles);
         setNextCursor(data.nextCursor);
-        if (activeTab === 'all' && data.articles) {
-          const counts = { all: data.articles.length };
-          data.articles.forEach(a => {
-            counts[a.category] = (counts[a.category] || 0) + 1;
-          });
-          setCategoryCounts(counts);
-        }
       })
       .catch(err => setError(err.message))
       .finally(() => setLoading(false));
@@ -68,28 +154,47 @@ export default function NewsFeed() {
   return (
     <div className="ff-card">
       <div className="ff-card-top-accent" style={{ background: 'var(--charcoal-slate)' }} />
-      <div className="ff-card-header">
-        <h2 style={{ fontSize: 16, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
-          News Feed
-        </h2>
-        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Live from ESPN, Yahoo, CBS & more</span>
-      </div>
 
-      <div className="ff-tabs">
-        {TABS.map(tab => (
-          <button key={tab} className={`ff-tab ${activeTab === tab ? 'active' : ''}`}
-            onClick={() => setActiveTab(tab)}>
-            {tab.charAt(0).toUpperCase() + tab.slice(1)}
-            {categoryCounts[tab] != null && (
-              <span style={{ marginLeft: 6, fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 'var(--radius-full)', background: 'var(--tan-10)', color: 'var(--copper)' }}>
-                {categoryCounts[tab]}
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
-
-      <div style={{ maxHeight: 520, overflowY: 'auto' }}>
+      <div style={{ maxHeight: 560, overflowY: 'auto' }}>
+        {/* Two-column header: tabs left, "Players" label right */}
+        <div className="ff-news-sticky-header">
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ padding: '12px 20px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <h2 style={{ fontSize: 15, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+                News Feed
+                {unreadCounts.all > 0 && (
+                  <span className="ff-badge-count">{unreadCounts.all > 99 ? '99+' : unreadCounts.all}</span>
+                )}
+              </h2>
+            </div>
+            <div className="ff-tabs" style={{ borderBottom: 'none' }}>
+              {TABS.map(tab => {
+                const count = unreadCounts[tab] || 0;
+                return (
+                  <button key={tab} className={`ff-tab ${activeTab === tab ? 'active' : ''}`}
+                    onClick={() => setActiveTab(tab)}>
+                    {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                    {count > 0 && (
+                      <span style={{
+                        marginLeft: 6, fontSize: 9, fontWeight: 700, padding: '1px 5px',
+                        borderRadius: 'var(--radius-full)',
+                        background: tab === 'all' ? 'var(--accent)' : 'var(--tan-10)',
+                        color: tab === 'all' ? 'var(--on-accent)' : 'var(--copper)',
+                      }}>
+                        {count > 100 ? '100+' : count}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div className="ff-news-players" style={{ justifyContent: 'flex-end', padding: '0 16px 10px 12px' }}>
+            <span style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)' }}>
+              Impacted Players
+            </span>
+          </div>
+        </div>
         {loading && (
           <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
             Loading news...
@@ -108,52 +213,74 @@ export default function NewsFeed() {
           </div>
         )}
 
-        {articles.map((article, index) => (
-          <div key={article.id}>
-          {index > 0 && index % 8 === 7 && (
-            <div style={{ padding: '12px 20px' }}>
-              <AdSpace size="sm" />
+        {articles.map((article) => {
+          const isRead = readIds.has(article.id);
+          const textPlayers = findPlayersInText((article.title || '') + ' ' + (article.summary || ''));
+          const serverPlayer = findPlayerByName(article.player_name);
+          // Merge: text-matched players first, add server match if not already found
+          const matchedPlayers = [...textPlayers];
+          if (serverPlayer && !matchedPlayers.find(p => p.id === serverPlayer.id)) {
+            matchedPlayers.push(serverPlayer);
+          }
+          const impact = articleImpactMap[article.id];
+          return (
+          <div key={article.id} className="ff-news-item" style={{ opacity: isRead ? 0.6 : 1 }}>
+            <a href={article.source_url} target="_blank" rel="noopener noreferrer"
+              className="ff-news-article" style={{ textDecoration: 'none', color: 'inherit', display: 'flex', flex: 1, minWidth: 0, gap: 12 }}
+              onClick={() => handleArticleClick(article.id)}>
+              {article.image_url ? (
+                <div className="ff-news-thumb">
+                  <img src={article.image_url} alt="" loading="lazy" />
+                </div>
+              ) : (
+                <div className="ff-news-icon" />
+              )}
+              <div className="ff-news-content">
+                <div className="ff-news-title">{article.title}</div>
+                <div className="ff-news-body">{article.summary}</div>
+                <div className="ff-news-meta" style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
+                  <span style={{
+                    fontSize: 9, fontWeight: 600, padding: '1px 6px', borderRadius: 'var(--radius-full)',
+                    background: 'var(--tan-10)', color: 'var(--copper)', textTransform: 'uppercase',
+                  }}>{article.source_name}</span>
+                  {article.source_count > 1 && (
+                    <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+                      Reported by {article.source_count} sources
+                    </span>
+                  )}
+                  <span className="ff-news-time">{timeAgo(article.published_at)}</span>
+                  {impact && (
+                    <span style={{
+                      fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 'var(--radius-full)',
+                      background: impact.impact > 0 ? 'rgba(22,163,74,0.12)' : 'rgba(220,38,38,0.12)',
+                      color: impact.impact > 0 ? 'var(--success-green)' : 'var(--red)',
+                    }}>
+                      {impact.impact > 0 ? '\u2191' : '\u2193'} HexScore Impact
+                    </span>
+                  )}
+                </div>
+              </div>
+            </a>
+            <div className="ff-news-players">
+              {matchedPlayers.map(mp => (
+                <button key={mp.id} className="ff-news-player-link"
+                  onClick={() => { if (onPlayerClick) onPlayerClick(mp.id); }}>
+                  {mp.name} <span className="ff-news-player-pos">{mp.pos}</span>
+                </button>
+              ))}
             </div>
-          )}
-          <a href={article.source_url} target="_blank" rel="noopener noreferrer"
-            className="ff-news-item" style={{ textDecoration: 'none', color: 'inherit', display: 'flex' }}>
-            {article.image_url ? (
-              <div className="ff-news-thumb">
-                <img src={article.image_url} alt="" loading="lazy" />
-              </div>
-            ) : (
-              <div className="ff-news-icon">
-                {CATEGORY_ICONS[article.category] || CATEGORY_ICONS.news}
-              </div>
-            )}
-            <div className="ff-news-content">
-              <div className="ff-news-title">{article.title}</div>
-              <div className="ff-news-body">{article.summary}</div>
-              <div className="ff-news-meta" style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-                <span style={{
-                  fontSize: 9, fontWeight: 600, padding: '1px 6px', borderRadius: 'var(--radius-full)',
-                  background: 'var(--tan-10)', color: 'var(--copper)', textTransform: 'uppercase',
-                }}>{article.source_name}</span>
-                {article.source_count > 1 && (
-                  <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
-                    Reported by {article.source_count} sources
-                  </span>
-                )}
-                <span className="ff-news-time">{timeAgo(article.published_at)}</span>
-              </div>
-            </div>
-          </a>
           </div>
-        ))}
-      </div>
+          );
+        })}
 
-      {nextCursor && (
-        <div style={{ padding: '12px 20px', textAlign: 'center' }}>
-          <button className="ff-btn ff-btn-secondary" onClick={loadMore} disabled={loadingMore}>
-            {loadingMore ? 'Loading...' : 'Load More'}
-          </button>
-        </div>
-      )}
+        {nextCursor && (
+          <div style={{ padding: '12px 20px', textAlign: 'center' }}>
+            <button className="ff-btn ff-btn-secondary" onClick={loadMore} disabled={loadingMore}>
+              {loadingMore ? 'Loading...' : 'Load More'}
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

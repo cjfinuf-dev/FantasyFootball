@@ -3,7 +3,7 @@ import { TEAMS, USER_TEAM_ID } from '../../data/teams';
 import { PLAYERS } from '../../data/players';
 import { ROSTER_PRESETS } from '../../data/scoring';
 import { getEspnId } from '../../data/espnIds';
-import { getHexScore } from '../../utils/hexScore';
+import { getHexScore, formatHex } from '../../utils/hexScore';
 import PosBadge from '../ui/PosBadge';
 import PlayerHeadshot from '../ui/PlayerHeadshot';
 
@@ -410,7 +410,7 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
             <div style={{ display: 'flex', gap: 16, marginBottom: 24, flexWrap: 'wrap' }}>
               <div>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>Pick Timer</label>
-                <select className="auth-input" style={{ padding: '8px 12px', minWidth: 120 }}
+                <select className="ff-search-input" style={{ padding: '8px 12px', minWidth: 120, width: 'auto' }}
                   value={state.timerSetting}
                   onChange={e => setState(prev => ({ ...prev, timerSetting: Number(e.target.value) }))}>
                   <option value={30}>30 seconds</option>
@@ -421,7 +421,7 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>AI Pick Speed</label>
-                <select className="auth-input" style={{ padding: '8px 12px', minWidth: 120 }}
+                <select className="ff-search-input" style={{ padding: '8px 12px', minWidth: 120, width: 'auto' }}
                   value={state.pickSpeed}
                   onChange={e => setState(prev => ({ ...prev, pickSpeed: e.target.value }))}>
                   <option value="instant">Instant</option>
@@ -488,7 +488,7 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
         {/* Reset Confirmation Modal */}
         {showResetConfirm && (
           <div className="auth-overlay" onClick={e => { if (e.target === e.currentTarget) setShowResetConfirm(false); }}>
-            <div className="auth-modal" style={{ width: 380, textAlign: 'center' }}>
+            <div className="auth-modal" style={{ maxWidth: 380, width: '90vw', textAlign: 'center' }}>
               <h2 style={{ fontSize: 18, marginBottom: 8 }}>Reset Draft?</h2>
               <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 20 }}>
                 This will clear all draft picks and return to the draft lobby. This cannot be undone.
@@ -507,19 +507,49 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
           </div>
         )}
 
-        {/* All Team Rosters */}
+        {/* Your Team — featured full-width */}
+        {(() => {
+          const userTeam = TEAMS.find(t => t.id === USER_TEAM_ID);
+          const userRosterComplete = teamRostersMap[USER_TEAM_ID] || [];
+          return (
+            <div className="ff-card ff-draft-user-card" style={{ marginBottom: 16 }}>
+              <div className="ff-card-top-accent" />
+              <div className="ff-card-header" style={{ paddingBottom: 8 }}>
+                <h3 style={{ fontSize: 16, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {userTeam?.name} <span style={{ fontSize: 10, background: 'var(--accent)', color: '#fff', padding: '1px 6px', borderRadius: 4 }}>YOUR TEAM</span>
+                </h3>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{userRosterComplete.length} players</span>
+              </div>
+              <div className="ff-card-body" style={{ padding: '0 16px 12px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '0 24px' }}>
+                  {userRosterComplete.map((pick, i) => (
+                    <div key={i} style={{
+                      display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0',
+                      borderBottom: '1px solid var(--border)', fontSize: 12,
+                    }}>
+                      <span style={{ color: 'var(--text-muted)', minWidth: 18, fontSize: 10 }}>R{pick.round + 1}</span>
+                      <PlayerHeadshot espnId={getEspnId(pick.player?.name)} name={pick.player?.name} size="xs" pos={pick.player?.pos} team={pick.player?.team} />
+                      <PosBadge pos={pick.player?.pos} />
+                      <span style={{ fontWeight: 600 }}>{pick.player?.name}</span>
+                      <span style={{ marginLeft: 'auto', color: 'var(--text-muted)', fontSize: 10 }}>{pick.player?.team}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Other Team Rosters */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
-          {state.draftOrder.map(teamId => {
+          {state.draftOrder.filter(id => id !== USER_TEAM_ID).map(teamId => {
             const team = TEAMS.find(t => t.id === teamId);
-            const isUser = teamId === USER_TEAM_ID;
             const roster = teamRostersMap[teamId] || [];
             return (
-              <div key={teamId} className="ff-card" style={{ border: isUser ? '2px solid var(--accent)' : undefined }}>
-                <div className="ff-card-top-accent" style={{ background: isUser ? 'var(--accent)' : 'var(--charcoal-slate, #334155)' }} />
+              <div key={teamId} className="ff-card">
+                <div className="ff-card-top-accent" style={{ background: 'var(--charcoal-slate, #334155)' }} />
                 <div className="ff-card-header" style={{ paddingBottom: 8 }}>
-                  <h3 style={{ fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    {team.name} {isUser && <span style={{ fontSize: 10, background: 'var(--accent)', color: '#fff', padding: '1px 6px', borderRadius: 4 }}>YOU</span>}
-                  </h3>
+                  <h3 style={{ fontSize: 14 }}>{team.name}</h3>
                 </div>
                 <div className="ff-card-body" style={{ padding: '0 12px 12px' }}>
                   {roster.map((pick, i) => (
@@ -551,8 +581,13 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
         @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
       `}</style>
 
+      {/* Exit Draft link */}
+      <div style={{ marginBottom: 12 }}>
+        <button className="ff-back-btn" onClick={() => window.history.back()}>{'\u2190'} Exit Draft</button>
+      </div>
+
       {/* Pick Announcements */}
-      <div style={{ position: 'fixed', top: 60, right: 16, zIndex: 1000, display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 300 }}>
+      <div style={{ position: 'fixed', top: 56, right: 16, zIndex: 60, display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 300 }}>
         {state.announcements.slice(0, 3).map((ann, i) => {
           const team = TEAMS.find(t => t.id === ann.teamId);
           return (
@@ -608,7 +643,7 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
       </div>
 
       {/* Main Content: Player Pool + Sidebar */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 16, marginBottom: 16 }}>
+      <div className="ff-draft-grid">
         {/* Player Pool */}
         <div className="ff-card">
           <div className="ff-card-top-accent" style={{ background: 'var(--brand-tan, #d4a76a)' }} />
@@ -616,79 +651,62 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
             <h2 style={{ fontSize: 15 }}>Available Players</h2>
             <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{availablePlayers.length} remaining</span>
           </div>
-          <div style={{ padding: '0 16px 8px', display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+          <div className="ff-tm-filter-bar" style={{ padding: '0 16px 8px' }}>
             {['ALL','QB','RB','WR','TE','K','DEF'].map(pos => (
               <button key={pos} onClick={() => setPosFilter(pos)}
-                style={{
-                  padding: '4px 10px', borderRadius: 4, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 600,
-                  background: posFilter === pos ? (pos === 'ALL' ? 'var(--accent)' : POS_COLORS[pos]) : 'var(--surface, var(--bg-alt))',
-                  color: posFilter === pos ? '#fff' : 'var(--text)',
-                  transition: 'all 0.15s',
-                }}>
+                className={`ff-tm-filter-pill${posFilter === pos ? ' active' : ''}`}
+                style={posFilter === pos && pos !== 'ALL' ? { background: POS_COLORS[pos], borderColor: POS_COLORS[pos] } : undefined}>
                 {pos}
               </button>
             ))}
             <input
+              className="ff-search-input"
               type="text" placeholder="Search players..." value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              style={{
-                marginLeft: 'auto', padding: '5px 10px', borderRadius: 6, border: '1px solid var(--border)',
-                background: 'var(--bg)', color: 'var(--text)', fontSize: 12, width: 160, outline: 'none',
-              }}
+              style={{ marginLeft: 'auto', width: 160, padding: '5px 10px', fontSize: 12 }}
             />
           </div>
-          <div style={{ maxHeight: 420, overflowY: 'auto', padding: '0 4px' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+          <div className="ff-table-wrap" style={{ maxHeight: 420 }}>
+            <table className="ff-table">
               <thead>
-                <tr style={{ borderBottom: '2px solid var(--border)', position: 'sticky', top: 0, background: 'var(--bg)', zIndex: 1 }}>
-                  <th style={{ textAlign: 'left', padding: '6px 8px', fontWeight: 600, fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Player</th>
-                  <th style={{ textAlign: 'left', padding: '6px 4px', fontWeight: 600, fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Team</th>
-                  <th style={{ textAlign: 'right', padding: '6px 8px', fontWeight: 600, fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', cursor: 'pointer' }} onClick={() => setSortBy('proj')}>
-                    Proj {sortBy === 'proj' ? '\u25BC' : ''}
+                <tr>
+                  <th>Player</th>
+                  <th>Team</th>
+                  <th className={sortBy === 'proj' ? 'sort-active' : ''} onClick={() => setSortBy('proj')} style={{ textAlign: 'right' }}>
+                    Proj {sortBy === 'proj' && <span className="sort-arrow">{'\u25BC'}</span>}
                   </th>
-                  <th style={{ textAlign: 'right', padding: '6px 8px', fontWeight: 600, fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', cursor: 'pointer' }} onClick={() => setSortBy('avg')}>
-                    Avg {sortBy === 'avg' ? '\u25BC' : ''}
+                  <th className={sortBy === 'avg' ? 'sort-active' : ''} onClick={() => setSortBy('avg')} style={{ textAlign: 'right' }}>
+                    Avg {sortBy === 'avg' && <span className="sort-arrow">{'\u25BC'}</span>}
                   </th>
-                  <th style={{ textAlign: 'right', padding: '6px 8px', fontWeight: 600, fontSize: 10, color: 'var(--hex-purple, #8B5CF6)', textTransform: 'uppercase', cursor: 'pointer' }} onClick={() => setSortBy('hex')}>
-                    Hex {sortBy === 'hex' ? '\u25BC' : ''}
+                  <th className={sortBy === 'hex' ? 'sort-active' : ''} onClick={() => setSortBy('hex')} style={{ textAlign: 'right', color: 'var(--hex-purple)' }}>
+                    Hex {sortBy === 'hex' && <span className="sort-arrow">{'\u25BC'}</span>}
                   </th>
-                  <th style={{ textAlign: 'center', padding: '6px 8px', width: 80 }}></th>
+                  <th style={{ width: 80, textAlign: 'center' }}></th>
                 </tr>
               </thead>
               <tbody>
                 {availablePlayers.map(player => {
                   const inQueue = state.pickQueue.includes(player.id);
                   return (
-                    <tr key={player.id} style={{
-                      borderBottom: '1px solid var(--border)',
-                      background: inQueue ? 'rgba(191,148,105,0.08)' : undefined,
-                    }}>
-                      <td style={{ padding: '6px 8px', display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <PlayerHeadshot espnId={getEspnId(player.name)} name={player.name} size="xs" pos={player.pos} team={player.team} />
-                        <PosBadge pos={player.pos} />
-                        <span style={{ fontWeight: 500 }}>{player.name}</span>
+                    <tr key={player.id} style={inQueue ? { background: 'var(--accent-10)' } : undefined}>
+                      <td>
+                        <div className="ff-flex ff-gap-2">
+                          <PlayerHeadshot espnId={getEspnId(player.name)} name={player.name} size="xs" pos={player.pos} team={player.team} />
+                          <PosBadge pos={player.pos} />
+                          <span className="player-name">{player.name}</span>
+                        </div>
                       </td>
-                      <td style={{ padding: '6px 4px', color: 'var(--text-muted)' }}>{player.team}</td>
-                      <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 600 }}>{player.proj}</td>
-                      <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-muted)' }}>{player.avg}</td>
-                      <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 600, color: 'var(--hex-purple, #8B5CF6)' }}>{getHexScore(player.id)}</td>
-                      <td style={{ padding: '4px 8px', textAlign: 'center' }}>
+                      <td className="player-team">{player.team}</td>
+                      <td style={{ textAlign: 'right', fontWeight: 600 }} className="tabular-nums">{player.proj}</td>
+                      <td style={{ textAlign: 'right' }} className="tabular-nums">{player.avg}</td>
+                      <td style={{ textAlign: 'right', fontWeight: 600, color: 'var(--hex-purple)' }} className="tabular-nums">{formatHex(getHexScore(player.id))}</td>
+                      <td style={{ textAlign: 'center' }}>
                         {isUserTurn ? (
-                          <button onClick={() => handleUserPick(player.id)}
-                            style={{
-                              padding: '4px 10px', borderRadius: 4, border: 'none', cursor: 'pointer',
-                              background: 'var(--accent)', color: '#fff', fontSize: 11, fontWeight: 600,
-                            }}>
+                          <button className="ff-btn ff-btn-primary ff-btn-sm" onClick={() => handleUserPick(player.id)}>
                             Draft
                           </button>
                         ) : (
-                          <button onClick={() => toggleQueue(player.id)}
-                            style={{
-                              padding: '4px 10px', borderRadius: 4, border: '1px solid var(--border)',
-                              cursor: 'pointer', fontSize: 11, fontWeight: 500,
-                              background: inQueue ? 'var(--accent)' : 'transparent',
-                              color: inQueue ? '#fff' : 'var(--text-muted)',
-                            }}>
+                          <button className={`ff-btn ff-btn-sm ${inQueue ? 'ff-btn-primary' : 'ff-btn-secondary'}`} onClick={() => toggleQueue(player.id)}>
                             {inQueue ? 'Queued' : '+Queue'}
                           </button>
                         )}
@@ -702,7 +720,7 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
         </div>
 
         {/* Right Sidebar */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div className="ff-right">
           {/* My Team */}
           <div className="ff-card">
             <div className="ff-card-top-accent" style={{ background: 'var(--accent)' }} />

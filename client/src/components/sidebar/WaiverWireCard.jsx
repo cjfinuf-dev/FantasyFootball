@@ -1,8 +1,7 @@
 import { useState, useMemo } from 'react';
-import { WAIVERS } from '../../data/waivers';
 import { PLAYERS } from '../../data/players';
 import { getEspnId } from '../../data/espnIds';
-import { getHexScore, getHexTier } from '../../utils/hexScore';
+import { getHexScore, getHexTier, formatHex } from '../../utils/hexScore';
 import PosBadge from '../ui/PosBadge';
 import PlayerHeadshot from '../ui/PlayerHeadshot';
 import PlayerLink from '../ui/PlayerLink';
@@ -23,7 +22,25 @@ export default function WaiverWireCard({ expanded = false, rosters, onPlayerClic
 
   const waiverPlayers = useMemo(() => {
     if (!hasDraftData) {
-      return WAIVERS.map(w => ({ ...w, isDynamic: false }));
+      // Pre-draft: show top available players by HexScore (no roster filter)
+      let list = [...PLAYERS];
+      if (!expanded) list = list.filter(p => p.pos !== 'K' && p.pos !== 'DEF');
+      if (expanded && posFilter !== 'ALL') list = list.filter(p => p.pos === posFilter);
+      return list
+        .sort((a, b) => getHexScore(b.id) - getHexScore(a.id))
+        .slice(0, expanded ? 25 : 5)
+        .map(p => {
+          const hex = getHexScore(p.id);
+          const tier = getHexTier(hex);
+          return {
+            playerId: p.id, name: p.name, team: p.team, pos: p.pos,
+            hexScore: hex, tier,
+            trend: p.proj > p.avg ? 'up' : 'down',
+            trendPct: Math.abs(Math.round(((p.proj - p.avg) / (p.avg || 1)) * 100)),
+            reason: tier.tier + ' tier',
+            isDynamic: true,
+          };
+        });
     }
 
     const draftedSet = new Set();
@@ -90,14 +107,12 @@ export default function WaiverWireCard({ expanded = false, rosters, onPlayerClic
               <div className="ff-waiver-name">
                 <PlayerLink name={w.name} playerId={w.playerId} onPlayerClick={onPlayerClick} /> <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{w.team}</span>
                 <PosBadge pos={w.pos} />
+                <span className={`ff-trend ${w.trend}`}>{w.trend === 'up' ? '\u25B2' : '\u25BC'} {w.trendPct}%</span>
               </div>
               <div className="ff-waiver-detail">{w.reason}</div>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
-              <div className="ff-waiver-pts tabular-nums" style={{ color: 'var(--hex-purple, #8B5CF6)' }}>
-                {w.isDynamic ? w.hexScore : w.proj}
-              </div>
-              <span className={`ff-trend ${w.trend}`}>{w.trend === 'up' ? '\u25B2' : '\u25BC'} {w.trendPct}%</span>
+            <div className={`ff-waiver-pts tabular-nums ${w.isDynamic ? 'hex-val-' + (w.tier.cssClass === 'hex-starter-plus' ? 'plus' : w.tier.cssClass.replace('hex-', '')) : ''}`}>
+              {w.isDynamic ? formatHex(w.hexScore) : w.proj}
             </div>
             {onClaimPlayer && hasDraftData && w.isDynamic && (
               <button className="ff-btn ff-btn-copper ff-btn-sm" onClick={() => onClaimPlayer(w.playerId)}>

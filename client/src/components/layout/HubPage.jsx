@@ -1,11 +1,17 @@
 import { useState } from 'react';
+import { useNavigate, useOutletContext } from 'react-router-dom';
+import { useAuth } from '../../hooks/useAuth';
+import { useLeagues } from '../../hooks/useLeagues';
 import NewsFeed from '../dashboard/NewsFeed';
-import AdSpace from '../ui/AdSpace';
-import QuickTradeCalc from '../trade/QuickTradeCalc';
 import ImportLeague from '../league/ImportLeague';
 import * as leagueApi from '../../api/leagues';
 
-export default function HubPage({ leagues, leaguesLoading, onSelectLeague, onCreateLeague, onDeleteLeague, onLeagueJoined, userName }) {
+export default function HubPage() {
+  const { user } = useAuth();
+  const { leagues, leaguesLoading, addLeague } = useLeagues();
+  const { onCreateLeague, onDeleteLeague } = useOutletContext();
+  const navigate = useNavigate();
+
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [joinForm, setJoinForm] = useState({ inviteCode: '', teamName: '' });
@@ -27,7 +33,8 @@ export default function HubPage({ leagues, leaguesLoading, onSelectLeague, onCre
       });
       setShowJoinModal(false);
       setJoinForm({ inviteCode: '', teamName: '' });
-      onLeagueJoined?.(league);
+      addLeague(league);
+      navigate(`/league/${league.id}`);
     } catch (err) {
       setJoinError(err.message || 'Failed to join league.');
     } finally {
@@ -35,90 +42,91 @@ export default function HubPage({ leagues, leaguesLoading, onSelectLeague, onCre
     }
   };
 
+  const handleLeagueJoined = (league) => {
+    addLeague(league);
+    navigate(`/league/${league.id}`);
+  };
+
   return (
     <>
       <div className="ff-hub-banner">
         <div>
-          <h1>Welcome back{userName ? `, ${userName.split(' ')[0]}` : ''}</h1>
+          <h1>Welcome back{user?.name ? `, ${user.name.split(' ')[0]}` : ''}</h1>
           <p>Your fantasy football hub.</p>
         </div>
       </div>
 
       <div className="ff-hub-grid">
-        <div className="ff-hub-left">
-          <div className="ff-card">
-            <div className="ff-card-top-accent" style={{ background: 'var(--copper)' }} />
-            <div className="ff-card-header">
-              <h2>My Leagues</h2>
-              {leagues.length > 0 && (
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <button className="ff-btn ff-btn-secondary ff-btn-sm" onClick={() => setShowImportModal(true)}>Import</button>
-                  <button className="ff-btn ff-btn-secondary ff-btn-sm" onClick={() => setShowJoinModal(true)}>Join</button>
-                  <button className="ff-btn ff-btn-copper ff-btn-sm" onClick={onCreateLeague}>+ New</button>
-                </div>
-              )}
-            </div>
-            <div className="ff-card-body">
-              {leaguesLoading ? (
-                <div className="ff-loading-inline">Loading leagues...</div>
-              ) : leagues.length === 0 ? (
-                <div className="ff-empty-state">
-                  <div className="ff-empty-state-title">No leagues yet</div>
-                  <div className="ff-empty-state-desc">Create your first league or join one to get started.</div>
-                  <div className="ff-empty-state-actions">
-                    <button className="ff-btn ff-btn-copper" onClick={onCreateLeague}>+ Create a League</button>
-                    <button className="ff-btn ff-btn-secondary" onClick={() => setShowJoinModal(true)}>Join a League</button>
-                  </div>
-                </div>
-              ) : (
-                <div className="ff-league-card-grid">
-                  {leagues.map(lg => (
-                    <div key={lg.id}
-                      className="ff-league-card"
-                      tabIndex={0}
-                      role="button"
-                      onClick={() => onSelectLeague(lg)}
-                      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelectLeague(lg); } }}>
-                      <div className="ff-league-card-row">
-                        <div className="ff-league-card-row-inner">
-                          <div className="ff-league-card-name">{lg.name}</div>
-                          <div className="ff-league-card-meta">{lg.team_name} &middot; {lg.role === 'commissioner' ? 'Commissioner' : 'Member'}</div>
-                        </div>
-                        {lg.role === 'commissioner' && (
-                          <button
-                            className="ff-league-delete-btn"
-                            onClick={e => { e.stopPropagation(); onDeleteLeague(lg.id); }}
-                            title="Delete league"
-                          >{'\u2715'}</button>
-                        )}
-                      </div>
-                      <div className="ff-league-card-badges">
-                        <span className="ff-league-card-badge">{lg.type}</span>
-                        <span className="ff-league-card-badge">{lg.scoring_preset}</span>
-                        <span className="ff-league-card-badge">{lg.league_size} teams</span>
-                        <span className="ff-league-card-season">{lg.season}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+        {/* Leagues card */}
+        <div className="ff-card">
+          <div className="ff-card-top-accent" style={{ background: 'var(--copper)' }} />
+          <div className="ff-card-header">
+            <h2>My Leagues</h2>
+            {leagues.length > 0 && (
+              <div style={{ display: 'flex', gap: 6 }}>
+                <button className="ff-btn ff-btn-secondary ff-btn-sm" onClick={() => setShowImportModal(true)}>Import</button>
+                <button className="ff-btn ff-btn-secondary ff-btn-sm" onClick={() => setShowJoinModal(true)}>Join</button>
+                <button className="ff-btn ff-btn-copper ff-btn-sm" onClick={onCreateLeague}>+ New</button>
+              </div>
+            )}
           </div>
-
-          <QuickTradeCalc />
-          <AdSpace size="sm" />
+          <div className="ff-card-body">
+            {leaguesLoading ? (
+              <div className="ff-loading-inline">Loading leagues...</div>
+            ) : leagues.length === 0 ? (
+              <div className="ff-empty-state">
+                <div className="ff-empty-state-title">No leagues yet</div>
+                <div className="ff-empty-state-desc">Create your first league or join one to get started.</div>
+                <div className="ff-empty-state-actions">
+                  <button className="ff-btn ff-btn-copper" onClick={onCreateLeague}>+ Create a League</button>
+                  <button className="ff-btn ff-btn-secondary" onClick={() => setShowJoinModal(true)}>Join a League</button>
+                </div>
+              </div>
+            ) : (
+              <div className="ff-league-card-grid">
+                {leagues.map(lg => (
+                  <button key={lg.id}
+                    className="ff-league-card"
+                    onClick={() => navigate(`/league/${lg.id}`)}>
+                    <div className="ff-league-card-row">
+                      <div className="ff-league-card-row-inner">
+                        <div className="ff-league-card-name">{lg.name}</div>
+                        <div className="ff-league-card-meta">{lg.team_name} &middot; {lg.role === 'commissioner' ? 'Commissioner' : 'Member'}</div>
+                      </div>
+                      {lg.role === 'commissioner' && (
+                        <span
+                          className="ff-league-delete-btn"
+                          role="button"
+                          tabIndex={0}
+                          onClick={e => { e.stopPropagation(); onDeleteLeague(lg.id); }}
+                          onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); e.preventDefault(); onDeleteLeague(lg.id); } }}
+                          title="Delete league"
+                          aria-label={`Delete ${lg.name}`}
+                        >{'\u2715'}</span>
+                      )}
+                    </div>
+                    <div className="ff-league-card-badges">
+                      <span className="ff-league-card-badge">{lg.type}</span>
+                      <span className="ff-league-card-badge">{lg.scoring_preset}</span>
+                      <span className="ff-league-card-badge">{lg.league_size} teams</span>
+                      <span className="ff-league-card-season">{lg.season}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
-        <div className="ff-hub-right">
-          <NewsFeed />
-          <AdSpace size="sm" />
-        </div>
+        <NewsFeed onPlayerClick={leagues.length > 0 ? (playerId) => {
+          navigate(`/league/${leagues[0].id}?player=${playerId}`);
+        } : undefined} />
       </div>
 
       {/* Join League Modal */}
       {showJoinModal && (
         <div className="auth-overlay" onClick={e => { if (e.target === e.currentTarget) setShowJoinModal(false); }}>
-          <div className="auth-modal" style={{ width: 420 }}>
+          <div className="auth-modal" style={{ maxWidth: 420, width: '90vw' }}>
             <button className="auth-close" onClick={() => setShowJoinModal(false)}>{'\u2715'}</button>
             <h2>Join a League</h2>
             <p className="auth-subtitle">Enter the invite code shared by the league commissioner.</p>
@@ -158,7 +166,7 @@ export default function HubPage({ leagues, leaguesLoading, onSelectLeague, onCre
       {showImportModal && (
         <ImportLeague
           onClose={() => setShowImportModal(false)}
-          onImported={(league) => { onLeagueJoined?.(league); }}
+          onImported={handleLeagueJoined}
         />
       )}
     </>

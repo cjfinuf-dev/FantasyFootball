@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { TEAMS, USER_TEAM_ID } from '../../data/teams';
 import { PLAYERS } from '../../data/players';
-import { getHexScore } from '../../utils/hexScore';
+import { getHexScore, formatHex } from '../../utils/hexScore';
 import TradePlayerRow, { hexChipClass } from './TradePlayerRow';
 import TradeAnalyzer from './TradeAnalyzer';
 
@@ -59,7 +59,10 @@ export default function TradeProposal({ rosters, onPropose, scoringPreset }) {
             <div
               key={t.id}
               className="ff-tm-team-card"
+              role="button"
+              tabIndex={0}
               onClick={() => setSelectedTeamId(t.id)}
+              onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedTeamId(t.id); } }}
             >
               <div className="ff-tm-team-card-name">{t.abbr}</div>
               <div className="ff-tm-team-card-meta">{t.name}</div>
@@ -103,7 +106,7 @@ export default function TradeProposal({ rosters, onPropose, scoringPreset }) {
                 <div key={id} className="ff-tm-zone-player">
                   <span style={{ fontSize: 12, fontWeight: 500 }}>{PLAYER_MAP[id]?.name}</span>
                   <span style={{ fontSize: 10, color: 'var(--text-muted)', marginLeft: 4 }}>{PLAYER_MAP[id]?.pos}</span>
-                  <span className={hexChipClass(getHexScore(id, scoringPreset))} style={{ marginLeft: 'auto', marginRight: 4 }}>{getHexScore(id, scoringPreset)}</span>
+                  <span className={hexChipClass(getHexScore(id, scoringPreset))} style={{ marginLeft: 'auto', marginRight: 4 }}>{formatHex(getHexScore(id, scoringPreset))}</span>
                   <button className="remove-btn" onClick={() => toggleSend(id)}>{'\u2715'}</button>
                 </div>
               ))
@@ -118,7 +121,7 @@ export default function TradeProposal({ rosters, onPropose, scoringPreset }) {
                 <div key={id} className="ff-tm-zone-player">
                   <span style={{ fontSize: 12, fontWeight: 500 }}>{PLAYER_MAP[id]?.name}</span>
                   <span style={{ fontSize: 10, color: 'var(--text-muted)', marginLeft: 4 }}>{PLAYER_MAP[id]?.pos}</span>
-                  <span className={hexChipClass(getHexScore(id, scoringPreset))} style={{ marginLeft: 'auto', marginRight: 4 }}>{getHexScore(id, scoringPreset)}</span>
+                  <span className={hexChipClass(getHexScore(id, scoringPreset))} style={{ marginLeft: 'auto', marginRight: 4 }}>{formatHex(getHexScore(id, scoringPreset))}</span>
                   <button className="remove-btn" onClick={() => toggleReceive(id)}>{'\u2715'}</button>
                 </div>
               ))

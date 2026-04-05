@@ -1,10 +1,12 @@
 import { useState } from 'react';
+import { getHeadshotUrl } from '../../data/espnIds';
 
 const SIZE_MAP = {
-  xs: { w: 52, h: 38 },
-  sm: { w: 64, h: 46 },
-  md: { w: 80, h: 58 },
-  lg: { w: 110, h: 80 },
+  tiny: { w: 56, h: 42 },
+  xs: { w: 96, h: 70 },
+  sm: { w: 120, h: 88 },
+  md: { w: 150, h: 110 },
+  lg: { w: 200, h: 146 },
 };
 
 // ESPN uses slightly different abbreviations for some teams
@@ -35,10 +37,15 @@ export default function PlayerHeadshot({ espnId, name, size = 'sm', pos, team })
     );
   }
 
-  // ESPN headshots have transparent backgrounds natively
-  const src = espnId && !failed
-    ? `https://a.espncdn.com/combiner/i?img=/i/headshots/nfl/players/full/${espnId}.png&w=${dim.w * 3}&h=${dim.h * 3}`
-    : null;
+  // Try ESPN CDN first, then nflverse headshot URL as fallback
+  let src = null;
+  if (!failed) {
+    if (espnId) {
+      src = `https://a.espncdn.com/combiner/i?img=/i/headshots/nfl/players/full/${espnId}.png&w=${dim.w * 3}&h=${dim.h * 3}`;
+    } else if (name) {
+      src = getHeadshotUrl(name);
+    }
+  }
 
   const posColors = {
     QB: '#3b82f6', RB: '#22c55e', WR: '#f59e0b', TE: '#ef4444', K: '#a855f7', DEF: '#64748b',

@@ -1,5 +1,5 @@
 import { PLAYERS } from '../../data/players';
-import { getHexScore, getHexTier } from '../../utils/hexScore';
+import { getHexScore, getHexTier, formatHex } from '../../utils/hexScore';
 import { getEspnId } from '../../data/espnIds';
 import PosBadge from '../ui/PosBadge';
 import PlayerHeadshot from '../ui/PlayerHeadshot';
@@ -44,7 +44,7 @@ export default function TradePlayerRow({ playerId, onClick, selected, showRemove
       <span className="p-name">{player.name}</span>
       <ArchetypeBadge playerId={playerId} pos={player.pos} size="xs" />
       <span className="p-nfl">{player.team}</span>
-      <span className={`p-val ${hexIntensityClass(score)}`}>{score}</span>
+      <span className={`p-val ${hexIntensityClass(score)}`}>{formatHex(score)}</span>
       {showRemove && (
         <button className="remove-btn" onClick={e => { e.stopPropagation(); onRemove?.(playerId); }}>
           {'\u2715'}

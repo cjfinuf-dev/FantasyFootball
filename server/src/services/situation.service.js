@@ -12,6 +12,21 @@
 
 const stringSimilarity = require('string-similarity');
 const { getDb, saveDb } = require('../db/connection');
+const { PLAYER_ROSTER } = require('../utils/playerRoster');
+
+// ─── Player name → ID resolution via fuzzy match ───
+const _rosterNames = Object.keys(PLAYER_ROSTER);
+
+function resolvePlayerId(playerName) {
+  if (!playerName) return null;
+  const lower = playerName.toLowerCase().trim();
+  // Exact match first
+  if (PLAYER_ROSTER[lower]) return PLAYER_ROSTER[lower].id;
+  // Fuzzy match
+  if (_rosterNames.length === 0) return null;
+  const { bestMatch } = stringSimilarity.findBestMatch(lower, _rosterNames);
+  return bestMatch.rating >= 0.85 ? PLAYER_ROSTER[bestMatch.target].id : null;
+}
 
 // ─── Player name → ID mapping (loaded from client data) ───
 // We store names for matching; IDs are resolved at detection time
@@ -219,11 +234,12 @@ async function detectSituationEvents(sweepId) {
 
       // Create event for the player mentioned
       if (article.player_name) {
+        const playerId = resolvePlayerId(article.player_name);
         db.run(
           `INSERT INTO situation_events
-           (player_name, team, event_type, impact, confidence, source, source_article_id, description, active)
-           VALUES (?, ?, ?, ?, ?, 'rss', ?, ?, 1)`,
-          [article.player_name, team, rule.eventType, impact, confidence, article.id, rule.descTemplate]
+           (player_id, player_name, team, event_type, impact, confidence, source, source_article_id, description, active)
+           VALUES (?, ?, ?, ?, ?, ?, 'rss', ?, ?, 1)`,
+          [playerId, article.player_name, team, rule.eventType, impact, confidence, article.id, rule.descTemplate]
         );
         eventsCreated++;
       }

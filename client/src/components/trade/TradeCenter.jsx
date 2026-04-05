@@ -82,14 +82,14 @@ export default function TradeCenter({ rosters, onRostersChange, scoringPreset = 
       </div>
 
       {/* Sub-tab navigation */}
-      <div className="ff-tm-filter-bar" style={{ padding: '0 20px', borderBottom: '1px solid var(--border)' }}>
-        <button className={`ff-tm-filter-pill${subTab === 'propose' ? ' active' : ''}`} onClick={() => setSubTab('propose')}>
+      <div className="ff-tabs">
+        <button className={`ff-tab${subTab === 'propose' ? ' active' : ''}`} onClick={() => setSubTab('propose')}>
           Propose
         </button>
-        <button className={`ff-tm-filter-pill${subTab === 'inbox' ? ' active' : ''}`} onClick={() => setSubTab('inbox')}>
+        <button className={`ff-tab${subTab === 'inbox' ? ' active' : ''}`} onClick={() => setSubTab('inbox')}>
           Inbox {pendingCount > 0 && <span style={{ marginLeft: 4, fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 'var(--radius-full)', background: 'var(--accent-secondary)', color: '#fff' }}>{pendingCount}</span>}
         </button>
-        <button className={`ff-tm-filter-pill${subTab === 'history' ? ' active' : ''}`} onClick={() => setSubTab('history')}>
+        <button className={`ff-tab${subTab === 'history' ? ' active' : ''}`} onClick={() => setSubTab('history')}>
           History
         </button>
       </div>

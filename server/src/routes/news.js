@@ -1,5 +1,6 @@
 const express = require('express');
 const { getNews, fetchAndStoreNews } = require('../services/news.service');
+const { getActiveSituationEvents } = require('../services/situation.service');
 
 const router = express.Router();
 
@@ -11,6 +12,14 @@ router.get('/', async (req, res, next) => {
     const category = req.query.category || null;
     const result = await getNews({ limit, before, category });
     res.json(result);
+  } catch (err) { next(err); }
+});
+
+// Active situation events — feeds HexScore adjustments
+router.get('/impacts', async (req, res, next) => {
+  try {
+    const events = await getActiveSituationEvents();
+    res.json({ events });
   } catch (err) { next(err); }
 });
 

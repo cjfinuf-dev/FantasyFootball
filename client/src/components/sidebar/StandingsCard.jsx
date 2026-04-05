@@ -36,50 +36,39 @@ export default function StandingsCard({ expanded = false, rosters, leagueName = 
         <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{hasDraftData ? 'Projected' : 'Pre-Draft'}</span>
       </div>
       <div className="ff-sidebar-card-body" style={{ padding: 0 }}>
-        <table className="ff-standings-table">
-          <thead>
-            <tr>
-              <th style={{ width: 28 }}>#</th>
-              <th>Team</th>
-              {hasDraftData ? (
-                <>
-                  <th>Proj</th>
-                  <th>Roster</th>
-                </>
-              ) : (
-                <>
-                  <th>W-L</th>
-                  <th>PF</th>
-                  <th>Streak</th>
-                </>
-              )}
-            </tr>
-          </thead>
-          <tbody>
-            {standings.map((team, i) => (
-              <tr key={team.id} className={`${i < 4 ? 'playoff-zone' : i >= 10 ? 'danger-zone' : ''} ${team.id === USER_TEAM_ID ? 'user-team' : ''}`}>
-                <td style={{ fontWeight: 600, color: 'var(--text-muted)', fontSize: 11 }}>{i + 1}</td>
-                <td style={{ fontWeight: team.id === USER_TEAM_ID ? 700 : 500 }}>
-                  {team.abbr}
-                </td>
-                {hasDraftData ? (
-                  <>
-                    <td className="tabular-nums" style={{ fontWeight: 600 }}>{team.rosterProj.toFixed(1)}</td>
-                    <td style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                      {rosters[team.id]?.length || 0} players
-                    </td>
-                  </>
-                ) : (
-                  <>
-                    <td>{team.wins}-{team.losses}</td>
-                    <td className="tabular-nums">{team.pf.toFixed(1)}</td>
-                    <td><span className={`ff-streak ${team.streak.startsWith('W') ? 'hot' : 'cold'}`}>{team.streak}</span></td>
-                  </>
-                )}
+        {!hasDraftData ? (
+          <div style={{ padding: '32px 16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
+            Complete the draft to see standings.
+          </div>
+        ) : (
+          <div className="ff-table-wrap">
+          <table className="ff-standings-table">
+            <caption className="ff-skip-link">{leagueName} Standings — Projected Rankings</caption>
+            <thead>
+              <tr>
+                <th style={{ width: 28 }}>#</th>
+                <th>Team</th>
+                <th>Proj</th>
+                <th>Roster</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {standings.map((team, i) => (
+                <tr key={team.id} className={`${i < 4 ? 'playoff-zone' : i >= 10 ? 'danger-zone' : ''} ${team.id === USER_TEAM_ID ? 'user-team' : ''}`}>
+                  <td style={{ fontWeight: 600, color: 'var(--text-muted)', fontSize: 11 }}>{i + 1}</td>
+                  <td style={{ fontWeight: team.id === USER_TEAM_ID ? 700 : 500 }}>
+                    {team.abbr}
+                  </td>
+                    <td className="tabular-nums" style={{ fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{team.rosterProj.toFixed(1)}</td>
+                  <td style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                    {rosters[team.id]?.length || 0} players
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          </div>
+        )}
       </div>
     </div>
   );

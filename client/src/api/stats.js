@@ -17,3 +17,7 @@ export async function updatePlayer(playerId, seasons) {
     body: JSON.stringify(seasons),
   });
 }
+
+export async function getSituationEvents() {
+  return apiFetch('/api/news/impacts');
+}

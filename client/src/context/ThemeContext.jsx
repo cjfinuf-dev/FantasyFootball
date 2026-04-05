@@ -26,7 +26,8 @@ function contrastRatio(l1, l2) {
   return (lighter + 0.05) / (darker + 0.05);
 }
 
-// Darken or lighten a color to meet minimum contrast against a background
+// Darken or lighten a color to meet minimum contrast against a background.
+// Uses proportional scaling (mix toward white/black) to preserve hue & saturation.
 function ensureContrast(hex, bgHex, minRatio = 4.5) {
   const rgb = hexToRgb(hex);
   const bgLum = luminance(hexToRgb(bgHex));
@@ -36,18 +37,23 @@ function ensureContrast(hex, bgHex, minRatio = 4.5) {
 
   // Determine direction: lighten if bg is dark, darken if bg is light
   const lighten = bgLum < 0.5;
-  let adjusted = [...rgb];
+  // Target: white [255,255,255] or black [0,0,0]
+  const target = lighten ? [255, 255, 255] : [0, 0, 0];
 
-  for (let i = 0; i < 40; i++) {
-    adjusted = adjusted.map(c =>
-      lighten
-        ? Math.min(255, c + 8)
-        : Math.max(0, c - 8)
-    );
-    if (contrastRatio(luminance(adjusted), bgLum) >= minRatio) break;
+  // Binary search for the minimum mix factor that meets contrast
+  let lo = 0, hi = 1, best = rgb;
+  for (let i = 0; i < 24; i++) {
+    const mid = (lo + hi) / 2;
+    const mixed = rgb.map((c, j) => Math.round(c + (target[j] - c) * mid));
+    if (contrastRatio(luminance(mixed), bgLum) >= minRatio) {
+      best = mixed;
+      hi = mid; // try less mixing
+    } else {
+      lo = mid; // need more mixing
+    }
   }
 
-  return '#' + adjusted.map(c => c.toString(16).padStart(2, '0')).join('');
+  return '#' + best.map(c => Math.max(0, Math.min(255, c)).toString(16).padStart(2, '0')).join('');
 }
 
 function hexToRgba(hex, alpha) {

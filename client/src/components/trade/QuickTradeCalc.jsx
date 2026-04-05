@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { PLAYERS } from '../../data/players';
-import { getHexScore, computeTradeTier } from '../../utils/hexScore';
+import { getHexScore, computeTradeTier, formatHex } from '../../utils/hexScore';
 import { hexChipClass } from './TradePlayerRow';
 import { getEspnId } from '../../data/espnIds';
 import PosBadge from '../ui/PosBadge';
@@ -37,39 +37,33 @@ function PlayerSearch({ onSelect, excludeIds, placeholder }) {
   return (
     <div style={{ position: 'relative' }}>
       <input
+        className="ff-search-input"
         type="text"
         value={query}
         onChange={e => setQuery(e.target.value)}
         onFocus={() => setFocused(true)}
         onBlur={() => setTimeout(() => setFocused(false), 200)}
         placeholder={placeholder}
-        style={{
-          width: '100%', padding: '8px 12px', fontSize: 12, border: '1px solid var(--border)',
-          borderRadius: 6, background: 'var(--bg)', color: 'var(--text)', outline: 'none',
-          boxSizing: 'border-box',
-        }}
+        style={{ fontSize: 13, padding: '10px 12px' }}
       />
       {focused && results.length > 0 && (
         <div style={{
           position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50,
-          background: 'var(--bg-white)', border: '1px solid var(--border)',
-          borderRadius: 6, boxShadow: 'var(--shadow-lg)', maxHeight: 240, overflowY: 'auto',
-          marginTop: 2,
+          border: '1px solid var(--border)', borderRadius: 'var(--radius-md)',
+          boxShadow: 'var(--shadow-lg)', background: 'var(--bg-white)',
+          maxHeight: 240, marginTop: 2, overflowY: 'auto',
         }}>
           {results.map(p => {
             const hex = getHexScore(p.id);
             return (
               <div key={p.id}
-                onMouseDown={() => handleSelect(p)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px',
-                  cursor: 'pointer', fontSize: 12, borderBottom: '1px solid var(--border)',
-                }}>
+                className="ff-tm-player-row"
+                onMouseDown={() => handleSelect(p)}>
                 <PlayerHeadshot espnId={getEspnId(p.name)} name={p.name} size="xs" pos={p.pos} team={p.team} />
                 <PosBadge pos={p.pos} />
-                <span style={{ fontWeight: 500, flex: 1 }}>{p.name}</span>
-                <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>{p.team}</span>
-                <span className={hexChipClass(hex)} style={{ marginLeft: 4 }}>{hex}</span>
+                <span className="p-name">{p.name}</span>
+                <span className="p-nfl">{p.team}</span>
+                <span className={hexChipClass(hex)} style={{ marginLeft: 4 }}>{formatHex(hex)}</span>
               </div>
             );
           })}
@@ -82,7 +76,7 @@ function PlayerSearch({ onSelect, excludeIds, placeholder }) {
 function SidePanel({ label, playerIds, onAdd, onRemove, allIds, scoringPreset }) {
   return (
     <div style={{ flex: 1, minWidth: 0 }}>
-      <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 6, letterSpacing: '0.05em' }}>
+      <div style={{ fontSize: 13, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 10, letterSpacing: '0.05em' }}>
         {label}
       </div>
       <PlayerSearch
@@ -90,10 +84,10 @@ function SidePanel({ label, playerIds, onAdd, onRemove, allIds, scoringPreset })
         excludeIds={allIds}
         placeholder={playerIds.length >= MAX_PER_SIDE ? 'Max 5 players' : 'Search players...'}
       />
-      <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4, minHeight: 48 }}>
+      <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 6, minHeight: 80 }}>
         {playerIds.length === 0 && (
-          <div style={{ padding: '12px 0', textAlign: 'center', fontSize: 11, color: 'var(--text-muted)' }}>
-            Add players to this side
+          <div style={{ padding: '20px 0', textAlign: 'center', fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.5 }}>
+            Search and add players to this side of the trade
           </div>
         )}
         {playerIds.map(id => {
@@ -102,16 +96,17 @@ function SidePanel({ label, playerIds, onAdd, onRemove, allIds, scoringPreset })
           const hex = getHexScore(id, scoringPreset);
           return (
             <div key={id} style={{
-              display: 'flex', alignItems: 'center', gap: 8, padding: '5px 8px',
-              background: 'var(--surface, var(--bg-alt))', borderRadius: 6, fontSize: 12,
+              display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px',
+              background: 'var(--surface, var(--bg-alt))', borderRadius: 8, fontSize: 13,
+              border: '1px solid var(--border)',
             }}>
               <PlayerHeadshot espnId={getEspnId(p.name)} name={p.name} size="xs" pos={p.pos} team={p.team} />
               <PosBadge pos={p.pos} />
-              <span style={{ fontWeight: 500, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
-              <span className={hexChipClass(hex)}>{hex}</span>
+              <span style={{ fontWeight: 600, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
+              <span className={hexChipClass(hex)}>{formatHex(hex)}</span>
               <button onClick={() => onRemove(id)} style={{
                 background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)',
-                fontSize: 14, padding: '0 2px', lineHeight: 1,
+                fontSize: 16, padding: '0 4px', lineHeight: 1,
               }}>{'\u2715'}</button>
             </div>
           );
@@ -139,15 +134,15 @@ export default function QuickTradeCalc({ onSignIn, onSignUp }) {
   return (
     <div className="ff-card">
       <div className="ff-card-top-accent" style={{ background: 'var(--hex-purple, #8B5CF6)' }} />
-      <div className="ff-card-header">
-        <h2>Trade Calculator</h2>
+      <div className="ff-card-header" style={{ padding: '20px 24px' }}>
+        <h2 style={{ fontSize: 20 }}>Trade Calculator</h2>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {SCORING_OPTIONS.map(opt => (
             <button key={opt.value}
               onClick={() => setScoring(opt.value)}
               style={{
-                padding: '3px 10px', borderRadius: 4, border: 'none', cursor: 'pointer',
-                fontSize: 11, fontWeight: 600,
+                padding: '6px 14px', borderRadius: 6, border: 'none', cursor: 'pointer',
+                fontSize: 12, fontWeight: 600,
                 background: scoring === opt.value ? 'var(--hex-purple, #8B5CF6)' : 'var(--surface, var(--bg-alt))',
                 color: scoring === opt.value ? '#fff' : 'var(--text-muted)',
                 transition: 'all 0.15s',
@@ -157,12 +152,12 @@ export default function QuickTradeCalc({ onSignIn, onSignUp }) {
           ))}
         </div>
       </div>
-      <div className="ff-card-body">
+      <div className="ff-card-body" style={{ padding: '24px' }}>
         {/* Two-panel trade builder */}
-        <div style={{ display: 'flex', gap: 16 }}>
+        <div style={{ display: 'flex', gap: 24 }}>
           <SidePanel label="Side A" playerIds={sideA} onAdd={addA} onRemove={removeA} allIds={allIds} scoringPreset={scoring} />
-          <div style={{ display: 'flex', alignItems: 'center', padding: '0 4px' }}>
-            <div style={{ width: 1, height: 80, background: 'var(--border)' }} />
+          <div style={{ display: 'flex', alignItems: 'stretch', padding: '0 4px' }}>
+            <div style={{ width: 1, background: 'var(--border)' }} />
           </div>
           <SidePanel label="Side B" playerIds={sideB} onAdd={addB} onRemove={removeB} allIds={allIds} scoringPreset={scoring} />
         </div>
@@ -176,35 +171,31 @@ export default function QuickTradeCalc({ onSignIn, onSignUp }) {
           const bWins = tier.receiveTotal > tier.sendTotal;
           const even = tier.sendTotal === tier.receiveTotal;
 
-          // Side A = hex purple, Side B = white/silver — brand colors, always distinct.
+          // Side A = hex purple, Side B = surface — brand colors, always distinct.
           // Winner gets full saturation, loser gets muted.
-          const A_FULL = '#8B5CF6';
-          const A_MUTED = '#C4B5FD';
-          const B_FULL = '#E5E5E5';
-          const B_MUTED = '#A3A3A3';
-          const aBarColor = aWins || even ? A_FULL : A_MUTED;
-          const bBarColor = bWins || even ? B_FULL : B_MUTED;
-          const aLabelColor = aWins || even ? '#8B5CF6' : 'var(--text-muted)';
+          const aBarColor = aWins || even ? 'var(--hex-purple)' : 'var(--accent-tertiary)';
+          const bBarColor = bWins || even ? 'var(--surface2)' : 'var(--border)';
+          const aLabelColor = aWins || even ? 'var(--hex-purple)' : 'var(--text-muted)';
           const bLabelColor = bWins || even ? 'var(--text)' : 'var(--text-muted)';
 
           return (
-            <div style={{ marginTop: 16, padding: '12px 16px', background: 'var(--surface, var(--bg-alt))', borderRadius: 8 }}>
+            <div style={{ marginTop: 20, padding: '16px 20px', background: 'var(--surface, var(--bg-alt))', borderRadius: 10, border: '1px solid var(--border)' }}>
               {/* Side labels with values */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 6 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 8 }}>
                 <span style={{ fontWeight: 700 }}>
-                  <span style={{ color: '#8B5CF6', marginRight: 4 }}>{'\u25A0'}</span>
+                  <span style={{ color: 'var(--hex-purple)', marginRight: 4 }}>{'\u25A0'}</span>
                   <span style={{ color: aLabelColor }}>Side A: {tier.sendTotal}</span>
                   {aWins && <span style={{ color: 'var(--success-green)', marginLeft: 4, fontSize: 10 }}>{'\u2714'}</span>}
                 </span>
                 <span style={{ fontWeight: 700 }}>
                   {bWins && <span style={{ color: 'var(--success-green)', marginRight: 4, fontSize: 10 }}>{'\u2714'}</span>}
                   <span style={{ color: bLabelColor }}>Side B: {tier.receiveTotal}</span>
-                  <span style={{ color: '#999', marginLeft: 4, textShadow: '0 0 1px rgba(0,0,0,0.3)' }}>{'\u25A0'}</span>
+                  <span style={{ color: 'var(--text-muted)', marginLeft: 4 }}>{'\u25A0'}</span>
                 </span>
               </div>
 
               {/* Tug-of-war bar */}
-              <div style={{ position: 'relative', display: 'flex', height: 28, borderRadius: 6, overflow: 'hidden', background: 'var(--border)' }}>
+              <div style={{ position: 'relative', display: 'flex', height: 36, borderRadius: 8, overflow: 'hidden', background: 'var(--border)' }}>
                 <div style={{
                   width: `${aPct}%`,
                   background: aBarColor,
@@ -212,7 +203,7 @@ export default function QuickTradeCalc({ onSignIn, onSignUp }) {
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   minWidth: aPct > 5 ? 36 : 0,
                 }}>
-                  {aPct > 12 && <span style={{ fontSize: 10, fontWeight: 800, color: '#fff' }}>{aPct}%</span>}
+                  {aPct > 12 && <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--on-accent)' }}>{aPct}%</span>}
                 </div>
                 <div style={{
                   width: `${bPct}%`,
@@ -225,21 +216,21 @@ export default function QuickTradeCalc({ onSignIn, onSignUp }) {
                   borderRadius: '0 6px 6px 0',
                   boxSizing: 'border-box',
                 }}>
-                  {bPct > 12 && <span style={{ fontSize: 10, fontWeight: 800, color: '#333' }}>{bPct}%</span>}
+                  {bPct > 12 && <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text)' }}>{bPct}%</span>}
                 </div>
               </div>
 
               {/* Verdict */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
                 <span style={{
-                  fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 4,
-                  background: even ? 'rgba(139,92,246,0.1)' : aWins ? 'rgba(139,92,246,0.1)' : 'rgba(0,0,0,0.06)',
-                  color: even ? 'var(--hex-purple)' : aWins ? '#8B5CF6' : 'var(--text)',
+                  fontSize: 13, fontWeight: 700, padding: '5px 14px', borderRadius: 6,
+                  background: even ? 'var(--accent-10)' : aWins ? 'var(--accent-10)' : 'var(--surface)',
+                  color: even ? 'var(--hex-purple)' : aWins ? 'var(--hex-purple)' : 'var(--text)',
                 }}>
                   {even ? 'Even Trade' : aWins ? 'Side A Wins' : 'Side B Wins'}
                 </span>
                 <span style={{
-                  fontSize: 11, fontWeight: 600, color: 'var(--text-muted)',
+                  fontSize: 13, fontWeight: 600, color: 'var(--text-muted)',
                 }}>
                   {tier.label} ({tier.delta >= 0 ? '+' : ''}{tier.delta})
                 </span>
