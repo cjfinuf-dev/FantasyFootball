@@ -44,7 +44,7 @@ export default function TopNav({ onSignIn, onSignUp, onCreateLeague }) {
     <nav className="ff-top-navbar">
       <div className="ff-nav-left">
         <div className="ff-nav-logo" style={{ cursor: 'pointer' }} onClick={() => navigate(user ? '/hub' : '/')}>
-          <img src="/logo-icon.png" alt="" className="ff-nav-logo-icon" />Hex<span>Metrics</span>
+          <img src="/logo-full.png" alt="HexMetrics" width="112" height="28" style={{ height: 28, width: 112 }} />
         </div>
         {isLeagueView && activeLeague && (
           <>

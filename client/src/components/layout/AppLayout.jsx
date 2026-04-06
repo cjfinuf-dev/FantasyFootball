@@ -63,7 +63,7 @@ export default function AppLayout() {
       </main>
 
       <footer className="ff-footer">
-        <div className="ff-footer-brand"><img src="/logo-icon.png" alt="" className="ff-footer-logo-icon" />Hex<span>Metrics</span> <span className="ff-footer-season">2025-26</span></div>
+        <div className="ff-footer-brand"><img src="/logo-full.png" alt="HexMetrics" width="96" height="24" style={{ height: 24, width: 96, opacity: 0.7 }} /> <span className="ff-footer-season">2025-26</span></div>
         <div className="ff-footer-links">
           {isLeagueView ? (
             <button className="ff-footer-link" onClick={() => navigate('/hub')}>Home</button>

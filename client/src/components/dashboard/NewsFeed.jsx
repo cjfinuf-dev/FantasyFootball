@@ -1,6 +1,14 @@
 import { useState, useEffect, useMemo } from 'react';
 import { getNews } from '../../api/news';
 import { PLAYERS } from '../../data/players';
+
+// Fix mojibake from RSS feeds
+function cleanText(s) {
+  if (!s) return s;
+  return s.replace(/â€™/g, "'").replace(/â€˜/g, "'").replace(/â€œ/g, '"').replace(/â€\u009d/g, '"')
+    .replace(/â€"/g, '—').replace(/â€"/g, '–').replace(/â€¦/g, '…')
+    .replace(/&#39;/g, "'").replace(/&#x27;/g, "'").replace(/&quot;/g, '"').replace(/&amp;/g, '&');
+}
 import { getDynamicSituationEvents } from '../../utils/hexScore';
 
 const PLAYER_NAME_MAP = {};
@@ -224,7 +232,7 @@ export default function NewsFeed({ onPlayerClick }) {
           }
           const impact = articleImpactMap[article.id];
           return (
-          <div key={article.id} className="ff-news-item" style={{ opacity: isRead ? 0.6 : 1 }}>
+          <div key={article.id} className={`ff-news-item${isRead ? ' ff-news-read' : ''}`}>
             <a href={article.source_url} target="_blank" rel="noopener noreferrer"
               className="ff-news-article" style={{ textDecoration: 'none', color: 'inherit', display: 'flex', flex: 1, minWidth: 0, gap: 12 }}
               onClick={() => handleArticleClick(article.id)}>
@@ -233,11 +241,16 @@ export default function NewsFeed({ onPlayerClick }) {
                   <img src={article.image_url} alt="" loading="lazy" />
                 </div>
               ) : (
-                <div className="ff-news-icon" />
+                <div className="ff-news-thumb" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg viewBox="0 0 48 52" width="32" height="34" opacity="0.25">
+                    <polygon points="24,2 46,14 46,38 24,50 2,38 2,14" fill="none" stroke="var(--hex-purple)" strokeWidth="2"/>
+                    <text x="24" y="30" textAnchor="middle" fontSize="14" fontWeight="700" fill="var(--hex-purple)">H</text>
+                  </svg>
+                </div>
               )}
               <div className="ff-news-content">
-                <div className="ff-news-title">{article.title}</div>
-                <div className="ff-news-body">{article.summary}</div>
+                <div className="ff-news-title">{cleanText(article.title)}</div>
+                <div className="ff-news-body">{cleanText(article.summary)}</div>
                 <div className="ff-news-meta" style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
                   <span style={{
                     fontSize: 9, fontWeight: 600, padding: '1px 6px', borderRadius: 'var(--radius-full)',
@@ -252,10 +265,10 @@ export default function NewsFeed({ onPlayerClick }) {
                   {impact && (
                     <span style={{
                       fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 'var(--radius-full)',
-                      background: impact.impact > 0 ? 'rgba(22,163,74,0.12)' : 'rgba(220,38,38,0.12)',
+                      background: impact.impact > 0 ? 'var(--green-light)' : 'var(--red-light)',
                       color: impact.impact > 0 ? 'var(--success-green)' : 'var(--red)',
                     }}>
-                      {impact.impact > 0 ? '\u2191' : '\u2193'} HexScore Impact
+                      {impact.impact > 0 ? '\u2191' : '\u2193'} <span style={{ color: 'var(--hex-purple)' }}>Hex</span>Score Impact
                     </span>
                   )}
                 </div>

@@ -48,7 +48,7 @@ export default function TradeHistory({ history }) {
             <div key={trade.id} className="ff-tm-history-row">
               <div className="ff-tm-history-header" onClick={() => setExpandedId(isExpanded ? null : trade.id)}>
                 <span className={`ff-tm-status-pill ${trade.status}`}>{trade.status}</span>
-                <span style={{ flex: 1, fontWeight: 600 }}>{from?.abbr} {'\u2194'} {to?.abbr}</span>
+                <span style={{ flex: 1, fontWeight: 600 }}>{from?.name} {'\u2194'} {to?.name}</span>
                 <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{resolvedDate}</span>
                 <span className={`ff-tm-history-arrow${isExpanded ? ' open' : ''}`}>{'\u25BC'}</span>
               </div>
@@ -57,7 +57,7 @@ export default function TradeHistory({ history }) {
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, padding: '12px 0' }}>
                     <div>
                       <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4 }}>
-                        {from?.abbr} Sent
+                        {from?.name} Sent
                       </div>
                       {trade.offeringPlayerIds.map(id => (
                         <TradePlayerRow key={id} playerId={id} />
@@ -65,7 +65,7 @@ export default function TradeHistory({ history }) {
                     </div>
                     <div>
                       <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4 }}>
-                        {to?.abbr} Sent
+                        {to?.name} Sent
                       </div>
                       {trade.requestingPlayerIds.map(id => (
                         <TradePlayerRow key={id} playerId={id} />

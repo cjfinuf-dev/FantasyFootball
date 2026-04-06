@@ -9,11 +9,14 @@ import PowerRankingsCard from '../sidebar/PowerRankingsCard';
 import DraftBoard from './DraftBoard';
 import MyLineup from './MyLineup';
 import PlayerStats from './PlayerStats';
+import TeamPage from './TeamPage';
+import MatchupDetail from './MatchupDetail';
 import TradeCenter from '../trade/TradeCenter';
 import LeagueSettings from './LeagueSettings';
 import * as leagueApi from '../../api/leagues';
 
 import { TEAMS, USER_TEAM_ID } from '../../data/teams';
+import { MATCHUPS } from '../../data/matchups';
 
 // Hex-branded tab icons — stroke-based SVGs using currentColor
 const HEX = 'M7 1.27L12.6 4.5v6.5L7 14.23 1.4 11V4.5z'; // hexagon path
@@ -41,15 +44,31 @@ export default function LeagueDashboard() {
   const [draftedRosters, setDraftedRosters] = useState(null);
   const [savedDraft, setSavedDraft] = useState(null);
   const [draftLoading, setDraftLoading] = useState(true);
-  const [members, setMembers] = useState([]);
+  const members = league?.members || [];
   const [viewingPlayerId, setViewingPlayerId] = useState(() => searchParams.get('player') || null);
+  const [viewingTeamId, setViewingTeamId] = useState(null);
+  const [viewingMatchupId, setViewingMatchupId] = useState(null);
 
   const handlePlayerClick = (playerId) => {
+    setViewingTeamId(null);
     setViewingPlayerId(playerId);
-    // Update URL without navigation so it's shareable
     const params = new URLSearchParams(searchParams);
     params.set('player', playerId);
     setSearchParams(params, { replace: true });
+  };
+
+  const handleTeamClick = (teamId) => {
+    setViewingPlayerId(null);
+    setViewingTeamId(teamId);
+    setViewingMatchupId(null);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleMatchupClick = (matchupId) => {
+    setViewingPlayerId(null);
+    setViewingTeamId(null);
+    setViewingMatchupId(matchupId);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const setActiveTab = (tabId) => {
@@ -63,7 +82,6 @@ export default function LeagueDashboard() {
     leagueApi.getLeague(leagueId)
       .then(data => {
         setLeague(data.league);
-        setMembers(data.league.members || []);
       })
       .catch(() => navigate('/hub', { replace: true }))
       .finally(() => setLeagueLoading(false));
@@ -116,7 +134,7 @@ export default function LeagueDashboard() {
   const handleRemoveMember = async (memberId) => {
     try {
       const { league: updated } = await leagueApi.removeMember(leagueId, memberId);
-      setMembers(updated.members || []);
+      setLeague(updated);
     } catch (err) { alert(err.message || 'Failed to remove member.'); }
   };
 
@@ -152,7 +170,7 @@ export default function LeagueDashboard() {
   return (
     <div>
       {/* League Header */}
-      <div className="ff-hero ff-hero-compact" style={{ marginTop: 48 }}>
+      <header className="ff-hero ff-hero-compact">
         <div style={{ width: '100%' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
             <Link to="/hub" className="ff-back-btn">{'\u2190'} My Leagues</Link>
@@ -162,7 +180,7 @@ export default function LeagueDashboard() {
             {league.name}
           </h1>
           <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>
-            Your team: <strong style={{ color: 'var(--accent-secondary-text)' }}>{league.team_name}</strong> &middot; {league.role === 'commissioner' ? 'Commissioner' : 'Member'}
+            Your team: <strong style={{ color: 'var(--accent-text)' }}>{league.team_name}</strong> &middot; {league.role === 'commissioner' ? 'Commissioner' : 'Member'}
           </p>
 
           {/* League Nav Tabs */}
@@ -190,7 +208,7 @@ export default function LeagueDashboard() {
             </button>
           </div>
         </div>
-      </div>
+      </header>
 
       {/* Player Stats View */}
       {viewingPlayerId ? (
@@ -212,11 +230,29 @@ export default function LeagueDashboard() {
             setSearchParams(params, { replace: true });
           }} />
         </div>
+      ) : viewingTeamId ? (
+        <div className="ff-tab-content ff-tab-content-wide">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, fontSize: 12, color: 'var(--text-muted)' }}>
+            <button onClick={() => setViewingTeamId(null)} className="ff-back-btn">{'\u2190'} {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</button>
+            <span style={{ color: 'var(--border-strong)' }}>/</span>
+            <span style={{ fontWeight: 600, color: 'var(--text)' }}>Team Details</span>
+          </div>
+          <TeamPage teamId={viewingTeamId} rosters={draftedRosters} onBack={() => setViewingTeamId(null)} onPlayerClick={handlePlayerClick} />
+        </div>
+      ) : viewingMatchupId ? (
+        <div className="ff-tab-content ff-tab-content-wide">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, fontSize: 12, color: 'var(--text-muted)' }}>
+            <button onClick={() => setViewingMatchupId(null)} className="ff-back-btn">{'\u2190'} Matchups</button>
+            <span style={{ color: 'var(--border-strong)' }}>/</span>
+            <span style={{ fontWeight: 600, color: 'var(--text)' }}>Matchup Detail</span>
+          </div>
+          <MatchupDetail matchup={MATCHUPS.find(m => m.id === viewingMatchupId) || MATCHUPS[0]} rosters={draftedRosters} onBack={() => setViewingMatchupId(null)} onPlayerClick={handlePlayerClick} />
+        </div>
       ) : <>
 
       {/* Tab Content */}
       {activeTab === 'draft' && (
-        <div className="ff-tab-content ff-tab-content-full">
+        <div className="ff-tab-content" style={{ padding: 0, maxWidth: 'none' }}>
           {draftLoading ? (
             <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)', fontSize: 13 }}>Loading draft...</div>
           ) : (
@@ -225,6 +261,8 @@ export default function LeagueDashboard() {
               onDraftReset={handleDraftReset}
               leagueName={league.name}
               initialDraft={savedDraft}
+              scoringPreset={league.scoring_preset || 'ppr'}
+              leagueSize={league.league_size || 12}
             />
           )}
         </div>
@@ -246,11 +284,11 @@ export default function LeagueDashboard() {
             <div className="ff-overview-layout">
               <div className="ff-overview-grid">
                 <div className="ff-left">
-                  <MatchupWidget rosters={draftedRosters} onPlayerClick={handlePlayerClick} />
+                  <MatchupWidget rosters={draftedRosters} onPlayerClick={handlePlayerClick} onMatchupClick={handleMatchupClick} />
                   <NewsFeed onPlayerClick={handlePlayerClick} />
                 </div>
                 <div className="ff-right">
-                  <StandingsCard rosters={draftedRosters} leagueName={league.name} />
+                  <StandingsCard rosters={draftedRosters} leagueName={league.name} onTeamClick={handleTeamClick} />
                   <WaiverWireCard rosters={draftedRosters} onPlayerClick={handlePlayerClick} onClaimPlayer={(playerId) => {
                     setDraftedRosters(prev => {
                       const next = { ...prev };
@@ -287,13 +325,13 @@ export default function LeagueDashboard() {
 
       {activeTab === 'matchups' && (
         <div className="ff-tab-content ff-tab-content-wide">
-          <MatchupWidget mode="all" rosters={draftedRosters} onPlayerClick={handlePlayerClick} />
+          <MatchupWidget mode="all" rosters={draftedRosters} onPlayerClick={handlePlayerClick} onMatchupClick={handleMatchupClick} />
         </div>
       )}
 
       {activeTab === 'standings' && (
         <div className="ff-tab-content ff-tab-content-mid">
-          <StandingsCard expanded rosters={draftedRosters} leagueName={league.name} />
+          <StandingsCard expanded rosters={draftedRosters} leagueName={league.name} onTeamClick={handleTeamClick} />
         </div>
       )}
 

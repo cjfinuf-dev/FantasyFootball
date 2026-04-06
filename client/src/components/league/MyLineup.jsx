@@ -370,7 +370,7 @@ export default function MyLineup({ rosters, onPlayerClick }) {
               onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--accent)'; }}
             >Best Lineup</button>
             <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: 24, fontWeight: 800 }} className="tabular-nums">{totalProj.toFixed(1)}</div>
+              <div style={{ fontSize: 24, fontWeight: 800 }} className="tabular-nums">{totalProj.toFixed(2)}</div>
               <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Projected</div>
             </div>
           </div>

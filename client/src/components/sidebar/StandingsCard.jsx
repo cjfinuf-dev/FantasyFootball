@@ -13,14 +13,11 @@ function getRosterStrength(teamId, rosters) {
   }, 0);
 }
 
-export default function StandingsCard({ expanded = false, rosters, leagueName = 'League' }) {
+export default function StandingsCard({ expanded = false, rosters, leagueName = 'League', onTeamClick }) {
   const standings = useMemo(() => {
     if (!rosters) {
-      // Fallback: use hardcoded team data sorted by wins
       return [...TEAMS].sort((a, b) => b.wins - a.wins || b.pf - a.pf);
     }
-
-    // Compute standings from roster strength (pre-season projection rankings)
     return [...TEAMS].map(team => {
       const totalProj = getRosterStrength(team.id, rosters);
       return { ...team, rosterProj: totalProj };
@@ -56,10 +53,16 @@ export default function StandingsCard({ expanded = false, rosters, leagueName = 
               {standings.map((team, i) => (
                 <tr key={team.id} className={`${i < 4 ? 'playoff-zone' : i >= 10 ? 'danger-zone' : ''} ${team.id === USER_TEAM_ID ? 'user-team' : ''}`}>
                   <td style={{ fontWeight: 600, color: 'var(--text-muted)', fontSize: 11 }}>{i + 1}</td>
-                  <td style={{ fontWeight: team.id === USER_TEAM_ID ? 700 : 500 }}>
-                    {team.abbr}
+                  <td>
+                    <button
+                      className="ff-player-link"
+                      style={{ fontWeight: team.id === USER_TEAM_ID ? 700 : 500, fontSize: 'inherit' }}
+                      onClick={() => onTeamClick && onTeamClick(team.id)}
+                    >
+                      {team.name}
+                    </button>
                   </td>
-                    <td className="tabular-nums" style={{ fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{team.rosterProj.toFixed(1)}</td>
+                  <td className="tabular-nums" style={{ fontWeight: 600 }}>{team.rosterProj.toFixed(2)}</td>
                   <td style={{ fontSize: 11, color: 'var(--text-muted)' }}>
                     {rosters[team.id]?.length || 0} players
                   </td>

@@ -128,7 +128,7 @@ export default function PlayerRankings({ onPlayerClick }) {
 
   const hexChipStyle = (score) => {
     const opacity = score >= 85 ? 1.0 : score >= 75 ? 0.9 : score >= 60 ? 0.8 : score >= 45 ? 0.65 : 0.4;
-    return { fontWeight: 700, color: `rgba(139, 92, 246, ${opacity})`, fontFamily: 'monospace' };
+    return { fontWeight: 700, color: `var(--hex-purple)`, opacity, fontFamily: 'monospace' };
   };
 
   const handleExportCSV = () => {
@@ -203,7 +203,7 @@ export default function PlayerRankings({ onPlayerClick }) {
             <button key={pos}
               className={`ff-tm-filter-pill${posFilter === pos ? ' active' : ''}`}
               onClick={() => setPosFilter(pos)}
-              style={posFilter === pos && pos !== 'ALL' ? { background: `var(${POS_COLORS[pos]})`, borderColor: `var(${POS_COLORS[pos]})`, color: '#fff' } : {}}>
+              style={posFilter === pos && pos !== 'ALL' ? { background: `var(${POS_COLORS[pos]})`, borderColor: `var(${POS_COLORS[pos]})`, color: 'var(--on-accent)' } : {}}>
               {pos}
             </button>
           ))}

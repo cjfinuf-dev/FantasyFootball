@@ -13,6 +13,32 @@ const parser = new RSSParser({
   },
 });
 const FETCH_WINDOW = 72 * 60 * 60 * 1000; // 72 hours — overlap ensures no gaps between sweeps
+
+// Fix mojibake and smart quote encoding issues from RSS feeds
+function cleanText(str) {
+  if (!str) return '';
+  return str
+    .replace(/â€™/g, "'")
+    .replace(/â€˜/g, "'")
+    .replace(/â€œ/g, '"')
+    .replace(/â€\u009d/g, '"')
+    .replace(/â€"/g, '—')
+    .replace(/â€"/g, '–')
+    .replace(/â€¦/g, '…')
+    .replace(/\u2019/g, "'")
+    .replace(/\u2018/g, "'")
+    .replace(/\u201C/g, '"')
+    .replace(/\u201D/g, '"')
+    .replace(/\u2013/g, '–')
+    .replace(/\u2014/g, '—')
+    .replace(/\u2026/g, '…')
+    .replace(/&amp;/g, '&')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&#39;/g, "'")
+    .replace(/&#x27;/g, "'")
+    .replace(/&quot;/g, '"')
+    .trim();
+}
 const MAX_ARTICLES_PER_SWEEP = 20;
 
 // --- Helpers ---
@@ -200,7 +226,7 @@ async function storeArticles(clusters, sweepId) {
     db.run(
       `INSERT INTO news_articles (title, summary, image_url, source_url, source_name, category, player_name, team_name, source_count, published_at, sweep_id)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [rep.title, summary, imageUrl, rep.link, rep.sourceName, category, playerName, teamName, cluster.sources.size, rep.pubDate.toISOString(), sweepId]
+      [cleanText(rep.title), cleanText(summary), imageUrl, rep.link, rep.sourceName, category, playerName, teamName, cluster.sources.size, rep.pubDate.toISOString(), sweepId]
     );
     stored++;
   }

@@ -37,7 +37,7 @@ export default function TradeInbox({ trades, rosters, onAccept, onReject, onWith
       <div key={trade.id} className={`ff-tm-inbox-card ${direction}`}>
         <div className="ff-tm-inbox-header">
           <span className="ff-tm-inbox-teams">
-            {isIncoming ? `${fromTeam?.abbr} wants to trade` : `Trade to ${toTeam?.abbr}`}
+            {isIncoming ? `${fromTeam?.name} wants to trade` : `Trade to ${toTeam?.name}`}
           </span>
           <span className={`ff-tm-inbox-countdown${isUrgent ? ' urgent' : ''}`}>{timeLeft}</span>
         </div>

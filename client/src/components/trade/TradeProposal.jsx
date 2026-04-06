@@ -64,8 +64,8 @@ export default function TradeProposal({ rosters, onPropose, scoringPreset }) {
               onClick={() => setSelectedTeamId(t.id)}
               onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedTeamId(t.id); } }}
             >
-              <div className="ff-tm-team-card-name">{t.abbr}</div>
-              <div className="ff-tm-team-card-meta">{t.name}</div>
+              <div className="ff-tm-team-card-name">{t.name}</div>
+              <div className="ff-tm-team-card-meta">{t.abbr}</div>
               <div className="ff-tm-team-card-meta">{t.wins}-{t.losses}</div>
             </div>
           ))}
@@ -159,7 +159,7 @@ export default function TradeProposal({ rosters, onPropose, scoringPreset }) {
           </div>
         </div>
         <div className="ff-tm-column">
-          <div className="ff-tm-column-header">{partnerTeam?.abbr || 'Team'} Roster</div>
+          <div className="ff-tm-column-header">{partnerTeam?.name || 'Team'} Roster</div>
           <div className="ff-tm-column-list">
             {sortByHex(filterPlayers(partnerRoster)).map(id => (
               <TradePlayerRow

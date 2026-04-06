@@ -65,7 +65,7 @@ export default function PowerRankingsCard({ expanded = false, rosters }) {
             return (
             <div className={`ff-power-row${team.id === USER_TEAM_ID ? ' user-row' : ''}`} key={team.id}>
               <span className="ff-power-rank">{rank + 1}</span>
-              <span className="ff-power-name" style={{ fontWeight: team.id === USER_TEAM_ID ? 700 : 500 }}>{team.abbr}</span>
+              <span className="ff-power-name" style={{ fontWeight: team.id === USER_TEAM_ID ? 700 : 500 }}>{team.name}</span>
               <div className="ff-power-bar-bg">
                 <div className={`ff-power-bar-fill ${team.id === USER_TEAM_ID ? 'user' : ''}`} style={{ width: `${(team.computedPower / maxPower) * 100}%` }} />
                 <div className="ff-power-bar-avg" style={{ left: `${(avgPower / maxPower) * 100}%` }} title={`League avg: ${Math.round(avgPower)}`} />

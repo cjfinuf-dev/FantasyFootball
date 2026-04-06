@@ -11,7 +11,7 @@ const SIZE_MAP = {
 
 // ESPN uses slightly different abbreviations for some teams
 const ESPN_TEAM_MAP = { WAS: 'wsh', LAR: 'lar', LAC: 'lac', LV: 'lv' };
-function getTeamLogoUrl(team) {
+export function getTeamLogoUrl(team) {
   const abbr = (team || '').toLowerCase();
   const mapped = ESPN_TEAM_MAP[team] || abbr;
   return `https://a.espncdn.com/i/teamlogos/nfl/500/${mapped}.png`;
@@ -67,18 +67,36 @@ export default function PlayerHeadshot({ espnId, name, size = 'sm', pos, team })
     );
   }
 
-  // Transparent headshot — no box, no border, no background
+  // Transparent headshot with team logo badge
+  const showTeamBadge = team && size !== 'tiny';
+  const badgeSize = size === 'lg' ? 28 : size === 'md' ? 22 : size === 'sm' ? 18 : 14;
   return (
-    <img
-      src={src}
-      alt={name || 'Player'}
-      loading="lazy"
-      onError={() => setFailed(true)}
-      style={{
-        width: dim.w, height: dim.h,
-        objectFit: 'contain',
-        flexShrink: 0,
-      }}
-    />
+    <div style={{ position: 'relative', width: dim.w, height: dim.h, flexShrink: 0 }}>
+      <img
+        src={src}
+        alt={name || 'Player'}
+        loading="lazy"
+        onError={() => setFailed(true)}
+        style={{
+          width: dim.w, height: dim.h,
+          objectFit: 'contain',
+        }}
+      />
+      {showTeamBadge && (
+        <img
+          src={getTeamLogoUrl(team)}
+          alt=""
+          style={{
+            position: 'absolute', bottom: 0, right: 0,
+            width: badgeSize, height: badgeSize,
+            objectFit: 'contain',
+            borderRadius: '50%',
+            background: 'var(--bg-white)',
+            border: '1px solid var(--border)',
+          }}
+          loading="lazy"
+        />
+      )}
+    </div>
   );
 }

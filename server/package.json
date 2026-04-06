@@ -16,7 +16,8 @@
     "node-cron": "^4.2.1",
     "rss-parser": "^3.13.0",
     "sql.js": "^1.11.0",
-    "string-similarity": "^4.0.4"
+    "string-similarity": "^4.0.4",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "nodemon": "^3.1.0"

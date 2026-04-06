@@ -85,7 +85,7 @@ function PlayerRow({ player, onPlayerClick }) {
   );
 }
 
-function MatchupCard({ matchup, expanded, rosters, onPlayerClick, onToggle }) {
+function MatchupCard({ matchup, expanded, rosters, onPlayerClick, onToggle, onMatchupClick }) {
   const homeTeam = TEAMS.find(t => t.id === matchup.home.teamId);
   const awayTeam = TEAMS.find(t => t.id === matchup.away.teamId);
   const homeProb = calcWinProb(matchup.home.projected, matchup.away.projected);
@@ -130,7 +130,7 @@ function MatchupCard({ matchup, expanded, rosters, onPlayerClick, onToggle }) {
             <StreakBadge streak={homeTeam.streak} />
           </div>
           <div className="ff-matchup-score tabular-nums" style={!expanded ? { fontSize: 24 } : undefined}>
-            {matchup.home.projected.toFixed(1)}
+            {matchup.home.projected.toFixed(2)}
           </div>
           <div className="ff-matchup-projected tabular-nums">Projected</div>
           <span className={`ff-matchup-tag ${isTossUp ? 'ff-tag-even' : homeFavored ? 'ff-tag-fav' : 'ff-tag-dog'}`}>
@@ -156,7 +156,7 @@ function MatchupCard({ matchup, expanded, rosters, onPlayerClick, onToggle }) {
             <StreakBadge streak={awayTeam.streak} />
           </div>
           <div className="ff-matchup-score tabular-nums" style={!expanded ? { fontSize: 24 } : undefined}>
-            {matchup.away.projected.toFixed(1)}
+            {matchup.away.projected.toFixed(2)}
           </div>
           <div className="ff-matchup-projected tabular-nums">Projected</div>
           <span className={`ff-matchup-tag ${isTossUp ? 'ff-tag-even' : awayFavored ? 'ff-tag-fav' : 'ff-tag-dog'}`}>
@@ -177,6 +177,16 @@ function MatchupCard({ matchup, expanded, rosters, onPlayerClick, onToggle }) {
         <WinProbBar homeProb={homeProb} />
       </div>
 
+      {/* View Full Matchup link */}
+      {expanded && onMatchupClick && (
+        <div style={{ padding: '8px 16px', borderTop: '1px solid var(--border)', textAlign: 'center' }}>
+          <button className="ff-btn ff-btn-secondary ff-btn-sm" onClick={(e) => { e.stopPropagation(); onMatchupClick(matchup.id); }}
+            style={{ fontSize: 11 }}>
+            View Full <span style={{ color: 'var(--hex-purple)' }}>Hex</span>Analysis
+          </button>
+        </div>
+      )}
+
       {/* Expand hint for compact cards */}
       {!expanded && onToggle && (
         <div style={{
@@ -191,7 +201,7 @@ function MatchupCard({ matchup, expanded, rosters, onPlayerClick, onToggle }) {
   );
 }
 
-export default function MatchupWidget({ mode = 'featured', rosters, onPlayerClick }) {
+export default function MatchupWidget({ mode = 'featured', rosters, onPlayerClick, onMatchupClick }) {
   const [expandedId, setExpandedId] = useState(null);
 
   const matchups = useMemo(() => {
@@ -213,7 +223,7 @@ export default function MatchupWidget({ mode = 'featured', rosters, onPlayerClic
 
   // Overview mode — single featured matchup
   if (mode === 'featured') {
-    return <MatchupCard matchup={userMatchup} expanded rosters={rosters} onPlayerClick={onPlayerClick} />;
+    return <MatchupCard matchup={userMatchup} expanded rosters={rosters} onPlayerClick={onPlayerClick} onMatchupClick={onMatchupClick} />;
   }
 
   // Full matchups page
@@ -227,7 +237,7 @@ export default function MatchupWidget({ mode = 'featured', rosters, onPlayerClic
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       {/* User's matchup — always expanded at top */}
       <div>
-        <MatchupCard matchup={userMatchup} expanded rosters={rosters} onPlayerClick={onPlayerClick} />
+        <MatchupCard matchup={userMatchup} expanded rosters={rosters} onPlayerClick={onPlayerClick} onMatchupClick={onMatchupClick} />
       </div>
 
       {/* Section header */}
@@ -244,10 +254,10 @@ export default function MatchupWidget({ mode = 'featured', rosters, onPlayerClic
         {otherMatchups.map(m => (
           expandedId === m.id ? (
             <div key={m.id} style={{ gridColumn: '1 / -1' }}>
-              <MatchupCard matchup={m} expanded rosters={rosters} onPlayerClick={onPlayerClick} onToggle={handleToggle} />
+              <MatchupCard matchup={m} expanded rosters={rosters} onPlayerClick={onPlayerClick} onToggle={handleToggle} onMatchupClick={onMatchupClick} />
             </div>
           ) : (
-            <MatchupCard key={m.id} matchup={m} expanded={false} rosters={rosters} onPlayerClick={onPlayerClick} onToggle={handleToggle} />
+            <MatchupCard key={m.id} matchup={m} expanded={false} rosters={rosters} onPlayerClick={onPlayerClick} onToggle={handleToggle} onMatchupClick={onMatchupClick} />
           )
         ))}
       </div>

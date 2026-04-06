@@ -210,7 +210,7 @@ const DEFAULT_LEAGUE_SIZE = 12;
 // Position HexScore caps — applied on final score after sigmoid.
 // QB capped at 85: no QB should rank in the top 20 overall (elite RBs/WRs fill those slots).
 // K/DEF capped at 60: kickers and defenses are always end-of-draft value.
-const POSITION_HEXSCORE_CAP = { TE: 99.5, K: 65, DEF: 60 };
+const POSITION_HEXSCORE_CAP = { K: 65, DEF: 60 };
 
 // ─── Draft Value ───
 // How many players at each position are worth spending a draft pick on.
@@ -251,7 +251,7 @@ const AGE_CURVES = {
   QB:  { primeStart: 26, peak: 30, primeEnd: 34, cliff: 38, declineRate: 0.06 },
   RB:  { primeStart: 22, peak: 25, primeEnd: 27, cliff: 29, declineRate: 0.14 },
   WR:  { primeStart: 24, peak: 27, primeEnd: 30, cliff: 32, declineRate: 0.09 },
-  TE:  { primeStart: 25, peak: 28, primeEnd: 31, cliff: 33, declineRate: 0.12 },
+  TE:  { primeStart: 25, peak: 28, primeEnd: 30, cliff: 32, declineRate: 0.18 },
   K:   { primeStart: 25, peak: 31, primeEnd: 36, cliff: 40, declineRate: 0.04 },
 };
 

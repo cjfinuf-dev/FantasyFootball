@@ -1,9 +1,9 @@
 export default function StatusLabel({ status }) {
   const config = {
-    healthy: { color: 'var(--success-green)', bg: 'rgba(22,163,74,0.1)', label: 'H', dotClass: 'injury-dot--healthy' },
-    out: { color: 'var(--injury-out)', bg: 'rgba(220,38,38,0.1)', label: 'OUT', dotClass: 'injury-dot--out' },
-    questionable: { color: 'var(--injury-questionable)', bg: 'rgba(245,158,11,0.1)', label: 'Q', dotClass: 'injury-dot--questionable' },
-    probable: { color: 'var(--injury-probable)', bg: 'rgba(22,163,74,0.1)', label: 'PROB', dotClass: 'injury-dot--healthy' },
+    healthy: { color: 'var(--success-green)', bg: 'var(--green-light)', label: 'H', dotClass: 'injury-dot--healthy' },
+    out: { color: 'var(--injury-out)', bg: 'var(--red-light)', label: 'OUT', dotClass: 'injury-dot--out' },
+    questionable: { color: 'var(--injury-questionable)', bg: 'var(--warning-amber-light)', label: 'Q', dotClass: 'injury-dot--questionable' },
+    probable: { color: 'var(--injury-probable)', bg: 'var(--green-light)', label: 'PROB', dotClass: 'injury-dot--healthy' },
   };
 
   const c = config[status];

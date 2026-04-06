@@ -12,7 +12,7 @@ export default function LandingPage() {
 
   return (
     <>
-      <div className="ff-hero ff-hero-landing" style={{ marginTop: 48 }}>
+      <div className="ff-hero ff-hero-landing">
         <img src="/logo-full.png" alt="HexMetrics" className="ff-hero-logo" />
         <p>The ultimate news and analysis platform for fantasy football. Beat your friends. Achieve glory.</p>
         <div className="ff-hero-landing-actions">

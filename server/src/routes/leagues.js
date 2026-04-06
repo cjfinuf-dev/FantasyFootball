@@ -1,5 +1,6 @@
 const express = require('express');
 const { requireAuth } = require('../middleware/auth');
+const { validateCreateLeague, validateJoinLeague, validateSaveDraft } = require('../middleware/validate');
 const leagueService = require('../services/league.service');
 
 const router = express.Router();
@@ -11,12 +12,9 @@ router.get('/', requireAuth, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.post('/', requireAuth, async (req, res, next) => {
+router.post('/', requireAuth, validateCreateLeague, async (req, res, next) => {
   try {
     const { name, type, scoringPreset, scoringJson, rosterJson, leagueSize, season, settingsJson, teamName } = req.body;
-    if (!name || !season || !teamName) {
-      return res.status(400).json({ error: 'Name, season, and team name are required.' });
-    }
     const league = await leagueService.createLeague({
       name, type: type || 'redraft', scoringPreset: scoringPreset || 'standard',
       scoringJson, rosterJson, leagueSize: leagueSize || 12, season,
@@ -55,20 +53,18 @@ router.delete('/:id/members/:memberId', requireAuth, async (req, res, next) => {
 });
 
 // Join league via invite code
-router.post('/join', requireAuth, async (req, res, next) => {
+router.post('/join', requireAuth, validateJoinLeague, async (req, res, next) => {
   try {
     const { inviteCode, teamName } = req.body;
-    if (!inviteCode || !teamName) return res.status(400).json({ error: 'Invite code and team name are required.' });
     const league = await leagueService.joinLeague({ inviteCode, teamName, userId: req.user.id });
     res.json({ league });
   } catch (err) { next(err); }
 });
 
 // Draft endpoints
-router.post('/:id/draft', requireAuth, async (req, res, next) => {
+router.post('/:id/draft', requireAuth, validateSaveDraft, async (req, res, next) => {
   try {
     const { picks, draftOrder } = req.body;
-    if (!picks || !draftOrder) return res.status(400).json({ error: 'picks and draftOrder are required.' });
     await leagueService.saveDraft(Number(req.params.id), req.user.id, { picks, draftOrder });
     res.json({ success: true });
   } catch (err) { next(err); }

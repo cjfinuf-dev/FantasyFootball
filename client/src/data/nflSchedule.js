@@ -34,3 +34,16 @@ export function getOpponent(nflTeam) {
   }
   return null;
 }
+
+// 2026 NFL Bye Weeks (projected)
+export const BYE_WEEKS = {
+  ARI: 9, ATL: 11, BAL: 8, BUF: 12, CAR: 7, CHI: 10, CIN: 9, CLE: 6,
+  DAL: 11, DEN: 8, DET: 5, GB: 10, HOU: 7, IND: 13, JAX: 6, KC: 12,
+  LAC: 8, LA: 9, LV: 10, MIA: 11, MIN: 7, NE: 13, NO: 6, NYG: 11,
+  NYJ: 12, PHI: 5, PIT: 8, SF: 10, SEA: 9, TB: 7, TEN: 6, WAS: 13,
+};
+
+export function getByeWeek(nflTeam) {
+  if (!nflTeam) return null;
+  return BYE_WEEKS[nflTeam.toUpperCase()] || null;
+}

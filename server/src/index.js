@@ -18,18 +18,30 @@ const PORT = process.env.PORT || 3001;
 
 // Middleware
 app.use(helmet());
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173').split(',');
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
+  origin: (origin, cb) => {
+    if (!origin || ALLOWED_ORIGINS.includes(origin)) cb(null, true);
+    else cb(new Error('CORS not allowed'));
+  },
   credentials: true,
 }));
 app.use(express.json());
 
-// Rate limiting
+// Rate limiting — global + stricter for auth
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests. Please try again later.' },
+});
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 20,
   message: { error: 'Too many attempts. Please try again later.' },
 });
+app.use('/api/', apiLimiter);
 app.use('/api/auth/signup', authLimiter);
 app.use('/api/auth/signin', authLimiter);
 

@@ -243,8 +243,8 @@ export default function QuickTradeCalc({ onSignIn, onSignUp }) {
         {(onSignIn || onSignUp) && (
           <div style={{
             marginTop: 16, padding: '14px 16px', borderRadius: 8,
-            background: 'var(--hex-purple-light, rgba(139,92,246,0.08))',
-            border: '1px solid rgba(139,92,246,0.2)',
+            background: 'var(--hex-purple-light)',
+            border: '1px solid var(--accent-20)',
           }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>
               Want roster-aware trade analysis?
