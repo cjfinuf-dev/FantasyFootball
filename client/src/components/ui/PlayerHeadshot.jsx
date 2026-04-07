@@ -3,6 +3,7 @@ import { getHeadshotUrl } from '../../data/espnIds';
 
 const SIZE_MAP = {
   tiny: { w: 56, h: 42 },
+  xxs: { w: 74, h: 54 },
   xs: { w: 96, h: 70 },
   sm: { w: 120, h: 88 },
   md: { w: 150, h: 110 },
@@ -67,22 +68,42 @@ export default function PlayerHeadshot({ espnId, name, size = 'sm', pos, team })
     );
   }
 
-  // Transparent headshot with team logo badge
-  const showTeamBadge = team && size !== 'tiny';
-  const badgeSize = size === 'lg' ? 28 : size === 'md' ? 22 : size === 'sm' ? 18 : 14;
+  // Large sizes: team logo as centered watermark behind the player
+  const useWatermark = team && (size === 'lg' || size === 'md');
+  // Small sizes: team logo as corner badge
+  const useCornerBadge = team && !useWatermark && size !== 'tiny';
+  const badgeSize = size === 'sm' ? 28 : 22;
+
   return (
-    <div style={{ position: 'relative', width: dim.w, height: dim.h, flexShrink: 0 }}>
+    <div style={{ position: 'relative', width: dim.w, height: dim.h, flexShrink: 0, overflow: 'hidden' }}>
+      {useWatermark && (
+        <img
+          src={getTeamLogoUrl(team)}
+          alt=""
+          loading="lazy"
+          style={{
+            position: 'absolute',
+            top: '50%', left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: dim.w * 1.25, height: dim.h * 1.25,
+            objectFit: 'contain',
+            opacity: 0.13,
+            pointerEvents: 'none',
+          }}
+        />
+      )}
       <img
         src={src}
         alt={name || 'Player'}
         loading="lazy"
         onError={() => setFailed(true)}
         style={{
+          position: 'relative',
           width: dim.w, height: dim.h,
           objectFit: 'contain',
         }}
       />
-      {showTeamBadge && (
+      {useCornerBadge && (
         <img
           src={getTeamLogoUrl(team)}
           alt=""
@@ -90,9 +111,8 @@ export default function PlayerHeadshot({ espnId, name, size = 'sm', pos, team })
             position: 'absolute', bottom: 0, right: 0,
             width: badgeSize, height: badgeSize,
             objectFit: 'contain',
-            borderRadius: '50%',
-            background: 'var(--bg-white)',
-            border: '1px solid var(--border)',
+            background: 'none',
+            border: 'none',
           }}
           loading="lazy"
         />

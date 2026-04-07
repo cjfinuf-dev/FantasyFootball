@@ -1,15 +1,15 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { TEAMS, USER_TEAM_ID } from '../../data/teams';
 import { PLAYERS } from '../../data/players';
-import { ROSTER_PRESETS } from '../../data/scoring';
+import { SCORING_PRESETS, ROSTER_PRESETS, ROSTER_SLOT_LABELS, SCORING_FIELD_LABELS, BONUS_LABELS, CATEGORY_COLORS } from '../../data/scoring';
 import { getEspnId } from '../../data/espnIds';
 import { getHexScore, formatHex } from '../../utils/hexScore';
 import PosBadge from '../ui/PosBadge';
+import HexBrand from '../ui/HexBrand';
 import PlayerHeadshot from '../ui/PlayerHeadshot';
+import { getGrade, getGradeCompact } from '../../utils/grades';
 
-const TOTAL_TEAMS = 12;
 const TOTAL_ROUNDS = 15;
-const TOTAL_PICKS = TOTAL_TEAMS * TOTAL_ROUNDS;
 
 const POS_COLORS = {
   QB: 'var(--pos-qb)', RB: 'var(--pos-rb)', WR: 'var(--pos-wr)',
@@ -24,10 +24,10 @@ const POS_BG = {
 const PLAYER_MAP = {};
 PLAYERS.forEach(p => { PLAYER_MAP[p.id] = p; });
 
-function getTeamForPick(pickNumber, draftOrder) {
-  const round = Math.floor(pickNumber / TOTAL_TEAMS);
-  const pickInRound = pickNumber % TOTAL_TEAMS;
-  const orderIndex = round % 2 === 0 ? pickInRound : (TOTAL_TEAMS - 1 - pickInRound);
+function getTeamForPick(pickNumber, draftOrder, teamCount = 12) {
+  const round = Math.floor(pickNumber / teamCount);
+  const pickInRound = pickNumber % teamCount;
+  const orderIndex = round % 2 === 0 ? pickInRound : (teamCount - 1 - pickInRound);
   return draftOrder[orderIndex];
 }
 
@@ -131,14 +131,14 @@ function weightedRandomPick(candidates) {
   return topN[0].id;
 }
 
-function getBestAvailable(state, teamId, scoringPreset = 'ppr', archetypes = {}) {
+function getBestAvailable(state, teamId, scoringPreset = 'ppr', archetypes = {}, teamCount = 12) {
   const pickedSet = new Set(state.picks.map(p => p.playerId));
   const available = PLAYERS.filter(p => !pickedSet.has(p.id));
   if (available.length === 0) return null;
 
   const { needs, counts } = getTeamNeeds(state.picks, teamId);
   const neededPositions = Object.keys(needs);
-  const round = Math.floor(state.currentPick / TOTAL_TEAMS);
+  const round = Math.floor(state.currentPick / teamCount);
   const archetype = archetypes[teamId] || 'balanced';
   const archetypeDef = BOT_ARCHETYPES[archetype] || BOT_ARCHETYPES.balanced;
 
@@ -194,13 +194,13 @@ function getBestAvailable(state, teamId, scoringPreset = 'ppr', archetypes = {})
   return weightedRandomPick(scored);
 }
 
-function makeInitialState(initialDraft) {
+function makeInitialState(initialDraft, totalPicks) {
   if (initialDraft && initialDraft.phase === 'complete' && initialDraft.picks?.length > 0) {
     return {
       phase: 'complete',
       draftOrder: initialDraft.draftOrder || TEAMS.map(t => t.id),
       picks: initialDraft.picks,
-      currentPick: TOTAL_PICKS,
+      currentPick: totalPicks || initialDraft.picks.length,
       timer: 0,
       timerRunning: false,
       pickQueue: [],
@@ -218,15 +218,28 @@ function makeInitialState(initialDraft) {
     timer: 60,
     timerRunning: false,
     pickQueue: [],
-    pickSpeed: 'fast',
+    pickSpeed: 'instant',
     announcements: [],
     timerSetting: 60,
-    autoDraft: false,
+    autoDraft: true,
   };
 }
 
 export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName = 'League', initialDraft, scoringPreset = 'ppr', leagueSize = 12 }) {
-  const [state, setState] = useState(() => makeInitialState(initialDraft));
+  const TOTAL_TEAMS = leagueSize;
+  const [draftStyle, setDraftStyle] = useState('snake');
+  const [rounds, setRounds] = useState(TOTAL_ROUNDS);
+  const [selectedPreset, setSelectedPreset] = useState(scoringPreset);
+  const [rosterConfig, setRosterConfig] = useState(() => ROSTER_PRESETS[scoringPreset] || ROSTER_PRESETS.standard);
+  const [bonuses, setBonuses] = useState({ rush100: 0, rec100: 0, pass300: 0, rush200: 0, rec200: 0, pass400: 0, td40plus: 0, td50plus: 0 });
+  const [customScoring, setCustomScoring] = useState(() => {
+    const p = SCORING_PRESETS[scoringPreset] || SCORING_PRESETS.ppr;
+    return { passing: { ...p.passing }, rushing: { ...p.rushing }, receiving: { ...p.receiving }, kicking: { ...p.kicking }, dst: { ...p.dst } };
+  });
+  const [isCustomScoring, setIsCustomScoring] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState({ format: true, scoring: false, roster: false, details: false, bonuses: false });
+  const TOTAL_PICKS = TOTAL_TEAMS * rounds;
+  const [state, setState] = useState(() => makeInitialState(initialDraft, TOTAL_PICKS));
   const [botArchetypes, setBotArchetypes] = useState({});
   const timerRef = useRef(null);
   const [posFilter, setPosFilter] = useState('ALL');
@@ -254,7 +267,7 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
   }, [pickedIds, posFilter, searchQuery, sortBy]);
 
   const currentTeamId = useMemo(
-    () => state.phase === 'active' ? getTeamForPick(state.currentPick, state.draftOrder) : null,
+    () => state.phase === 'active' ? getTeamForPick(state.currentPick, state.draftOrder, TOTAL_TEAMS) : null,
     [state.currentPick, state.draftOrder, state.phase]
   );
 
@@ -291,7 +304,7 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
           round,
           pick: pickForThisCell ? { ...pickForThisCell, player } : null,
           isCurrent: state.phase === 'active' && state.currentPick < TOTAL_PICKS &&
-            getTeamForPick(state.currentPick, state.draftOrder) === state.draftOrder[col] &&
+            getTeamForPick(state.currentPick, state.draftOrder, TOTAL_TEAMS) === state.draftOrder[col] &&
             Math.floor(state.currentPick / TOTAL_TEAMS) === round,
         });
       }
@@ -303,7 +316,7 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
   // Execute a pick
   const executePick = useCallback((prev, playerId = null) => {
     if (prev.currentPick >= TOTAL_PICKS) return prev;
-    const teamId = getTeamForPick(prev.currentPick, prev.draftOrder);
+    const teamId = getTeamForPick(prev.currentPick, prev.draftOrder, TOTAL_TEAMS);
     const isUser = teamId === USER_TEAM_ID;
     const pickedSet = new Set(prev.picks.map(p => p.playerId));
 
@@ -312,7 +325,7 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
         playerId = prev.pickQueue.find(pid => !pickedSet.has(pid));
       }
       if (!playerId) {
-        playerId = getBestAvailable(prev, teamId, scoringPreset, botArchetypes);
+        playerId = getBestAvailable(prev, teamId, scoringPreset, botArchetypes, TOTAL_TEAMS);
       }
     }
 
@@ -325,7 +338,7 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
     const newPick = { pickNumber: prev.currentPick, round, pickInRound, teamId, playerId, timestamp: Date.now() };
     const nextPick = prev.currentPick + 1;
     const isComplete = nextPick >= TOTAL_PICKS;
-    const nextTeam = isComplete ? null : getTeamForPick(nextPick, prev.draftOrder);
+    const nextTeam = isComplete ? null : getTeamForPick(nextPick, prev.draftOrder, TOTAL_TEAMS);
     const nextIsUser = nextTeam === USER_TEAM_ID;
 
     return {
@@ -347,7 +360,7 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
   useEffect(() => {
     if (state.phase !== 'active' || !state.timerRunning) return;
 
-    const currentTeam = getTeamForPick(state.currentPick, state.draftOrder);
+    const currentTeam = getTeamForPick(state.currentPick, state.draftOrder, TOTAL_TEAMS);
     const isUser = currentTeam === USER_TEAM_ID;
     const isAutoUser = isUser && state.autoDraft;
     const isManualUser = isUser && !state.autoDraft;
@@ -426,10 +439,39 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
     setState(prev => ({ ...prev, draftOrder: shuffleArray(prev.draftOrder) }));
   };
 
+  const toggleSection = (key) => {
+    setSettingsOpen(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const handlePresetChange = (presetId) => {
+    setSelectedPreset(presetId);
+    setIsCustomScoring(false);
+    const p = SCORING_PRESETS[presetId] || SCORING_PRESETS.ppr;
+    setCustomScoring({ passing: { ...p.passing }, rushing: { ...p.rushing }, receiving: { ...p.receiving }, kicking: { ...p.kicking }, dst: { ...p.dst } });
+    const rosterKey = presetId === 'tePremium' ? 'standard' : (ROSTER_PRESETS[presetId] ? presetId : 'standard');
+    setRosterConfig({ ...(ROSTER_PRESETS[rosterKey] || ROSTER_PRESETS.standard) });
+  };
+
+  const updateScoringValue = (category, key, value) => {
+    setIsCustomScoring(true);
+    setCustomScoring(prev => ({
+      ...prev,
+      [category]: { ...prev[category], [key]: Number(value) || 0 },
+    }));
+  };
+
+  const updateRosterSlot = (pos, val) => {
+    setRosterConfig(prev => ({ ...prev, [pos]: Math.max(0, Math.min(10, Number(val) || 0)) }));
+  };
+
+  const toggleBonus = (key) => {
+    setBonuses(prev => ({ ...prev, [key]: prev[key] ? 0 : key.includes('200') || key.includes('400') ? 2 : key.includes('50') ? 3 : 1 }));
+  };
+
   const resetDraft = () => {
     clearInterval(timerRef.current);
     draftCompleteCalledRef.current = false;
-    setState(makeInitialState());
+    setState(makeInitialState(null, TOTAL_PICKS));
     setShowResetConfirm(false);
     setPosFilter('ALL');
     setSearchQuery('');
@@ -446,89 +488,275 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
 
   // ---- LOBBY ----
   if (state.phase === 'lobby') {
+    const presetScoring = SCORING_PRESETS[selectedPreset] || SCORING_PRESETS.ppr;
+    const currentScoring = isCustomScoring ? { ...presetScoring, ...customScoring } : presetScoring;
+    const sectionHeader = (key, label) => (
+      <button onClick={() => toggleSection(key)} style={{
+        width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '10px 14px', background: 'var(--surface)', border: 'none', borderBottom: '1px solid var(--border)',
+        cursor: 'pointer', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em',
+        color: settingsOpen[key] ? 'var(--accent-text)' : 'var(--text-muted)',
+      }}>
+        {label}
+        <span style={{ fontSize: 10, transition: 'transform 0.15s', transform: settingsOpen[key] ? 'rotate(180deg)' : 'rotate(0)' }}>{'\u25BC'}</span>
+      </button>
+    );
+
     return (
-      <div style={{ maxWidth: 800, margin: '0 auto' }}>
-        <div className="ff-card">
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 16px' }}>
+        {/* Header */}
+        <div className="ff-card" style={{ marginBottom: 16 }}>
           <div className="ff-card-top-accent" style={{ background: 'var(--accent)' }} />
           <div className="ff-card-header">
             <h2 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>{leagueName} Draft Room</h2>
-            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Snake Draft &middot; {TOTAL_ROUNDS} Rounds &middot; {TOTAL_PICKS} Picks</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11 }}>
+              <span style={{ padding: '2px 8px', borderRadius: 'var(--radius-full)', background: 'var(--accent-10)', color: 'var(--accent-text)', fontWeight: 700, textTransform: 'uppercase' }}>
+                {draftStyle}
+              </span>
+              <span style={{ padding: '2px 8px', borderRadius: 'var(--radius-full)', background: isCustomScoring ? 'var(--warning-amber-light)' : 'var(--surface2)', color: isCustomScoring ? 'var(--warning-amber)' : 'var(--text-muted)', fontWeight: 600 }}>
+                {isCustomScoring ? `${presetScoring.name} (Custom)` : presetScoring.name}
+              </span>
+              <span style={{ color: 'var(--text-muted)' }}>{TOTAL_TEAMS} teams &middot; {rounds} rounds &middot; {TOTAL_PICKS} picks</span>
+            </div>
           </div>
-          <div className="ff-card-body">
-            <div style={{ marginBottom: 24 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                <h3 style={{ fontSize: 14, fontWeight: 700 }}>Draft Order</h3>
-                <button className="ff-btn ff-btn-secondary" style={{ fontSize: 12, padding: '6px 12px' }} onClick={randomizeOrder}>
-                  Randomize
-                </button>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 8 }}>
-                {state.draftOrder.map((teamId, i) => {
-                  const team = TEAMS.find(t => t.id === teamId);
-                  const isUser = teamId === USER_TEAM_ID;
-                  return (
-                    <div key={teamId} style={{
-                      display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
-                      background: isUser ? 'var(--accent-20, rgba(191,148,105,0.15))' : 'var(--surface, var(--bg-alt))',
-                      border: isUser ? '2px solid var(--accent)' : '1px solid var(--border)',
-                      borderRadius: 8, fontSize: 13,
-                    }}>
-                      <span style={{ fontWeight: 700, color: 'var(--text-muted)', fontSize: 16, minWidth: 24 }}>{i + 1}</span>
-                      <div>
-                        <div style={{ fontWeight: isUser ? 700 : 600 }}>{team.name}</div>
-                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{team.owner}{isUser ? ' (You)' : ''}</div>
+        </div>
+
+        {/* Two-column layout */}
+        <div style={{ display: 'grid', gridTemplateColumns: '340px 1fr', gap: 16, alignItems: 'start' }}>
+          {/* LEFT: Settings Sidebar */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+            <div className="ff-card" style={{ overflow: 'hidden' }}>
+              {/* Section 1: Draft Format */}
+              {sectionHeader('format', 'Draft Format')}
+              {settingsOpen.format && (
+                <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 12, borderBottom: '1px solid var(--border)' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 6 }}>Draft Style</label>
+                    <div style={{ display: 'flex', gap: 4 }}>
+                      {[{ id: 'snake', label: 'Snake' }, { id: 'linear', label: 'Linear' }, { id: 'auction', label: 'Auction' }].map(s => (
+                        <button key={s.id} onClick={() => setDraftStyle(s.id)}
+                          className={`ff-tm-filter-pill${draftStyle === s.id ? ' active' : ''}`}
+                          style={{ flex: 1, textAlign: 'center', justifyContent: 'center' }}>
+                          {s.label}
+                          {s.id === 'auction' && <span style={{ fontSize: 8, marginLeft: 4, opacity: 0.6 }}>Soon</span>}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 12 }}>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>Rounds</label>
+                      <input type="number" className="ff-search-input" min={10} max={20} value={rounds}
+                        onChange={e => setRounds(Math.max(10, Math.min(20, Number(e.target.value) || 15)))}
+                        style={{ width: '100%', padding: '6px 10px', fontSize: 13, textAlign: 'center' }} />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>League Size</label>
+                      <div style={{ padding: '6px 10px', fontSize: 13, textAlign: 'center', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--text-muted)' }}>
+                        {TOTAL_TEAMS} teams
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            </div>
+                  </div>
+                </div>
+              )}
 
-            <div style={{ display: 'flex', gap: 16, marginBottom: 24, flexWrap: 'wrap' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>Pick Timer</label>
-                <select className="ff-search-input" style={{ padding: '8px 12px', minWidth: 120, width: 'auto' }}
-                  value={state.timerSetting}
-                  onChange={e => setState(prev => ({ ...prev, timerSetting: Number(e.target.value) }))}>
-                  <option value={30}>30 seconds</option>
-                  <option value={60}>60 seconds</option>
-                  <option value={90}>90 seconds</option>
-                  <option value={120}>120 seconds</option>
-                </select>
-              </div>
-              <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>AI Pick Speed</label>
-                <select className="ff-search-input" style={{ padding: '8px 12px', minWidth: 120, width: 'auto' }}
-                  value={state.pickSpeed}
-                  onChange={e => setState(prev => ({ ...prev, pickSpeed: e.target.value }))}>
-                  <option value="instant">Instant</option>
-                  <option value="fast">Fast (0.5s)</option>
-                  <option value="slow">Slow (2s)</option>
-                </select>
-              </div>
-            </div>
+              {/* Section 2: Scoring Preset */}
+              {sectionHeader('scoring', 'Scoring')}
+              {settingsOpen.scoring && (
+                <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 6, borderBottom: '1px solid var(--border)' }}>
+                  {Object.entries(SCORING_PRESETS).map(([id, preset]) => (
+                    <button key={id} onClick={() => handlePresetChange(id)} style={{
+                      display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px',
+                      background: selectedPreset === id ? 'var(--accent-15)' : 'var(--surface)',
+                      border: selectedPreset === id ? '2px solid var(--accent)' : '1px solid var(--border)',
+                      borderRadius: 8, cursor: 'pointer', textAlign: 'left', width: '100%',
+                      transition: 'all 0.15s',
+                    }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: selectedPreset === id ? 'var(--accent-text)' : 'var(--text)' }}>{preset.name}</div>
+                        <div style={{ fontSize: 10, color: 'var(--text-muted)', lineHeight: 1.3, marginTop: 2 }}>{preset.desc?.slice(0, 60)}...</div>
+                      </div>
+                      {selectedPreset === id && <span style={{ fontSize: 14, color: 'var(--accent-text)' }}>{'\u2713'}</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
 
-            {/* Auto-Draft Toggle */}
-            <label style={{
-              display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', marginBottom: 24,
-              background: state.autoDraft ? 'rgba(22,163,74,0.08)' : 'var(--surface, var(--bg-alt))',
-              border: state.autoDraft ? '2px solid var(--success-green, #22c55e)' : '1px solid var(--border)',
-              borderRadius: 8, cursor: 'pointer', fontSize: 13, transition: 'all 0.15s',
-            }}>
-              <input type="checkbox" checked={state.autoDraft}
-                onChange={e => setState(prev => ({ ...prev, autoDraft: e.target.checked }))}
-                style={{ width: 18, height: 18, accentColor: 'var(--success-green, #22c55e)' }} />
-              <div>
-                <div style={{ fontWeight: 600 }}>Auto-Draft My Picks</div>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                  Your picks will be made automatically using best available or your pick queue
+              {/* Section 3: Roster Configuration */}
+              {sectionHeader('roster', 'Roster Slots')}
+              {settingsOpen.roster && (
+                <div style={{ padding: 14, borderBottom: '1px solid var(--border)' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                    {Object.entries(rosterConfig).map(([pos, count]) => (
+                      <div key={pos} style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        padding: '6px 10px', background: 'var(--surface)', border: '1px solid var(--border)',
+                        borderRadius: 6, fontSize: 12,
+                      }}>
+                        <span style={{ fontWeight: 600, color: POS_COLORS[pos] || 'var(--text)' }}>{pos}</span>
+                        <input type="number" min={0} max={10} value={count}
+                          onChange={e => updateRosterSlot(pos, e.target.value)}
+                          style={{
+                            width: 36, padding: '2px 4px', border: '1px solid var(--border)', borderRadius: 4,
+                            fontSize: 12, textAlign: 'center', background: 'var(--bg-white)', color: 'var(--text)',
+                          }} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Section 4: Scoring Details (editable) */}
+              {sectionHeader('details', isCustomScoring ? 'Scoring (Custom)' : 'Scoring Details')}
+              {settingsOpen.details && (
+                <div style={{ padding: 14, borderBottom: '1px solid var(--border)', fontSize: 11 }}>
+                  {isCustomScoring && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10, padding: '6px 10px', background: 'var(--warning-amber-light)', borderRadius: 6, fontSize: 10, color: 'var(--warning-amber)', fontWeight: 600 }}>
+                      <span>Custom scoring active</span>
+                      <button onClick={() => { setIsCustomScoring(false); const p = SCORING_PRESETS[selectedPreset] || SCORING_PRESETS.ppr; setCustomScoring({ passing: { ...p.passing }, rushing: { ...p.rushing }, receiving: { ...p.receiving }, kicking: { ...p.kicking }, dst: { ...p.dst } }); }}
+                        style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--warning-amber)', cursor: 'pointer', fontSize: 10, fontWeight: 700, textDecoration: 'underline' }}>
+                        Reset to {presetScoring.name}
+                      </button>
+                    </div>
+                  )}
+                  {Object.entries(SCORING_FIELD_LABELS).filter(([cat]) => cat !== 'idp' || selectedPreset === 'idp').map(([cat, fields]) => (
+                    <div key={cat} style={{ marginBottom: 10 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: CATEGORY_COLORS[cat] || 'var(--text-muted)', marginBottom: 4 }}>{cat}</div>
+                      {Object.entries(fields).map(([key, meta]) => {
+                        const val = customScoring[cat]?.[key];
+                        if (val === undefined) return null;
+                        const presetVal = presetScoring[cat]?.[key];
+                        const isModified = isCustomScoring && val !== presetVal;
+                        return (
+                          <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '3px 0' }}>
+                            <span style={{ color: 'var(--text-muted)', flex: 1 }}>{meta.label}</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <input type="number" step="any" value={val}
+                                onChange={e => updateScoringValue(cat, key, e.target.value)}
+                                style={{
+                                  width: 56, padding: '2px 6px', border: `1px solid ${isModified ? 'var(--warning-amber)' : 'var(--border)'}`,
+                                  borderRadius: 4, fontSize: 11, textAlign: 'center',
+                                  background: isModified ? 'var(--warning-amber-light)' : 'var(--bg-white)',
+                                  color: 'var(--text)', outline: 'none',
+                                }} />
+                              <span style={{ fontSize: 9, color: 'var(--text-muted)', minWidth: 28 }}>{meta.unit}</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Section 5: Bonuses */}
+              {sectionHeader('bonuses', 'Bonuses')}
+              {settingsOpen.bonuses && (
+                <div style={{ padding: 14 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {Object.entries(BONUS_LABELS).map(([key, label]) => (
+                      <label key={key} style={{
+                        display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px',
+                        background: bonuses[key] ? 'rgba(22,163,74,0.06)' : 'var(--surface)',
+                        border: bonuses[key] ? '1px solid var(--success-green)' : '1px solid var(--border)',
+                        borderRadius: 6, cursor: 'pointer', fontSize: 12, transition: 'all 0.15s',
+                      }}>
+                        <input type="checkbox" checked={!!bonuses[key]} onChange={() => toggleBonus(key)}
+                          style={{ width: 14, height: 14, accentColor: 'var(--success-green)' }} />
+                        <span style={{ flex: 1, fontWeight: 500 }}>{label}</span>
+                        {bonuses[key] > 0 && <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--success-green)' }}>+{bonuses[key]} pts</span>}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* RIGHT: Draft Order + Controls */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {/* Draft Order */}
+            <div className="ff-card">
+              <div className="ff-card-header" style={{ padding: '12px 20px' }}>
+                <h3 style={{ fontSize: 14, fontWeight: 700 }}>Draft Order</h3>
+                <button className="ff-btn ff-btn-secondary ff-btn-sm" onClick={randomizeOrder}>Randomize</button>
+              </div>
+              <div className="ff-card-body" style={{ padding: 16 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 8 }}>
+                  {state.draftOrder.map((teamId, i) => {
+                    const team = TEAMS.find(t => t.id === teamId);
+                    const isUser = teamId === USER_TEAM_ID;
+                    return (
+                      <div key={teamId} style={{
+                        display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px',
+                        background: isUser ? 'var(--accent-20)' : 'var(--surface)',
+                        border: isUser ? '2px solid var(--accent)' : '1px solid var(--border)',
+                        borderRadius: 8, fontSize: 12,
+                      }}>
+                        <span style={{ fontWeight: 700, color: 'var(--text-muted)', fontSize: 14, minWidth: 20 }}>{i + 1}</span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: isUser ? 700 : 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{team.name}</div>
+                          <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>{team.owner}{isUser ? ' (You)' : ''}</div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
-            </label>
+            </div>
 
-            <button className="ff-btn ff-btn-primary" style={{ fontSize: 15, padding: '14px 32px', width: '100%' }} onClick={startDraft}>
-              Start Draft
-            </button>
+            {/* Draft Controls */}
+            <div className="ff-card">
+              <div className="ff-card-header" style={{ padding: '12px 20px' }}>
+                <h3 style={{ fontSize: 14, fontWeight: 700 }}>Draft Controls</h3>
+              </div>
+              <div className="ff-card-body" style={{ padding: 16 }}>
+                <div style={{ display: 'flex', gap: 16, marginBottom: 16, flexWrap: 'wrap' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>Pick Timer</label>
+                    <select className="ff-search-input" style={{ padding: '8px 12px', minWidth: 120, width: 'auto' }}
+                      value={state.timerSetting}
+                      onChange={e => setState(prev => ({ ...prev, timerSetting: Number(e.target.value) }))}>
+                      <option value={30}>30 seconds</option>
+                      <option value={60}>60 seconds</option>
+                      <option value={90}>90 seconds</option>
+                      <option value={120}>120 seconds</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>AI Pick Speed</label>
+                    <select className="ff-search-input" style={{ padding: '8px 12px', minWidth: 120, width: 'auto' }}
+                      value={state.pickSpeed}
+                      onChange={e => setState(prev => ({ ...prev, pickSpeed: e.target.value }))}>
+                      <option value="instant">Instant</option>
+                      <option value="fast">Fast (0.5s)</option>
+                      <option value="slow">Slow (2s)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <label style={{
+                  display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', marginBottom: 16,
+                  background: state.autoDraft ? 'rgba(22,163,74,0.08)' : 'var(--surface)',
+                  border: state.autoDraft ? '2px solid var(--success-green)' : '1px solid var(--border)',
+                  borderRadius: 8, cursor: 'pointer', fontSize: 13, transition: 'all 0.15s',
+                }}>
+                  <input type="checkbox" checked={state.autoDraft}
+                    onChange={e => setState(prev => ({ ...prev, autoDraft: e.target.checked }))}
+                    style={{ width: 18, height: 18, accentColor: 'var(--success-green)' }} />
+                  <div>
+                    <div style={{ fontWeight: 600 }}>Auto-Draft My Picks</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                      Your picks will be made automatically using best available or your pick queue
+                    </div>
+                  </div>
+                </label>
+
+                <button className="ff-btn ff-btn-primary" style={{ fontSize: 15, padding: '14px 32px', width: '100%' }} onClick={startDraft}>
+                  Start Draft
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -550,22 +778,13 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
     const hexRange = maxHex - minHex || 1;
     const gradeFromHex = (total) => {
       const pct = (total - minHex) / hexRange;
-      if (pct >= 0.95) return { grade: 'S',  color: 'var(--grade-s)' };
-      if (pct >= 0.88) return { grade: 'A+', color: 'var(--grade-a-plus)' };
-      if (pct >= 0.80) return { grade: 'A',  color: 'var(--grade-a)' };
-      if (pct >= 0.72) return { grade: 'A-', color: 'var(--grade-a-minus)' };
-      if (pct >= 0.64) return { grade: 'B+', color: 'var(--grade-b-plus)' };
-      if (pct >= 0.56) return { grade: 'B',  color: 'var(--grade-b)' };
-      if (pct >= 0.48) return { grade: 'B-', color: 'var(--grade-b-minus)' };
-      if (pct >= 0.40) return { grade: 'C+', color: 'var(--grade-c-plus)' };
-      if (pct >= 0.32) return { grade: 'C',  color: 'var(--grade-c)' };
-      if (pct >= 0.20) return { grade: 'D',  color: 'var(--grade-d)' };
-      return { grade: 'F', color: 'var(--grade-f)' };
+      const { letter, color } = getGrade(pct);
+      return { grade: letter, color };
     };
     const { grade: draftGrade, color: gradeColor } = gradeFromHex(userTotalHex);
 
     return (
-      <div className="ff-draft-immersive" style={{ padding: '0 20px 40px' }}>
+      <div className="ff-draft-results" style={{ padding: '0 20px 40px', maxWidth: 1200, margin: '0 auto' }}>
         {/* Reset Confirmation Modal */}
         {showResetConfirm && (
           <div className="auth-overlay" onClick={e => { if (e.target === e.currentTarget) setShowResetConfirm(false); }}>
@@ -575,12 +794,12 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
                 This will clear all draft picks and return to the draft lobby. This cannot be undone.
               </p>
               <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
-                <button onClick={() => setShowResetConfirm(false)}
-                  style={{ padding: '10px 20px', borderRadius: 6, border: '1px solid var(--di-border, #555)', background: 'transparent', color: 'var(--di-text, #ccc)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                <button className="ff-btn ff-btn-secondary"
+                  onClick={() => setShowResetConfirm(false)}>
                   Cancel
                 </button>
-                <button onClick={resetDraft}
-                  style={{ padding: '10px 20px', borderRadius: 6, border: 'none', background: 'var(--red, #ef4444)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                <button className="ff-btn ff-btn-danger"
+                  onClick={resetDraft}>
                   Reset Draft
                 </button>
               </div>
@@ -590,45 +809,45 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
 
         {/* Draft Summary Header */}
         <div style={{ textAlign: 'center', padding: '32px 0 24px' }}>
-          <div style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--di-text-muted, #888)', marginBottom: 8 }}>Draft Complete</div>
-          <h1 style={{ fontSize: 28, fontWeight: 800, color: '#fff', margin: '0 0 4px', fontFamily: "'Playfair Display', serif" }}>{leagueName}</h1>
-          <p style={{ fontSize: 13, color: 'var(--di-text-faint, #666)' }}>{TOTAL_PICKS} picks &middot; {TOTAL_ROUNDS} rounds &middot; {TOTAL_TEAMS} teams</p>
+          <div style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: 8 }}>Draft Complete</div>
+          <h1 style={{ fontSize: 28, fontWeight: 800, color: 'var(--text)', margin: '0 0 4px', fontFamily: "'Playfair Display', serif" }}>{leagueName}</h1>
+          <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>{TOTAL_PICKS} picks &middot; {TOTAL_ROUNDS} rounds &middot; {TOTAL_TEAMS} teams</p>
         </div>
 
         {/* Your Team — Hero Card with Draft Grade */}
         {(() => {
           const userTeam = TEAMS.find(t => t.id === USER_TEAM_ID);
           return (
-            <div style={{
-              background: 'var(--gray-800)', border: '2px solid var(--accent)', borderRadius: 12,
+            <div className="ff-card" style={{
+              border: '2px solid var(--accent)', borderRadius: 12,
               marginBottom: 24, overflow: 'hidden',
             }}>
               {/* Grade Banner */}
               <div style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '16px 24px', borderBottom: '1px solid var(--gray-700)',
-                background: 'rgba(139,92,246,0.06)',
+                padding: '16px 24px', borderBottom: '1px solid var(--border)',
+                background: 'var(--accent-10)',
               }}>
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                    <span style={{ fontSize: 18, fontWeight: 800, color: '#fff' }}>{userTeam?.name}</span>
-                    <span style={{ fontSize: 9, background: 'var(--accent)', color: '#fff', padding: '2px 8px', borderRadius: 4, fontWeight: 700, textTransform: 'uppercase' }}>Your Team</span>
+                    <span style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)' }}>{userTeam?.name}</span>
+                    <span style={{ fontSize: 9, background: 'var(--accent)', color: 'var(--on-accent)', padding: '2px 8px', borderRadius: 4, fontWeight: 700, textTransform: 'uppercase' }}>Your Team</span>
                   </div>
-                  <div style={{ fontSize: 12, color: 'var(--di-text-muted, #888)' }}>
-                    {userRosterComplete.length} players &middot; Ranked #{userRank} of {TOTAL_TEAMS} &middot; {Math.round(userTotalHex)} total <span style={{ color: 'var(--hex-purple)' }}>Hex</span>Score
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                    {userRosterComplete.length} players &middot; Ranked #{userRank} of {TOTAL_TEAMS} &middot; {Math.round(userTotalHex)} total <HexBrand word="Score" icon={false} />
                   </div>
                 </div>
                 <div style={{ textAlign: 'center' }}>
                   <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 72, height: 78, clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)', background: gradeColor, fontSize: 28, fontWeight: 900, color: '#fff' }}>
                     {draftGrade}
                   </div>
-                  <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--di-text-muted, #888)', marginTop: 4 }}><svg viewBox="0 0 14 16" width="10" height="11" style={{ verticalAlign: '-1px', marginRight: 2 }}><polygon points="7,1 13,4.5 13,11.5 7,15 1,11.5 1,4.5" fill="none" stroke="var(--hex-purple)" strokeWidth="1.5"/></svg><span style={{ color: 'var(--hex-purple)' }}>Hex</span>Grade</div>
+                  <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginTop: 4 }}><HexBrand word="Grade" size="sm" /></div>
                 </div>
               </div>
 
               {/* Position Group Analysis */}
-              <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--gray-700)' }}>
-                <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--di-text-muted, #888)', marginBottom: 12 }}><svg viewBox="0 0 14 16" width="11" height="12" style={{ verticalAlign: '-1px', marginRight: 3 }}><polygon points="7,1 13,4.5 13,11.5 7,15 1,11.5 1,4.5" fill="none" stroke="var(--hex-purple)" strokeWidth="1.5"/></svg>Position <span style={{ color: 'var(--hex-purple)' }}>Hex</span>Grades</div>
+              <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--border)' }}>
+                <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: 12 }}>Position <HexBrand word="Grades" size="sm" /></div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
                   {['QB', 'RB', 'WR', 'TE'].map(pos => {
                     const starterSlots = { QB: 1, RB: 2, WR: 2, TE: 1 };
@@ -651,36 +870,26 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
                     const posMin = teamPosTotals[teamPosTotals.length - 1]?.total || 0;
                     const posRange = posMax - posMin || 1;
                     const posPct = (userEntry.total - posMin) / posRange;
-                    const posGradeData = posPct >= 0.95 ? { g: 'S', c: 'var(--grade-s)' }
-                      : posPct >= 0.88 ? { g: 'A+', c: 'var(--grade-a-plus)' }
-                      : posPct >= 0.80 ? { g: 'A', c: 'var(--grade-a)' }
-                      : posPct >= 0.72 ? { g: 'A-', c: 'var(--grade-a-minus)' }
-                      : posPct >= 0.64 ? { g: 'B+', c: 'var(--grade-b-plus)' }
-                      : posPct >= 0.56 ? { g: 'B', c: 'var(--grade-b)' }
-                      : posPct >= 0.48 ? { g: 'B-', c: 'var(--grade-b-minus)' }
-                      : posPct >= 0.40 ? { g: 'C+', c: 'var(--grade-c-plus)' }
-                      : posPct >= 0.32 ? { g: 'C', c: 'var(--grade-c)' }
-                      : posPct >= 0.20 ? { g: 'D', c: 'var(--grade-d)' }
-                      : { g: 'F', c: 'var(--grade-f)' };
+                    const posGradeData = getGradeCompact(posPct);
                     const leagueBestPct = posMax > 0 ? Math.round((userEntry.total / posMax) * 100) : 0;
 
                     return (
                       <div key={pos} style={{
-                        background: 'rgba(255,255,255,0.03)', border: '1px solid var(--gray-700)',
+                        background: 'var(--surface)', border: '1px solid var(--border)',
                         borderRadius: 8, padding: '12px 14px', textAlign: 'center',
                       }}>
                         <div style={{ fontSize: 11, fontWeight: 700, color: POS_COLORS[pos], textTransform: 'uppercase', marginBottom: 8 }}>{pos}s</div>
                         <div style={{ margin: '0 auto 6px', display: 'flex', justifyContent: 'center' }}>
                           <span className="hex-grade-badge-xl" style={{ background: posGradeData.c }}>{posGradeData.g}</span>
                         </div>
-                        <div style={{ fontSize: 10, color: 'var(--di-text-muted, #888)', marginBottom: 6 }}>#{posRank} of {TOTAL_TEAMS}</div>
-                        <div style={{ background: 'var(--di-border, #333)', borderRadius: 3, height: 4, marginBottom: 6 }}>
+                        <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 6 }}>#{posRank} of {TOTAL_TEAMS}</div>
+                        <div style={{ background: 'var(--surface2)', borderRadius: 3, height: 4, marginBottom: 6 }}>
                           <div style={{ background: posGradeData.c, borderRadius: 3, height: '100%', width: `${leagueBestPct}%`, transition: 'width 0.3s' }} />
                         </div>
-                        <div style={{ fontSize: 9, color: 'var(--di-text-faint, #666)' }}>{leagueBestPct}% of league best</div>
+                        <div style={{ fontSize: 9, color: 'var(--text-muted)' }}>{leagueBestPct}% of league best</div>
                         {userEntry.best && (
-                          <div style={{ fontSize: 10, color: 'var(--di-text-muted, #aaa)', marginTop: 6, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            Top: <span style={{ fontWeight: 600, color: 'var(--di-text, #ddd)' }}>{userEntry.best.player?.name}</span>
+                          <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 6, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            Top: <span style={{ fontWeight: 600, color: 'var(--text)' }}>{userEntry.best.player?.name}</span>
                           </div>
                         )}
                       </div>
@@ -705,21 +914,11 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
 
                 const getPlayerHexGrade = (playerId, pos) => {
                   const pool = allDraftedByPos[pos] || [];
-                  if (pool.length === 0) return { g: '-', c: '#666' };
+                  if (pool.length === 0) return { g: '-', c: 'var(--text-muted)' };
                   const rank = pool.findIndex(p => p.playerId === playerId);
-                  if (rank < 0) return { g: '-', c: '#666' };
+                  if (rank < 0) return { g: '-', c: 'var(--text-muted)' };
                   const pct = pool.length > 1 ? 1 - (rank / (pool.length - 1)) : 1;
-                  if (pct >= 0.95) return { g: 'S', c: 'var(--grade-s)' };
-                  if (pct >= 0.88) return { g: 'A+', c: 'var(--grade-a-plus)' };
-                  if (pct >= 0.80) return { g: 'A', c: 'var(--grade-a)' };
-                  if (pct >= 0.72) return { g: 'A-', c: 'var(--grade-a-minus)' };
-                  if (pct >= 0.64) return { g: 'B+', c: 'var(--grade-b-plus)' };
-                  if (pct >= 0.56) return { g: 'B', c: 'var(--grade-b)' };
-                  if (pct >= 0.48) return { g: 'B-', c: 'var(--grade-b-minus)' };
-                  if (pct >= 0.40) return { g: 'C+', c: 'var(--grade-c-plus)' };
-                  if (pct >= 0.32) return { g: 'C', c: 'var(--grade-c)' };
-                  if (pct >= 0.20) return { g: 'D', c: 'var(--grade-d)' };
-                  return { g: 'F', c: 'var(--grade-f)' };
+                  return getGradeCompact(pct);
                 };
 
                 // Sort into roster slots
@@ -749,27 +948,27 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
                   return (
                     <div key={label + (pick?.playerId || '')} style={{
                       display: 'flex', alignItems: 'center', gap: 10, padding: '7px 0',
-                      borderBottom: '1px solid var(--gray-700)', fontSize: 12,
+                      borderBottom: '1px solid var(--border)', fontSize: 12,
                       opacity: muted ? 0.6 : 1,
                     }}>
                       <span style={{
                         fontSize: 9, fontWeight: 700, minWidth: 32, textTransform: 'uppercase',
-                        color: POS_COLORS[pick?.player?.pos] || '#666',
+                        color: POS_COLORS[pick?.player?.pos] || 'var(--text-muted)',
                       }}>{label}</span>
                       {pick ? (
                         <>
                           <PlayerHeadshot espnId={getEspnId(pick.player?.name)} name={pick.player?.name} size="xs" pos={pick.player?.pos} team={pick.player?.team} />
                           <PosBadge pos={pick.player?.pos} />
-                          <span style={{ fontWeight: 600, color: 'var(--di-text, #ddd)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pick.player?.name}</span>
-                          <span style={{ color: 'var(--di-text-faint, #666)', fontSize: 10 }}>{pick.player?.team}</span>
-                          <span style={{ color: 'var(--di-text-faint, #666)', fontSize: 9 }}>R{pick.round + 1}</span>
+                          <span style={{ fontWeight: 600, color: 'var(--text)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pick.player?.name}</span>
+                          <span style={{ color: 'var(--text-muted)', fontSize: 10 }}>{pick.player?.team}</span>
+                          <span style={{ color: 'var(--text-muted)', fontSize: 9 }}>R{pick.round + 1}</span>
                           <span style={{ color: 'var(--hex-purple)', fontSize: 11, fontWeight: 700, minWidth: 28, textAlign: 'right' }} className="tabular-nums">{formatHex(getHexScore(pick.playerId))}</span>
                           {pg && (
                             <span className="hex-grade-badge" style={{ background: pg.c }}>{pg.g}</span>
                           )}
                         </>
                       ) : (
-                        <span style={{ color: 'var(--di-text-dim, #555)', fontStyle: 'italic', fontSize: 11 }}>Empty</span>
+                        <span style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: 11 }}>Empty</span>
                       )}
                     </div>
                   );
@@ -778,13 +977,13 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
                 return (
                   <div style={{ padding: '12px 24px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                      <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--di-text-muted, #888)' }}>Starters</span>
-                      <span style={{ fontSize: 9, color: 'var(--di-text-dim, #555)' }}><span style={{ color: 'var(--hex-purple)' }}>Hex</span>Grade vs. league</span>
+                      <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)' }}>Starters</span>
+                      <span style={{ fontSize: 9, color: 'var(--text-muted)' }}><HexBrand word="Grade" icon={false} /> vs. league</span>
                     </div>
                     {starters.map(s => renderRow(s.label, s.pick, false))}
                     {bench.length > 0 && (
                       <>
-                        <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--di-text-faint, #666)', marginTop: 12, marginBottom: 6 }}>Bench</div>
+                        <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginTop: 12, marginBottom: 6 }}>Bench</div>
                         {bench.map((pick, i) => renderRow('BN', pick, true))}
                       </>
                     )}
@@ -793,9 +992,8 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
               })()}
 
               {/* Actions */}
-              <div style={{ padding: '12px 24px', borderTop: '1px solid var(--gray-700)', display: 'flex', justifyContent: 'flex-end' }}>
-                <button onClick={() => setShowResetConfirm(true)}
-                  style={{ padding: '6px 14px', borderRadius: 6, border: '1px solid var(--di-border, #555)', background: 'transparent', color: 'var(--di-text-muted, #999)', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+              <div style={{ padding: '12px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end' }}>
+                <button className="ff-btn ff-btn-secondary ff-btn-sm" onClick={() => setShowResetConfirm(true)}>
                   Reset Draft
                 </button>
               </div>
@@ -804,10 +1002,10 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
         })()}
 
         {/* All Teams Grid */}
-        <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--di-text-muted, #888)', marginBottom: 12 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: 12 }}>
           All Teams
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 0, border: '1px solid var(--gray-700)', borderRadius: 10, overflow: 'hidden' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 0, border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
           {allTeamTotals.map(({ teamId }, rankIdx) => {
             if (teamId === USER_TEAM_ID) return null;
             const team = TEAMS.find(t => t.id === teamId);
@@ -815,14 +1013,14 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
             const teamTotal = allTeamTotals[rankIdx]?.total || 0;
             const { grade: teamGrade, color: tgColor } = gradeFromHex(teamTotal);
             return (
-              <div key={teamId} style={{ background: 'var(--gray-800)', borderBottom: '1px solid var(--gray-700)', borderRight: '1px solid var(--gray-700)' }}>
+              <div key={teamId} style={{ background: 'var(--bg-white)', borderBottom: '1px solid var(--border)', borderRight: '1px solid var(--border)' }}>
                 <div style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: '8px 14px', borderBottom: '1px solid var(--gray-700)', background: 'rgba(255,255,255,0.02)',
+                  padding: '8px 14px', borderBottom: '1px solid var(--border)', background: 'var(--surface)',
                 }}>
                   <div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--di-text, #ddd)' }}>{team?.name}</div>
-                    <div style={{ fontSize: 10, color: 'var(--di-text-faint, #666)' }}>#{rankIdx + 1} overall</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{team?.name}</div>
+                    <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>#{rankIdx + 1} overall</div>
                   </div>
                   <span className="hex-grade-badge-lg" style={{ background: tgColor }}>{teamGrade}</span>
                 </div>
@@ -830,13 +1028,13 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
                   {roster.map((pick, i) => (
                     <div key={i} style={{
                       display: 'flex', alignItems: 'center', gap: 6, padding: '2px 0',
-                      borderBottom: i < roster.length - 1 ? '1px solid var(--gray-800)' : 'none',
+                      borderBottom: i < roster.length - 1 ? '1px solid var(--border)' : 'none',
                       fontSize: 11,
                     }}>
-                      <span style={{ color: 'var(--di-text-dim, #555)', minWidth: 18, fontSize: 9 }}>R{pick.round + 1}</span>
+                      <span style={{ color: 'var(--text-muted)', minWidth: 18, fontSize: 9 }}>R{pick.round + 1}</span>
                       <PosBadge pos={pick.player?.pos} />
-                      <span style={{ fontWeight: 500, color: 'var(--di-text, #bbb)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pick.player?.name}</span>
-                      <span style={{ color: 'var(--di-text-faint, #666)', fontSize: 9 }}>{pick.player?.team}</span>
+                      <span style={{ fontWeight: 500, color: 'var(--text)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pick.player?.name}</span>
+                      <span style={{ color: 'var(--text-muted)', fontSize: 9 }}>{pick.player?.team}</span>
                     </div>
                   ))}
                 </div>
@@ -863,7 +1061,7 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
           <span style={{ fontSize: 11, color: 'var(--di-text-muted, #888)', fontWeight: 600 }}>Rd {currentRound} &middot; Pick {overallPick}</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 15, fontWeight: 700, color: '#fff' }}>{currentTeam?.name}</span>
+          <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--di-text, #e5e5e5)' }}>{currentTeam?.name}</span>
           {isUserTurn && <span style={{ fontSize: 10, background: 'var(--accent)', color: '#fff', padding: '2px 8px', borderRadius: 4, fontWeight: 700 }}>YOUR PICK</span>}
           {!isUserTurn && <span style={{ fontSize: 10, color: 'var(--di-text-muted, #888)' }}>on the clock</span>}
         </div>
@@ -875,10 +1073,18 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
             <span style={{ fontSize: 10, color: 'var(--di-text-muted, #888)' }}>{state.picks.length}/{TOTAL_PICKS}</span>
           </div>
           <div style={{
-            fontSize: 24, fontWeight: 800, fontFamily: 'monospace', color: timerColor, lineHeight: 1,
-            minWidth: 36, textAlign: 'center',
+            fontSize: 28, fontWeight: 900, fontFamily: 'monospace', lineHeight: 1,
+            minWidth: 64, textAlign: 'center',
+            color: timerColor,
+            background: 'rgba(0,0,0,0.5)',
+            border: `2px solid ${timerColor}`,
+            borderRadius: 8,
+            padding: '6px 12px',
+            boxShadow: `0 0 12px ${timerColor}40, inset 0 0 8px ${timerColor}15`,
+            letterSpacing: '0.05em',
+            transition: 'color 0.3s, border-color 0.3s, box-shadow 0.3s',
           }}>
-            {isUserTurn ? state.timer : '\u00B7\u00B7\u00B7'}
+            {isUserTurn ? String(state.timer).padStart(2, '0') : '\u00B7\u00B7\u00B7'}
           </div>
         </div>
       </div>
@@ -928,9 +1134,12 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
                       }}>
                         {cell.pick ? (
                           <div>
-                            <div style={{ fontSize: 7, fontWeight: 700, color: POS_COLORS[cell.pick.player?.pos] }}>{cell.pick.player?.pos}</div>
-                            <div style={{ fontWeight: 600, fontSize: 8, lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 22, color: 'var(--di-text, #ddd)' }}>
-                              {cell.pick.player?.name?.split(' ').pop()?.slice(0, 4)}
+                            <div style={{ fontSize: 10, fontWeight: 700, color: POS_COLORS[cell.pick.player?.pos] }}>{cell.pick.player?.pos}</div>
+                            <div style={{ fontSize: 13, lineHeight: 1.2, color: 'var(--di-text, #ddd)' }}>
+                              {cell.pick.player?.name?.split(' ')[0]}
+                            </div>
+                            <div style={{ fontWeight: 700, fontSize: 13, lineHeight: 1.2, wordBreak: 'break-word', color: 'var(--di-text, #ddd)' }}>
+                              {cell.pick.player?.name?.split(' ').slice(1).join(' ')}
                             </div>
                           </div>
                         ) : cell.isCurrent ? (
@@ -974,7 +1183,7 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
                     <th className={sortBy === 'hex' ? 'sort-active' : ''} onClick={() => setSortBy('hex')} style={{ textAlign: 'right', color: 'var(--hex-purple)' }}>
                       Hex {sortBy === 'hex' && <span className="sort-arrow">{'\u25BC'}</span>}
                     </th>
-                    <th style={{ width: 72, textAlign: 'center' }}></th>
+                    <th style={{ width: 44, textAlign: 'center' }}></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -983,11 +1192,11 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
                     return (
                       <tr key={player.id} style={inQueue ? { background: 'rgba(139,92,246,0.08)' } : undefined}>
                         <td>
-                          <div className="ff-flex ff-gap-2">
-                            <PlayerHeadshot espnId={getEspnId(player.name)} name={player.name} size="xs" pos={player.pos} team={player.team} />
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <PlayerHeadshot espnId={getEspnId(player.name)} name={player.name} size="xxs" pos={player.pos} team={player.team} />
                             <PosBadge pos={player.pos} />
-                            <span className="player-name">{player.name}</span>
-                            <span className="player-team">{player.team}</span>
+                            <span style={{ fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{player.name}</span>
+                            <span style={{ color: 'var(--di-text-faint, var(--text-muted))', fontSize: 10, flexShrink: 0 }}>{player.team}</span>
                           </div>
                         </td>
                         <td style={{ textAlign: 'right', fontWeight: 600 }} className="tabular-nums">{player.proj}</td>
@@ -1014,7 +1223,7 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
         <div className="ff-draft-panel-right">
           {/* My Team — Two Views */}
           <div className="ff-card">
-            <div style={{ display: 'flex', borderBottom: '1px solid var(--gray-700)' }}>
+            <div style={{ display: 'flex', borderBottom: '1px solid var(--di-border, var(--gray-700))' }}>
               {[{ id: 'roster', label: 'Roster' }, { id: 'picks', label: 'Picks' }].map(tab => (
                 <button key={tab.id} onClick={() => setRosterView(tab.id)} style={{
                   flex: 1, padding: '8px 0', background: 'none', border: 'none',
@@ -1025,7 +1234,7 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
               ))}
               <span style={{ fontSize: 10, color: 'var(--di-text-faint, #666)', padding: '8px 10px', display: 'flex', alignItems: 'center' }}>{userRoster.length}/{TOTAL_ROUNDS}</span>
             </div>
-            <div style={{ padding: '0 10px 10px', maxHeight: 340, overflowY: 'auto' }}>
+            <div style={{ padding: '0 10px 10px', maxHeight: 480, overflowY: 'auto' }}>
               {rosterView === 'roster' ? (
                 /* Roster Slots View */
                 (() => {
@@ -1048,7 +1257,7 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
                     return (
                       <div key={idx} style={{
                         display: 'flex', alignItems: 'center', gap: 6, padding: '4px 0',
-                        borderBottom: '1px solid var(--gray-700)', fontSize: 11,
+                        borderBottom: '1px solid var(--di-border, var(--gray-700))', fontSize: 11,
                         opacity: !isStarter && !match ? 0.4 : 1,
                       }}>
                         <span style={{ fontSize: 8, fontWeight: 700, color: POS_COLORS[slot.pos] || '#888', minWidth: 26, textTransform: 'uppercase' }}>{slot.pos}</span>
@@ -1073,7 +1282,7 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
                   userRoster.map((pick, i) => (
                     <div key={i} style={{
                       display: 'flex', alignItems: 'center', gap: 6, padding: '4px 0',
-                      borderBottom: '1px solid var(--gray-700)', fontSize: 11,
+                      borderBottom: '1px solid var(--di-border, var(--gray-700))', fontSize: 11,
                     }}>
                       <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--di-text-dim, #555)', minWidth: 22 }}>R{pick.round + 1}</span>
                       <span style={{ fontSize: 8, color: 'var(--di-text-dim, #555)', minWidth: 14 }}>{pick.pickInRound + 1}</span>
@@ -1092,7 +1301,7 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
             onClick={() => setState(prev => ({ ...prev, autoDraft: !prev.autoDraft }))}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px' }}>
               <input type="checkbox" checked={state.autoDraft} readOnly style={{ width: 14, height: 14, accentColor: '#22c55e', pointerEvents: 'none' }} />
-              <span style={{ fontSize: 12, fontWeight: 600, color: state.autoDraft ? '#22c55e' : '#aaa' }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: state.autoDraft ? 'var(--success-green, #22c55e)' : 'var(--di-text-muted, #aaa)' }}>
                 Auto-Draft {state.autoDraft ? 'ON' : 'OFF'}
               </span>
             </div>
@@ -1115,7 +1324,7 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
                 return (
                   <div key={pid} style={{
                     display: 'flex', alignItems: 'center', gap: 6, padding: '3px 0',
-                    borderBottom: '1px solid var(--gray-700)', fontSize: 11,
+                    borderBottom: '1px solid var(--di-border, var(--gray-700))', fontSize: 11,
                     opacity: taken ? 0.3 : 1, textDecoration: taken ? 'line-through' : 'none',
                   }}>
                     <span style={{ color: 'var(--di-text-faint, #666)', fontSize: 9, minWidth: 12 }}>{i + 1}</span>

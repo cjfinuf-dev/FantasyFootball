@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import { PLAYERS } from '../../data/players';
 import { NFL_TEAMS } from '../../data/nflColors';
 import { getEspnId } from '../../data/espnIds';
@@ -10,6 +10,9 @@ import PlayerHeadshot from '../ui/PlayerHeadshot';
 import PosBadge from '../ui/PosBadge';
 import StatusLabel from '../ui/StatusLabel';
 import ArchetypeBadge from '../ui/ArchetypeBadge';
+import AnimatedNumber from '../ui/AnimatedNumber';
+import HexBrand from '../ui/HexBrand';
+import { getGrade } from '../../utils/grades';
 
 const PLAYER_MAP = {};
 PLAYERS.forEach(p => { PLAYER_MAP[p.id] = p; });
@@ -37,20 +40,7 @@ function getDimensionValue(dims, key) {
   }
 }
 
-// Unified grade scale: S (excellence) → A+ → A → A- → B+ → B → B- → C+ → C → D → F
-function getDimGrade(val) {
-  if (val >= 0.95) return { letter: 'S',  color: 'var(--grade-s)' };
-  if (val >= 0.88) return { letter: 'A+', color: 'var(--grade-a-plus)' };
-  if (val >= 0.80) return { letter: 'A',  color: 'var(--grade-a)' };
-  if (val >= 0.72) return { letter: 'A-', color: 'var(--grade-a-minus)' };
-  if (val >= 0.64) return { letter: 'B+', color: 'var(--grade-b-plus)' };
-  if (val >= 0.56) return { letter: 'B',  color: 'var(--grade-b)' };
-  if (val >= 0.48) return { letter: 'B-', color: 'var(--grade-b-minus)' };
-  if (val >= 0.40) return { letter: 'C+', color: 'var(--grade-c-plus)' };
-  if (val >= 0.32) return { letter: 'C',  color: 'var(--grade-c)' };
-  if (val >= 0.20) return { letter: 'D',  color: 'var(--grade-d)' };
-  return { letter: 'F', color: 'var(--grade-f)' };
-}
+const getDimGrade = getGrade;
 
 // Generate human-readable reason for a dimension score
 function getDimReason(key, val, player) {
@@ -94,9 +84,69 @@ function getDimReason(key, val, player) {
   return `Score: ${pct}/100`;
 }
 
+// Find the most similar player by Euclidean distance across hex dimensions
+const DIM_KEYS = ['production', 'volume', 'consistency', 'durability', 'situation', 'scarcity'];
+
+function findMostSimilar(playerId, hexData) {
+  if (!hexData?.dimensions) return null;
+  const player = PLAYER_MAP[playerId];
+  if (!player) return null;
+  const allScores = getLeagueHexScores('standard');
+  const myVals = DIM_KEYS.map(k => getDimensionValue(hexData.dimensions, k));
+
+  // Only compare within the same position group
+  const candidates = [];
+  allScores.forEach((entry, pid) => {
+    if (pid === playerId || !entry.dimensions) return;
+    const p = PLAYER_MAP[pid];
+    if (!p || p.pos !== player.pos) return;
+    const vals = DIM_KEYS.map(k => getDimensionValue(entry.dimensions, k));
+    const dist = Math.sqrt(vals.reduce((sum, v, i) => sum + Math.pow(v - myVals[i], 2), 0));
+    candidates.push({ pid, dist });
+  });
+
+  if (candidates.length === 0) return null;
+
+  // Sort by distance, take the top 10 closest, pick one randomly
+  candidates.sort((a, b) => a.dist - b.dist);
+  const pool = candidates.slice(0, Math.min(10, candidates.length));
+  const pick = pool[Math.floor(Math.random() * pool.length)];
+
+  const p = PLAYER_MAP[pick.pid];
+  const entry = allScores.get(pick.pid);
+  const similarity = Math.round((1 - pick.dist / 2.45) * 100);
+  return { player: p, hexScore: entry?.hexScore || 0, similarity };
+}
+
 // Interactive Hex Radar Chart
 function HexRadar({ dimensions, hexData, player }) {
   const [hoveredIdx, setHoveredIdx] = useState(null);
+  const [animProgress, setAnimProgress] = useState(0);
+  const animRef = useRef(null);
+  const [compareQuery, setCompareQuery] = useState('');
+  const [comparePlayer, setComparePlayer] = useState(null);
+
+  const compareResults = useMemo(() => {
+    if (!compareQuery || compareQuery.length < 2) return [];
+    const q = compareQuery.toLowerCase();
+    return PLAYERS.filter(p => p.id !== player.id && p.name.toLowerCase().includes(q)).slice(0, 5);
+  }, [compareQuery, player.id]);
+
+  const compareHexData = comparePlayer ? getHexData(comparePlayer.id) : null;
+  const similar = useMemo(() => findMostSimilar(player.id, hexData), [player.id, hexData]);
+
+  useEffect(() => {
+    const start = performance.now();
+    const duration = 700;
+    const animate = (now) => {
+      const t = Math.min((now - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
+      setAnimProgress(eased);
+      if (t < 1) animRef.current = requestAnimationFrame(animate);
+    };
+    animRef.current = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(animRef.current);
+  }, []);
 
   // SVG draws the hex chart; labels are positioned inside the SVG via extra padding
   const maxR = 262;
@@ -119,7 +169,7 @@ function HexRadar({ dimensions, hexData, player }) {
     val: getDimensionValue(hexData.dimensions, dim.key),
   }));
 
-  const dataPoints = dimValues.map((d, i) => getPoint(i, d.val * maxR));
+  const dataPoints = dimValues.map((d, i) => getPoint(i, d.val * maxR * animProgress));
   const dataPath = dataPoints.map((p, i) => (i === 0 ? 'M' : 'L') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ') + ' Z';
 
   // Tooltip data (always rendered, content swaps)
@@ -147,7 +197,7 @@ function HexRadar({ dimensions, hexData, player }) {
                 </span>
               </div>
               <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--text)', marginBottom: 10 }} className="tabular-nums">
-                {Math.round(tipDim.val * 100)}<span style={{ fontSize: 14, color: 'var(--text-muted)', fontWeight: 500 }}>/100</span>
+                {(tipDim.val * 100).toFixed(1)}<span style={{ fontSize: 14, color: 'var(--text-muted)', fontWeight: 500 }}>/100</span>
               </div>
               <div style={{ color: 'var(--text-muted)', fontSize: 13, lineHeight: 1.6 }}>
                 {getDimReason(tipDim.key, tipDim.val, player)}
@@ -159,6 +209,67 @@ function HexRadar({ dimensions, hexData, player }) {
             </div>
           )}
         </div>
+
+        {/* Most similar player suggestion */}
+        {similar && !comparePlayer && (
+          <div style={{ marginTop: 12 }}>
+            <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: 6 }}>Similar {player.pos}</div>
+            <button
+              onClick={() => { setComparePlayer(similar.player); setCompareQuery(''); }}
+              style={{
+                width: '100%', display: 'flex', alignItems: 'center', gap: 8,
+                padding: '8px 10px', borderRadius: 'var(--radius-md)',
+                background: 'var(--accent-10)', border: '1px solid var(--accent-20)',
+                cursor: 'pointer', textAlign: 'left',
+                transition: 'background 0.15s, border-color 0.15s',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'var(--accent-15)'; e.currentTarget.style.borderColor = 'var(--accent-30)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'var(--accent-10)'; e.currentTarget.style.borderColor = 'var(--accent-20)'; }}
+            >
+              <PlayerHeadshot espnId={getEspnId(similar.player.name)} name={similar.player.name} size="xs" pos={similar.player.pos} team={similar.player.team} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{similar.player.name}</div>
+                <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+                  <PosBadge pos={similar.player.pos} /> {similar.player.team} &middot; {formatHex(similar.hexScore)} Hex
+                </div>
+              </div>
+              <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--hex-purple)' }} className="tabular-nums">{similar.similarity}%</div>
+                <div style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 600 }}>match</div>
+              </div>
+            </button>
+          </div>
+        )}
+
+        {/* Compare player search */}
+        <div style={{ marginTop: 10, position: 'relative' }}>
+          <input
+            className="ff-search-input"
+            type="text"
+            placeholder={comparePlayer ? `vs ${comparePlayer.name}` : 'Compare player...'}
+            value={compareQuery}
+            onChange={e => { setCompareQuery(e.target.value); if (!e.target.value) setComparePlayer(null); }}
+            style={{ fontSize: 11, padding: '6px 10px', width: '100%' }}
+          />
+          {compareResults.length > 0 && (
+            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, background: 'var(--bg-white)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-lg)', marginTop: 2 }}>
+              {compareResults.map(p => (
+                <div key={p.id} className="ff-tm-player-row" style={{ padding: '6px 10px', cursor: 'pointer', fontSize: 12 }}
+                  onMouseDown={() => { setComparePlayer(p); setCompareQuery(''); }}>
+                  <PosBadge pos={p.pos} />
+                  <span style={{ fontWeight: 600 }}>{p.name}</span>
+                  <span style={{ color: 'var(--text-muted)', marginLeft: 4, fontSize: 10 }}>{p.team}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          {comparePlayer && (
+            <button onClick={() => { setComparePlayer(null); setCompareQuery(''); }}
+              style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 14 }}>
+              {'\u2715'}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Divider */}
@@ -166,27 +277,47 @@ function HexRadar({ dimensions, hexData, player }) {
 
       {/* Right: Chart */}
       <div className="ff-hex-radar-chart">
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 9999, padding: '4px 14px', marginBottom: 14, alignSelf: 'flex-start' }}><svg viewBox="0 0 14 16" width="12" height="13" style={{ marginRight: 2 }}><polygon points="7,1 13,4.5 13,11.5 7,15 1,11.5 1,4.5" fill="none" stroke="var(--hex-purple)" strokeWidth="1.5"/></svg><span style={{ color: 'var(--hex-purple)' }}>Hex</span>Chart</div>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 9999, padding: '4px 14px', marginBottom: 14, alignSelf: 'flex-start' }}><HexBrand word="Chart" size="sm" /></div>
       <svg width={svgSize} height={svgSize} viewBox={`0 0 ${svgSize} ${svgSize}`} style={{ display: 'block', maxWidth: '100%' }} role="img" aria-label={`HexChart for ${player.name} — ${dimensions.map(d => `${d.label}: ${Math.round(getDimensionValue(hexData.dimensions, d.key) * 100)}`).join(', ')}`}>
-        {/* Grid rings */}
+        {/* Grade bands — one per 10% ring, simple color ramp */}
+        {[
+          { inner: 0,   outer: 0.1, color: '#991b1b' },
+          { inner: 0.1, outer: 0.2, color: '#dc2626' },
+          { inner: 0.2, outer: 0.3, color: '#ea580c' },
+          { inner: 0.3, outer: 0.4, color: '#d97706' },
+          { inner: 0.4, outer: 0.5, color: '#ca8a04' },
+          { inner: 0.5, outer: 0.6, color: '#65a30d' },
+          { inner: 0.6, outer: 0.7, color: '#16a34a' },
+          { inner: 0.7, outer: 0.8, color: '#15803d' },
+          { inner: 0.8, outer: 0.9, color: '#22c55e' },
+          { inner: 0.9, outer: 1.0, color: '#8B5CF6' },
+        ].map(band => {
+          const outerPts = Array.from({ length: 6 }, (_, i) => getPoint(i, band.outer * maxR));
+          const innerPts = Array.from({ length: 6 }, (_, i) => getPoint(i, band.inner * maxR)).reverse();
+          const outerPath = outerPts.map((p, i) => (i === 0 ? 'M' : 'L') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ') + ' Z';
+          const innerPath = band.inner > 0
+            ? ' ' + innerPts.map((p, i) => (i === 0 ? 'M' : 'L') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ') + ' Z'
+            : '';
+          return <path key={band.outer} d={outerPath + innerPath} fill={band.color} fillOpacity="0.12" fillRule="evenodd" />;
+        })}
+
+        {/* Grid rings — alternating light/dark strokes for contrast */}
         {rings.map(r => {
           const ringPoints = Array.from({ length: 6 }, (_, i) => getPoint(i, r * maxR));
           const path = ringPoints.map((p, i) => (i === 0 ? 'M' : 'L') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ') + ' Z';
           const val = Math.round(r * 100);
-          const isMajor = val % 20 === 0;
+          const isOdd = (val / 10) % 2 === 1; // 10,30,50,70,90
           return <path key={r} d={path} fill="none"
-            stroke={r === 1 ? 'var(--hex-purple)' : 'var(--text-muted)'}
-            strokeWidth={r === 1 ? 4 : isMajor ? 1.5 : 1}
-            opacity={r === 1 ? 0.9 : isMajor ? 0.6 : 0.4}
-            strokeDasharray={!isMajor && r !== 1 ? '4,3' : 'none'} />;
+            stroke={r === 1 ? '#8B5CF6' : isOdd ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.25)'}
+            strokeWidth={r === 1 ? 4 : 1} />;
         })}
 
-        {/* Ring value labels along top axis — every ring */}
+        {/* Ring value labels along top axis — every ring with .0 decimal */}
         {rings.map(r => {
-          const val = Math.round(r * 100);
-          const isMajor = val % 20 === 0;
+          const val = (r * 100).toFixed(1);
+          const isMajor = Math.round(r * 100) % 20 === 0;
           return (
-            <text key={'rl' + r} x={cx + 12} y={cy - r * maxR + 5} fontSize={isMajor ? '14' : '11'} fontWeight={isMajor ? '700' : '500'} fill="var(--text-muted)" opacity={isMajor ? 0.6 : 0.35}>
+            <text key={'rl' + r} x={cx + 12} y={cy - r * maxR + 5} fontSize={isMajor ? '13' : '10'} fontWeight={isMajor ? '700' : '500'} fill="var(--text-muted)" opacity={isMajor ? 0.6 : 0.35}>
               {val}
             </text>
           );
@@ -197,6 +328,13 @@ function HexRadar({ dimensions, hexData, player }) {
           const [x, y] = getPoint(i, maxR);
           return <line key={i} x1={cx} y1={cy} x2={x} y2={y} stroke="var(--text-muted)" strokeWidth="1" opacity="0.4" />;
         })}
+
+        {/* Comparison polygon (if comparing) */}
+        {compareHexData && (() => {
+          const compPoints = dimensions.map((dim, i) => getPoint(i, getDimensionValue(compareHexData.dimensions, dim.key) * maxR * animProgress));
+          const compPath = compPoints.map((p, i) => (i === 0 ? 'M' : 'L') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ') + ' Z';
+          return <path d={compPath} fill="var(--accent-secondary)" fillOpacity="0.1" stroke="var(--accent-secondary-text)" strokeWidth="2" strokeLinejoin="round" strokeDasharray="8,4" />;
+        })()}
 
         {/* Data polygon */}
         <path d={dataPath} fill="var(--hex-purple)" fillOpacity="0.15" stroke="var(--hex-purple)" strokeWidth="2.5" strokeLinejoin="round" />
@@ -226,6 +364,24 @@ function HexRadar({ dimensions, hexData, player }) {
           <circle key={'hit' + i} cx={x} cy={y} r={20} fill="transparent" style={{ cursor: 'pointer' }}
             onMouseEnter={() => setHoveredIdx(i)} onMouseLeave={() => setHoveredIdx(null)} />
         ))}
+
+        {/* Score tooltip on hover — shows decimal value near the data point */}
+        {hoveredIdx !== null && (() => {
+          const [px, py] = dataPoints[hoveredIdx];
+          const val = (dimValues[hoveredIdx].val * 100).toFixed(1);
+          const grade = getDimGrade(dimValues[hoveredIdx].val);
+          // Position tooltip toward center so it doesn't clip outside SVG
+          const dx = cx - px, dy = cy - py;
+          const dist = Math.sqrt(dx*dx + dy*dy) || 1;
+          const offsetX = (dx / dist) * 28;
+          const offsetY = (dy / dist) * 28;
+          return (
+            <g>
+              <rect x={px + offsetX - 24} y={py + offsetY - 12} width="48" height="22" rx="6" fill="var(--bg-white)" stroke={grade.color} strokeWidth="1.5" />
+              <text x={px + offsetX} y={py + offsetY + 4} textAnchor="middle" fontSize="12" fontWeight="800" fill={grade.color}>{val}</text>
+            </g>
+          );
+        })()}
 
         {/* Dimension labels inside SVG — no overflow, no layout shift */}
         {dimValues.map((d, i) => {
@@ -350,15 +506,9 @@ export default function PlayerStats({ playerId, onBack }) {
           display: 'flex', alignItems: 'stretch', gap: 0,
           background: `linear-gradient(135deg, ${teamColor}10, ${teamColor}04, transparent)`,
         }}>
-          {/* Left: Photo + Team Logo */}
+          {/* Left: Photo */}
           <div style={{ display: 'flex', alignItems: 'flex-end', padding: '16px 0 0 20px', flexShrink: 0 }}>
-            <div style={{ position: 'relative' }}>
-              <PlayerHeadshot espnId={getEspnId(player.name)} name={player.name} size="lg" pos={player.pos} team={player.team} />
-              {nflTeam?.logo && (
-                <img src={nflTeam.logo} alt={nflTeam.name} loading="lazy"
-                  style={{ position: 'absolute', top: 4, left: 4, width: 28, height: 28, objectFit: 'contain', opacity: 0.8 }} />
-              )}
-            </div>
+            <PlayerHeadshot espnId={getEspnId(player.name)} name={player.name} size="lg" pos={player.pos} team={player.team} />
           </div>
 
           {/* Center: Name + Metadata */}
@@ -402,7 +552,7 @@ export default function PlayerStats({ playerId, onBack }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 0, borderLeft: '1px solid var(--border)', flexShrink: 0 }}>
             {/* Projection — hero number */}
             <div style={{ textAlign: 'center', padding: '16px 20px' }}>
-              <div style={{ fontSize: 32, fontWeight: 900, lineHeight: 1 }} className="tabular-nums">{player.proj}</div>
+              <div style={{ fontSize: 32, fontWeight: 900, lineHeight: 1 }} className="tabular-nums"><AnimatedNumber value={player.proj} /></div>
               <div style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginTop: 3 }}>Proj</div>
             </div>
             {/* Avg + Last — secondary stats */}
@@ -450,7 +600,7 @@ export default function PlayerStats({ playerId, onBack }) {
                   <polygon points="44,8 78,27 78,69 44,88 10,69 10,27" fill="none" stroke="currentColor" strokeWidth="1" className={intensityClass} opacity="0.2" />
                 </svg>
                 <div className={`tabular-nums ${intensityClass}`} style={{ fontSize: 36, fontWeight: 900, lineHeight: 1, position: 'relative', zIndex: 1 }}>
-                  {formatHex(score)}
+                  <AnimatedNumber value={score} duration={600} decimals={0} />
                 </div>
               </div>
               <div style={{
@@ -462,7 +612,7 @@ export default function PlayerStats({ playerId, onBack }) {
               </div>
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}><svg viewBox="0 0 14 16" width="14" height="15" style={{ verticalAlign: '-2px', marginRight: 4 }}><polygon points="7,1 13,4.5 13,11.5 7,15 1,11.5 1,4.5" fill="var(--hex-purple)" fillOpacity="0.15" stroke="var(--hex-purple)" strokeWidth="1.5"/></svg><span style={{ color: 'var(--hex-purple)' }}>Hex</span>Score</div>
+              <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}><HexBrand word="Score" size="md" filled /></div>
               <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: 8 }}>
                 {TIER_DESCRIPTIONS[tier.tier]}
               </div>
@@ -483,7 +633,7 @@ export default function PlayerStats({ playerId, onBack }) {
           {/* Dimension Breakdown */}
           <div style={{ padding: '16px 24px' }}>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 9999, padding: '4px 14px', marginBottom: 12 }}>
-              <svg viewBox="0 0 14 16" width="11" height="12"><polygon points="7,1 13,4.5 13,11.5 7,15 1,11.5 1,4.5" fill="none" stroke="var(--hex-purple)" strokeWidth="1.5"/></svg><span style={{ color: 'var(--hex-purple)' }}>Hex</span>Stats Breakdown
+              <HexBrand word="Stats" size="sm" /> Breakdown
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {HEX_DIMENSIONS.map(dim => {
@@ -523,7 +673,7 @@ export default function PlayerStats({ playerId, onBack }) {
             fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5,
             background: 'var(--surface)',
           }}>
-            <span style={{ color: 'var(--hex-purple)' }}>Hex</span>Score is a composite rating from 0-100 that evaluates fantasy value across production history, positional scarcity, team situation, health, and career trajectory. Higher scores indicate greater expected fantasy impact.
+            <HexBrand word="Score" icon={false} /> is a composite rating from 0-100 that evaluates fantasy value across production history, positional scarcity, team situation, health, and career trajectory. Higher scores indicate greater expected fantasy impact.
           </div>
         </div>
       )}

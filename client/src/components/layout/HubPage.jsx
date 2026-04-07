@@ -72,7 +72,10 @@ export default function HubPage() {
           </div>
           <div className="ff-card-body">
             {leaguesLoading ? (
-              <div className="ff-loading-inline">Loading leagues...</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 8 }}>
+                <div className="skeleton" style={{ height: 60, borderRadius: 8 }} />
+                <div className="skeleton" style={{ height: 60, borderRadius: 8 }} />
+              </div>
             ) : leagues.length === 0 ? (
               <div className="ff-empty-state">
                 <div className="ff-empty-state-title">No leagues yet</div>

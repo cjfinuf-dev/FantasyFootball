@@ -1,12 +1,14 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { TEAMS, USER_TEAM_ID } from '../../data/teams';
 import { PLAYERS } from '../../data/players';
 import { ROSTER_PRESETS } from '../../data/scoring';
 import { getEspnId } from '../../data/espnIds';
 import { getHexScore, getHexData, formatHex } from '../../utils/hexScore';
 import PosBadge from '../ui/PosBadge';
+import HexBrand from '../ui/HexBrand';
 import PlayerHeadshot from '../ui/PlayerHeadshot';
 import PlayerLink from '../ui/PlayerLink';
+import AnimatedNumber from '../ui/AnimatedNumber';
 
 const PLAYER_MAP = {};
 PLAYERS.forEach(p => { PLAYER_MAP[p.id] = p; });
@@ -96,6 +98,20 @@ function assignToSlots(playerIds) {
 // Dual Hex Radar Chart — matches player HexChart visual settings
 function DualHexRadar({ dimsA, dimsB, teamA, teamB }) {
   const [hoveredIdx, setHoveredIdx] = useState(null);
+  const [animProgress, setAnimProgress] = useState(0);
+  const animRef = useRef(null);
+
+  useEffect(() => {
+    const start = performance.now();
+    const duration = 700;
+    const animate = (now) => {
+      const t = Math.min((now - start) / duration, 1);
+      setAnimProgress(1 - Math.pow(1 - t, 3));
+      if (t < 1) animRef.current = requestAnimationFrame(animate);
+    };
+    animRef.current = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(animRef.current);
+  }, []);
 
   const maxR = 262;
   const mPillW = 125, mPillH = 36, mPillGap = 22;
@@ -112,7 +128,7 @@ function DualHexRadar({ dimsA, dimsB, teamA, teamB }) {
   };
 
   const buildPath = (dims) =>
-    dims.map((v, i) => getPoint(i, v * maxR))
+    dims.map((v, i) => getPoint(i, v * maxR * animProgress))
       .map((p, i) => (i === 0 ? 'M' : 'L') + p[0].toFixed(1) + ',' + p[1].toFixed(1))
       .join(' ') + ' Z';
 
@@ -154,11 +170,11 @@ function DualHexRadar({ dimsA, dimsB, teamA, teamB }) {
               <div style={{ display: 'flex', gap: 16, marginBottom: 12 }}>
                 <div style={{ flex: 1, textAlign: 'center', padding: '10px', borderRadius: 8, background: aWins ? 'var(--accent-10)' : 'transparent' }}>
                   <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--hex-purple)', marginBottom: 4 }}>{teamA.name}</div>
-                  <div style={{ fontSize: 28, fontWeight: 800 }} className="tabular-nums">{Math.round(dimsA[hoveredIdx] * 100)}</div>
+                  <div style={{ fontSize: 28, fontWeight: 800 }} className="tabular-nums">{(dimsA[hoveredIdx] * 100).toFixed(1)}</div>
                 </div>
                 <div style={{ flex: 1, textAlign: 'center', padding: '10px', borderRadius: 8, background: !aWins ? 'var(--accent-10)' : 'transparent' }}>
                   <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent-secondary-text)', marginBottom: 4 }}>{teamB.name}</div>
-                  <div style={{ fontSize: 28, fontWeight: 800 }} className="tabular-nums">{Math.round(dimsB[hoveredIdx] * 100)}</div>
+                  <div style={{ fontSize: 28, fontWeight: 800 }} className="tabular-nums">{(dimsB[hoveredIdx] * 100).toFixed(1)}</div>
                 </div>
               </div>
               {diff > 0 && (
@@ -186,27 +202,46 @@ function DualHexRadar({ dimsA, dimsB, teamA, teamB }) {
       {/* Right: Chart */}
       <div className="ff-hex-radar-chart">
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 9999, padding: '4px 14px', marginBottom: 14, alignSelf: 'flex-start' }}>
-          <svg viewBox="0 0 14 16" width="12" height="13"><polygon points="7,1 13,4.5 13,11.5 7,15 1,11.5 1,4.5" fill="none" stroke="var(--hex-purple)" strokeWidth="1.5"/></svg>
-          <span style={{ color: 'var(--hex-purple)' }}>Hex</span>Analysis
+<HexBrand word="Analysis" size="sm" />
         </div>
         <svg width={svgSize} height={svgSize} viewBox={`0 0 ${svgSize} ${svgSize}`} style={{ display: 'block', maxWidth: '100%' }} role="img" aria-label={`HexAnalysis comparison: ${teamA.name} vs ${teamB.name}`}>
-          {/* Grid rings */}
+          {/* Grade bands — one per 10% ring */}
+          {[
+            { inner: 0,   outer: 0.1, color: '#991b1b' },
+            { inner: 0.1, outer: 0.2, color: '#dc2626' },
+            { inner: 0.2, outer: 0.3, color: '#ea580c' },
+            { inner: 0.3, outer: 0.4, color: '#d97706' },
+            { inner: 0.4, outer: 0.5, color: '#ca8a04' },
+            { inner: 0.5, outer: 0.6, color: '#65a30d' },
+            { inner: 0.6, outer: 0.7, color: '#16a34a' },
+            { inner: 0.7, outer: 0.8, color: '#15803d' },
+            { inner: 0.8, outer: 0.9, color: '#22c55e' },
+            { inner: 0.9, outer: 1.0, color: '#8B5CF6' },
+          ].map(band => {
+            const outerPts = Array.from({ length: 6 }, (_, i) => getPoint(i, band.outer * maxR));
+            const innerPts = Array.from({ length: 6 }, (_, i) => getPoint(i, band.inner * maxR)).reverse();
+            const outerPath = outerPts.map((p, i) => (i === 0 ? 'M' : 'L') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ') + ' Z';
+            const innerPath = band.inner > 0
+              ? ' ' + innerPts.map((p, i) => (i === 0 ? 'M' : 'L') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ') + ' Z'
+              : '';
+            return <path key={band.outer} d={outerPath + innerPath} fill={band.color} fillOpacity="0.12" fillRule="evenodd" />;
+          })}
+
+          {/* Grid rings — alternating light/dark strokes for contrast */}
           {rings.map(r => {
             const pts = Array.from({ length: 6 }, (_, i) => getPoint(i, r * maxR));
             const path = pts.map((p, i) => (i === 0 ? 'M' : 'L') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ') + ' Z';
             const val = Math.round(r * 100);
-            const isMajor = val % 20 === 0;
+            const isOdd = (val / 10) % 2 === 1;
             return <path key={r} d={path} fill="none"
-              stroke={r === 1 ? 'var(--hex-purple)' : 'var(--text-muted)'}
-              strokeWidth={r === 1 ? 4 : isMajor ? 1.5 : 1}
-              opacity={r === 1 ? 0.9 : isMajor ? 0.6 : 0.4}
-              strokeDasharray={!isMajor && r !== 1 ? '4,3' : 'none'} />;
+              stroke={r === 1 ? '#8B5CF6' : isOdd ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.25)'}
+              strokeWidth={r === 1 ? 4 : 1} />;
           })}
 
-          {/* Ring value labels — every ring */}
+          {/* Ring value labels — every ring with .0 decimal */}
           {rings.map(r => {
-            const val = Math.round(r * 100);
-            const isMajor = val % 20 === 0;
+            const val = (r * 100).toFixed(1);
+            const isMajor = Math.round(r * 100) % 20 === 0;
             return (
               <text key={'rl' + r} x={cx + 10} y={cy - r * maxR + 4} fontSize={isMajor ? '12' : '10'} fontWeight={isMajor ? '700' : '500'} fill="var(--text-muted)" opacity={isMajor ? 0.6 : 0.35}>
                 {val}
@@ -225,6 +260,26 @@ function DualHexRadar({ dimsA, dimsB, teamA, teamB }) {
 
           {/* Team B polygon */}
           <path d={pathB} fill="var(--accent-secondary)" fillOpacity="0.12" stroke="var(--accent-secondary-text)" strokeWidth="2.5" strokeLinejoin="round" strokeDasharray="8,4" />
+
+          {/* Score tooltips on hover — show both teams' decimal values */}
+          {hoveredIdx !== null && (() => {
+            const aVal = (dimsA[hoveredIdx] * 100).toFixed(1);
+            const bVal = (dimsB[hoveredIdx] * 100).toFixed(1);
+            const [ax, ay] = dimsA[hoveredIdx] > 0 ? getPoint(hoveredIdx, dimsA[hoveredIdx] * maxR) : [cx, cy];
+            const [bx, by] = dimsB[hoveredIdx] > 0 ? getPoint(hoveredIdx, dimsB[hoveredIdx] * maxR) : [cx, cy];
+            const aDx = cx - ax, aDy = cy - ay, aDist = Math.sqrt(aDx*aDx + aDy*aDy) || 1;
+            const bDx = cx - bx, bDy = cy - by, bDist = Math.sqrt(bDx*bDx + bDy*bDy) || 1;
+            return (
+              <g>
+                {/* Team A value */}
+                <rect x={ax + (aDx/aDist)*24 - 22} y={ay + (aDy/aDist)*24 - 11} width="44" height="20" rx="5" fill="var(--hex-purple)" fillOpacity="0.9" />
+                <text x={ax + (aDx/aDist)*24} y={ay + (aDy/aDist)*24 + 4} textAnchor="middle" fontSize="11" fontWeight="800" fill="#fff">{aVal}</text>
+                {/* Team B value */}
+                <rect x={bx + (bDx/bDist)*24 - 22} y={by + (bDy/bDist)*24 - 11} width="44" height="20" rx="5" fill="var(--accent-secondary-text)" fillOpacity="0.8" />
+                <text x={bx + (bDx/bDist)*24} y={by + (bDy/bDist)*24 + 4} textAnchor="middle" fontSize="11" fontWeight="800" fill="#fff">{bVal}</text>
+              </g>
+            );
+          })()}
 
           {/* Dimension labels + hover targets */}
           {MATCHUP_DIMS.map((dim, i) => {
@@ -302,7 +357,7 @@ export default function MatchupDetail({ matchup, rosters, onBack, onPlayerClick 
               <div style={{ fontSize: 18, fontWeight: 800 }}>{homeTeam.name}</div>
               <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{homeTeam.wins}-{homeTeam.losses} &middot; {homeTeam.streak}</div>
               <div style={{ fontSize: 36, fontWeight: 900, marginTop: 8, color: homeProj >= awayProj ? 'var(--success-green)' : 'var(--text)' }} className="tabular-nums">
-                {homeProj.toFixed(2)}
+                <AnimatedNumber value={homeProj} decimals={2} duration={600} />
               </div>
               <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Projected</div>
             </div>
@@ -317,7 +372,7 @@ export default function MatchupDetail({ matchup, rosters, onBack, onPlayerClick 
               <div style={{ fontSize: 18, fontWeight: 800 }}>{awayTeam.name}</div>
               <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{awayTeam.wins}-{awayTeam.losses} &middot; {awayTeam.streak}</div>
               <div style={{ fontSize: 36, fontWeight: 900, marginTop: 8, color: awayProj >= homeProj ? 'var(--success-green)' : 'var(--text)' }} className="tabular-nums">
-                {awayProj.toFixed(2)}
+                <AnimatedNumber value={awayProj} decimals={2} duration={600} />
               </div>
               <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Projected</div>
             </div>

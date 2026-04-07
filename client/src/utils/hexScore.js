@@ -23,12 +23,11 @@
 
 import { PLAYERS } from '../data/players';
 import { ROSTER_PRESETS } from '../data/scoring';
-import { PLAYER_USAGE } from '../data/playerUsage';
-import { computeDurability } from '../data/injuryProfiles';
 import { TEAM_PROFILES, SCHEME_FIT, SITUATION_CHANGES } from '../data/teamProfiles';
-import { getPlayerArchetype } from '../data/playerArchetypes';
 import { getPlayerAge } from '../data/playerAges';
 import { HISTORICAL_STATS } from '../data/historicalStats';
+import { calcStatProduction } from './statProduction';
+import { classifyArchetype } from './archetypeClassifier';
 
 const PLAYER_MAP = {};
 PLAYERS.forEach(p => { PLAYER_MAP[p.id] = p; });
@@ -104,18 +103,19 @@ function getWeightedProduction(playerId) {
   return avgs[0];
 }
 
-// ─── Base scarcity curve parameters ───
-// k controls how fast value drops off by rank. Higher k = steeper drop = more top-heavy.
-// QB k raised because the gap between QB1 and QB12 is massive in real fantasy.
-// TE k lowered because replacement TEs are readily available — the TE1-TE8 gap is
-// much smaller than other positions. The old k=0.14 made TE1 feel as scarce as QB1.
+// ─── Scarcity — pure positional rank ───
+// Scarcity is simply where you rank among rosterable players at your position.
+// Best player = 1.0, worst = ~0. No exponential curves or arbitrary k values —
+// the score IS "how many players at your position would you drop before this one."
+// Startable thresholds retained only for the getScarcityCurve API (used by
+// slot value and draft value calculations).
 const SCARCITY_CURVES = {
-  QB:  { k: 0.09, startable: 12 },
-  RB:  { k: 0.10, startable: 24 },
-  WR:  { k: 0.08, startable: 24 },
-  TE:  { k: 0.08, startable: 12 },
-  K:   { k: 0.04, startable: 12 },
-  DEF: { k: 0.05, startable: 12 },
+  QB:  { startable: 12 },
+  RB:  { startable: 24 },
+  WR:  { startable: 24 },
+  TE:  { startable: 12 },
+  K:   { startable: 12 },
+  DEF: { startable: 12 },
 };
 
 // ─── Scoring format profiles ───
@@ -125,53 +125,43 @@ const SCARCITY_CURVES = {
 const SCORING_PROFILES = {
   standard: {
     prodMultiplier: { QB: 1.0, RB: 1.15, WR: 0.95, TE: 0.90, K: 1.0, DEF: 1.0 },
-    scarcityOverrides: { RB: { k: 0.12 } },
     slotValueOverrides: {},
   },
   ppr: {
     prodMultiplier: { QB: 1.0, RB: 1.0, WR: 1.15, TE: 1.05, K: 1.0, DEF: 1.0 },
-    scarcityOverrides: { TE: { k: 0.09 } },
     slotValueOverrides: {},
   },
   halfPpr: {
     prodMultiplier: { QB: 1.0, RB: 1.05, WR: 1.08, TE: 1.05, K: 1.0, DEF: 1.0 },
-    scarcityOverrides: {},
     slotValueOverrides: {},
   },
   sixPtPassTd: {
     prodMultiplier: { QB: 1.25, RB: 0.95, WR: 0.95, TE: 0.95, K: 1.0, DEF: 1.0 },
-    scarcityOverrides: { QB: { k: 0.09 } },
     slotValueOverrides: { productionOverride: { QB: 1.10 } },
   },
   tePremium: {
     prodMultiplier: { QB: 1.0, RB: 1.0, WR: 1.10, TE: 1.20, K: 1.0, DEF: 1.0 },
-    scarcityOverrides: { TE: { k: 0.10 } },
     slotValueOverrides: { productionOverride: { TE: 0.60 } },
   },
   superflex: {
     prodMultiplier: { QB: 1.20, RB: 0.95, WR: 0.95, TE: 0.95, K: 1.0, DEF: 1.0 },
-    scarcityOverrides: { QB: { k: 0.09 } },
     slotValueOverrides: { extraFlexSlots: { QB: ['SFLEX'] } },
   },
   dynasty: {
     prodMultiplier: { QB: 1.0, RB: 1.0, WR: 1.05, TE: 1.0, K: 0.80, DEF: 0.80 },
-    scarcityOverrides: {},
     slotValueOverrides: {},
     ageWeightOverride: 0.14,
   },
 };
 
-const DEFAULT_PROFILE = { prodMultiplier: { QB: 1.0, RB: 1.0, WR: 1.0, TE: 1.0, K: 1.0, DEF: 1.0 }, scarcityOverrides: {} };
+const DEFAULT_PROFILE = { prodMultiplier: { QB: 1.0, RB: 1.0, WR: 1.0, TE: 1.0, K: 1.0, DEF: 1.0 } };
 
 function getScoringProfile(preset) {
   return SCORING_PROFILES[preset] || DEFAULT_PROFILE;
 }
 
-function getScarcityCurve(pos, preset) {
-  const base = SCARCITY_CURVES[pos] || { k: 0.08, startable: 12 };
-  const profile = getScoringProfile(preset);
-  const override = profile.scarcityOverrides[pos];
-  return override ? { ...base, ...override } : base;
+function getScarcityCurve(pos) {
+  return SCARCITY_CURVES[pos] || { startable: 12 };
 }
 
 // ─── Other constants ───
@@ -255,6 +245,38 @@ const AGE_CURVES = {
   K:   { primeStart: 25, peak: 31, primeEnd: 36, cliff: 40, declineRate: 0.04 },
 };
 
+/**
+ * Age-based recovery factor for injury/durability discounting.
+ * Young players in their prime recover from injuries — their missed time
+ * is more likely a fluke than structural decline. Older players past their
+ * prime get little to no recovery benefit.
+ *
+ * Returns 0-0.50: fraction of the durability/consistency penalty to recover.
+ */
+function getAgeRecoveryFactor(age, pos) {
+  if (pos === 'DEF' || age === null) return 0.0;
+  const curve = AGE_CURVES[pos];
+  if (!curve) return 0.0;
+
+  const primeCenter = (curve.primeStart + curve.primeEnd) / 2;
+
+  if (age < curve.primeStart) return 0.50;  // Pre-prime: young bodies heal fast
+  if (age <= primeCenter)     return 0.40;  // Early prime: strong recovery
+  if (age <= curve.primeEnd)  return 0.25;  // Late prime: moderate recovery
+  if (age <= curve.cliff)     return 0.10;  // Post-prime: minimal recovery
+  return 0.0;                               // Past cliff: injuries = decline
+}
+
+/**
+ * Adjust season-aggregate share metrics for games played.
+ * Mirrors the same logic in statProduction.js for X-Factor calculations.
+ */
+function adjustShareForGP(shareValue, gp, maxGP = 17) {
+  if (!shareValue || !gp || gp >= maxGP * 0.75) return shareValue;
+  const scaleFactor = Math.min(2.0, maxGP / gp);
+  return shareValue * scaleFactor * 0.85;
+}
+
 function calcAgeFactor(age, pos) {
   if (pos === 'DEF' || age === null) return 1.0;
 
@@ -305,11 +327,10 @@ function buildPositionGroups(players, preset) {
 }
 
 function rawProduction(p) {
-  const historical = getWeightedProduction(p.id);
-  // Current-season signal: blend season avg (stable) + weekly proj (timely)
-  const currentSeason = (p.avg * 0.6) + (p.proj * 0.4);
-  // 60% historical (already heavily weights most recent year), 40% current season
-  return (historical * 0.60) + (currentSeason * 0.40);
+  // Stat-based production: multi-dimensional sub-score from real stats.
+  // calcStatProduction handles historical blending (65/20/10/5 year weights)
+  // and 60/40 historical vs current-season blend internally.
+  return calcStatProduction(p);
 }
 
 // ─── Dimension calculators ───
@@ -336,22 +357,59 @@ function calcProduction(player, posGroup, preset) {
   return range > 0 ? (raw - min) / range : 0.5;
 }
 
-function calcScarcity(player, posGroup, preset) {
-  const curve = getScarcityCurve(player.pos, preset);
+function calcScarcity(player, posGroup) {
+  const count = posGroup.length;
+  if (count <= 1) return 1.0;
   const rank = posGroup.indexOf(player) + 1;
-  const decay = Math.exp(-curve.k * (rank - 1));
-  const starterBonus = rank <= curve.startable ? 1.0 : 0.7;
-  return decay * starterBonus;
+  // Pure positional rank: best = 1.0, worst ≈ 0.
+  // "How many players at your position would you drop before this one?"
+  return (count - rank) / (count - 1);
 }
 
-function calcConsistency(player) {
-  const values = [player.pts, player.proj, player.avg];
-  const mean = values.reduce((s, v) => s + v, 0) / values.length;
-  if (mean <= 0) return 0;
-  const variance = values.reduce((s, v) => s + Math.pow(v - mean, 2), 0) / values.length;
-  const stdDev = Math.sqrt(variance);
-  const cv = stdDev / mean;
-  return Math.max(0, Math.min(1, 1 - (cv * 2)));
+function calcConsistency(player, age = null, pos = null) {
+  const history = _historicalData?.players?.[player.id];
+  if (!history) {
+    // No history: use current-season GP as sole availability signal
+    const gp = player.gp || 0;
+    return Math.min(1, gp / 17) * 0.50 + 0.50 * 0.50; // neutral production consistency
+  }
+
+  const years = Object.keys(history).map(Number).sort((a, b) => b - a);
+  if (years.length === 0) return 0.50;
+
+  // Availability Consistency (50%): how reliably does this player play 17 games?
+  const gpScores = years.map(y => Math.min(1, (history[String(y)]?.gp || 0) / 17));
+  const avgAvail = gpScores.reduce((s, v) => s + v, 0) / gpScores.length;
+  let availCV = 0;
+  if (gpScores.length >= 2 && avgAvail > 0) {
+    const variance = gpScores.reduce((s, v) => s + Math.pow(v - avgAvail, 2), 0) / gpScores.length;
+    availCV = Math.sqrt(variance) / avgAvail;
+  }
+  const availabilityConsistency = Math.max(0, Math.min(1, avgAvail * (1 - availCV)));
+
+  // Production Consistency (50%): how stable is season-to-season output?
+  const seasonProds = years
+    .map(y => history[String(y)])
+    .filter(s => s && s.gp >= 4) // filter cup-of-coffee seasons
+    .map(s => s.avgPts || 0)
+    .filter(v => v > 0);
+
+  let productionConsistency = 0.50; // neutral default (rookies, 1-season players)
+  if (seasonProds.length >= 2) {
+    const mean = seasonProds.reduce((s, v) => s + v, 0) / seasonProds.length;
+    if (mean > 0) {
+      const variance = seasonProds.reduce((s, v) => s + Math.pow(v - mean, 2), 0) / seasonProds.length;
+      const cv = Math.sqrt(variance) / mean;
+      productionConsistency = Math.max(0, Math.min(1, 1 - cv * 1.5));
+    }
+  }
+
+  // Age-mitigated availability: young prime-age players recover a portion of
+  // the availability penalty — missing games at 25 is less predictive than at 32.
+  const ageRecovery = getAgeRecoveryFactor(age, pos);
+  const adjustedAvailability = availabilityConsistency + (1.0 - availabilityConsistency) * ageRecovery * 0.5;
+
+  return (adjustedAvailability * 0.50) + (productionConsistency * 0.50);
 }
 
 // ─── Situation Score ───
@@ -442,6 +500,39 @@ function calcHealth(player) {
   return HEALTH_MULTIPLIERS[player.status] || 0.5;
 }
 
+// ─── Durability from Real GP Data ───
+// Replaces the fabricated injuryProfiles.js data with actual games-played
+// from HISTORICAL_STATS across the most recent 3 seasons.
+
+function calcDurabilityFromHistory(playerId) {
+  const history = _historicalData?.players?.[playerId];
+  if (!history) return 0.70; // unknown = slightly below average
+
+  const years = Object.keys(history).map(Number).sort((a, b) => b - a);
+  const recentYears = years.slice(0, 3);
+  if (recentYears.length === 0) return 0.70;
+
+  // Raw availability: games played / max possible (17 per season)
+  const totalGP = recentYears.reduce((sum, y) => sum + (history[String(y)]?.gp || 0), 0);
+  const maxGP = recentYears.length * 17;
+  const availability = totalGP / maxGP;
+
+  // Trend bonus: reward improving GP, penalize declining
+  let trendBonus = 0;
+  if (recentYears.length >= 2) {
+    const recentGP = history[String(recentYears[0])]?.gp || 0;
+    const priorGP = history[String(recentYears[1])]?.gp || 0;
+    if (recentGP > priorGP) trendBonus = 0.03;
+    else if (recentGP < priorGP - 3) trendBonus = -0.05;
+  }
+
+  // Severity proxy: seasons with GP <= 8 count as major miss events
+  const majorMisses = recentYears.filter(y => (history[String(y)]?.gp || 0) <= 8).length;
+  const severityPenalty = majorMisses * 0.08;
+
+  return Math.max(0.10, Math.min(1.0, availability + trendBonus - severityPenalty));
+}
+
 function calcRosterContext(player, rosterPlayerIds, allPlayers) {
   if (!rosterPlayerIds || rosterPlayerIds.length === 0) return 1.0;
   const counts = {};
@@ -499,7 +590,7 @@ function calcSlotValue(pos, scoringPreset) {
   const slotEligibility = maxEligible > 0 ? totalEligible / maxEligible : 0.5;
 
   // 2. Demand pressure: effective demand (including flex competition) vs supply
-  const curve = getScarcityCurve(pos, scoringPreset);
+  const curve = getScarcityCurve(pos);
   const dedicated = overrides.dedicatedOverride?.[pos] ?? (roster[pos] || 0);
   const isFlexEligible = Object.values(FLEX_SLOT_ELIGIBILITY).some(e => e.includes(pos));
   const flexSlots = totalEligible - dedicated;
@@ -525,42 +616,57 @@ function calcSlotValue(pos, scoringPreset) {
 }
 
 // ─── X-Factor (Usage Rating) ───
-// Measures how much a team relies on a specific player — target share,
-// touch share, snap dominance. Players who are hyper-targeted (McBride,
-// Bowers) get a meaningful boost over low-usage players at the same position.
-
-const XFACTOR_DEFAULTS = {
-  QB:  { rushShare: 0.08, snapShare: 0.95 },
-  RB:  { touchShare: 0.12, snapShare: 0.45, redZoneShare: 0.12 },
-  WR:  { targetShare: 0.14, snapShare: 0.75, redZoneShare: 0.10 },
-  TE:  { targetShare: 0.10, snapShare: 0.65, redZoneShare: 0.08 },
-  K:   {},
-  DEF: {},
-};
+// Measures how much a team relies on a specific player using real inline stats
+// from the player object (carries, tgtShare, airShare, wopr, rushYds, etc.)
+// instead of the separately-maintained playerUsage.js file.
 
 function calcXFactor(player) {
-  const usage = PLAYER_USAGE[player.id] || XFACTOR_DEFAULTS[player.pos] || {};
+  const gp = player.gp || 1;
 
   switch (player.pos) {
     case 'QB': {
       // QB X-Factor = rushing involvement (dual-threat premium)
-      const rush = usage.rushShare || 0.08;
-      return Math.min(1.0, rush * 3.5);
+      const rushYdsPerGm = (player.rushYds || 0) / gp;
+      const rushTdPerGm = (player.rushTd || 0) / gp;
+      const carriesPerGm = (player.carries || 0) / gp;
+      const rushEpaPerGm = (player.rushEpa || 0) / gp;
+      return Math.min(1.0,
+        (Math.min(1, rushYdsPerGm / 40) * 0.35) +
+        (Math.min(1, rushTdPerGm / 0.5) * 0.25) +
+        (Math.min(1, carriesPerGm / 7) * 0.20) +
+        (Math.min(1, Math.max(0, rushEpaPerGm) / 3) * 0.20)
+      );
     }
     case 'RB': {
-      // RB X-Factor = touch dominance + red zone role + snap share
-      const touch = usage.touchShare || 0.12;
-      const rz = usage.redZoneShare || 0.12;
-      const snap = usage.snapShare || 0.45;
-      return Math.min(1.0, (touch * 2.0) * 0.45 + (rz * 2.5) * 0.30 + snap * 0.25);
+      // RB X-Factor = workload dominance + receiving role
+      const carriesPerGm = (player.carries || 0) / gp;
+      const tgtShare = adjustShareForGP(player.tgtShare || 0, gp);
+      const recPerGm = (player.rec || 0) / gp;
+      return Math.min(1.0,
+        (Math.min(1, carriesPerGm / 20) * 0.40) +
+        (Math.min(1, tgtShare / 0.18) * 0.35) +
+        (Math.min(1, recPerGm / 5) * 0.25)
+      );
     }
-    case 'WR':
+    case 'WR': {
+      // WR X-Factor = target dominance + air yards share + WOPR
+      const tgtShare = adjustShareForGP(player.tgtShare || 0, gp);
+      const airShare = adjustShareForGP(player.airShare || 0, gp);
+      const wopr = adjustShareForGP(player.wopr || 0, gp);
+      return Math.min(1.0,
+        (Math.min(1, tgtShare / 0.28) * 0.40) +
+        (Math.min(1, airShare / 0.35) * 0.25) +
+        (Math.min(1, wopr / 0.70) * 0.35)
+      );
+    }
     case 'TE': {
-      // WR/TE X-Factor = target dominance + red zone + snap share
-      const target = usage.targetShare || 0.14;
-      const rz = usage.redZoneShare || 0.10;
-      const snap = usage.snapShare || 0.70;
-      return Math.min(1.0, (target * 2.8) * 0.50 + (rz * 3.0) * 0.25 + snap * 0.25);
+      // TE X-Factor = target dominance (different thresholds than WR)
+      const tgtShare = adjustShareForGP(player.tgtShare || 0, player.gp || 1);
+      const recPerGm = (player.rec || 0) / gp;
+      return Math.min(1.0,
+        (Math.min(1, tgtShare / 0.22) * 0.55) +
+        (Math.min(1, recPerGm / 7) * 0.45)
+      );
     }
     default:
       return 0.5;
@@ -618,18 +724,24 @@ export function computeAllHexScores(players = PLAYERS, rosterContext = null, sco
 
   players.forEach(p => {
     const posGroup = posGroups[p.pos] || [p];
-    const archetype = getPlayerArchetype(p.id, p.pos);
+    const archetype = classifyArchetype(p, p.pos);
 
     // Base dimensions
     let production = calcProduction(p, posGroup, scoringPreset);
-    const scarcity = calcScarcity(p, posGroup, scoringPreset);
-    let consistency = calcConsistency(p);
+    const scarcity = calcScarcity(p, posGroup);
+    const age = getPlayerAge(p.id);
+    let consistency = calcConsistency(p, age, p.pos);
     const situation = calcSituation(p, players);
     const health = calcHealth(p);
-    const durability = computeDurability(p.id);
+    const rawDurability = calcDurabilityFromHistory(p.id);
     const context = calcRosterContext(p, rosterContext, players);
-    const age = getPlayerAge(p.id);
     const ageFactor = calcAgeFactor(age, p.pos);
+
+    // Age-mitigated durability: young prime-age players recover a portion
+    // of the durability penalty — a 25-year-old missing time to a freak
+    // injury is fundamentally different from a 32-year-old breaking down.
+    const ageRecovery = getAgeRecoveryFactor(age, p.pos);
+    const durability = rawDurability + (1.0 - rawDurability) * ageRecovery;
 
     // Apply archetype adjustments
     // Fantasy premium boosts production (dual-threat QBs, bell-cow RBs, alpha WRs)

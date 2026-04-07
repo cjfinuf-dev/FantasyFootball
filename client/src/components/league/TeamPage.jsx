@@ -7,6 +7,7 @@ import { getHexScore, getHexTier, formatHex } from '../../utils/hexScore';
 import PosBadge from '../ui/PosBadge';
 import PlayerHeadshot from '../ui/PlayerHeadshot';
 import PlayerLink from '../ui/PlayerLink';
+import HexBrand from '../ui/HexBrand';
 
 const PLAYER_MAP = {};
 PLAYERS.forEach(p => { PLAYER_MAP[p.id] = p; });
@@ -108,7 +109,7 @@ export default function TeamPage({ teamId, rosters, onBack, onPlayerClick }) {
             </div>
             <div>
               <div style={{ fontSize: 24, fontWeight: 800, lineHeight: 1, color: 'var(--hex-purple)' }} className="tabular-nums">{Math.round(totalHex)}</div>
-              <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginTop: 2 }}><span style={{ color: 'var(--hex-purple)' }}>Hex</span>Score</div>
+              <div style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', marginTop: 2 }}><HexBrand word="Score" icon={false} /></div>
             </div>
             <div>
               <div style={{ fontSize: 24, fontWeight: 800, lineHeight: 1 }} className="tabular-nums">{startersFilled}/{starterSlots.length}</div>

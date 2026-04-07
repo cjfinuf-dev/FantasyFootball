@@ -6,6 +6,7 @@ import { getEspnId } from '../../data/espnIds';
 import PosBadge from '../ui/PosBadge';
 import PlayerHeadshot from '../ui/PlayerHeadshot';
 import PlayerLink from '../ui/PlayerLink';
+import HexBrand from '../ui/HexBrand';
 
 const PLAYER_MAP = {};
 PLAYERS.forEach(p => { PLAYER_MAP[p.id] = p; });
@@ -182,7 +183,7 @@ function MatchupCard({ matchup, expanded, rosters, onPlayerClick, onToggle, onMa
         <div style={{ padding: '8px 16px', borderTop: '1px solid var(--border)', textAlign: 'center' }}>
           <button className="ff-btn ff-btn-secondary ff-btn-sm" onClick={(e) => { e.stopPropagation(); onMatchupClick(matchup.id); }}
             style={{ fontSize: 11 }}>
-            View Full <span style={{ color: 'var(--hex-purple)' }}>Hex</span>Analysis
+            View Full <HexBrand word="Analysis" icon={false} />
           </button>
         </div>
       )}

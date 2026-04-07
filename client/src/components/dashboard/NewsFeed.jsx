@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { getNews } from '../../api/news';
 import { PLAYERS } from '../../data/players';
+import HexBrand from '../ui/HexBrand';
 
 // Fix mojibake from RSS feeds
 function cleanText(s) {
@@ -163,7 +164,7 @@ export default function NewsFeed({ onPlayerClick }) {
     <div className="ff-card">
       <div className="ff-card-top-accent" style={{ background: 'var(--charcoal-slate)' }} />
 
-      <div style={{ maxHeight: 560, overflowY: 'auto' }}>
+      <div style={{ maxHeight: 'min(560px, 65vh)', overflowY: 'auto' }}>
         {/* Two-column header: tabs left, "Players" label right */}
         <div className="ff-news-sticky-header">
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -204,8 +205,17 @@ export default function NewsFeed({ onPlayerClick }) {
           </div>
         </div>
         {loading && (
-          <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
-            Loading news...
+          <div style={{ padding: '8px 0' }}>
+            {[1,2,3,4].map(i => (
+              <div key={i} style={{ display: 'flex', gap: 12, padding: '12px 20px', borderBottom: '1px solid var(--border)' }}>
+                <div className="skeleton" style={{ width: 80, height: 56, borderRadius: 8, flexShrink: 0 }} />
+                <div style={{ flex: 1 }}>
+                  <div className="skeleton" style={{ width: '70%', height: 14, marginBottom: 6, borderRadius: 4 }} />
+                  <div className="skeleton" style={{ width: '90%', height: 11, marginBottom: 4, borderRadius: 4 }} />
+                  <div className="skeleton" style={{ width: '40%', height: 10, borderRadius: 4 }} />
+                </div>
+              </div>
+            ))}
           </div>
         )}
 
@@ -268,7 +278,7 @@ export default function NewsFeed({ onPlayerClick }) {
                       background: impact.impact > 0 ? 'var(--green-light)' : 'var(--red-light)',
                       color: impact.impact > 0 ? 'var(--success-green)' : 'var(--red)',
                     }}>
-                      {impact.impact > 0 ? '\u2191' : '\u2193'} <span style={{ color: 'var(--hex-purple)' }}>Hex</span>Score Impact
+                      {impact.impact > 0 ? '\u2191' : '\u2193'} <HexBrand word="Score" icon={false} /> Impact
                     </span>
                   )}
                 </div>

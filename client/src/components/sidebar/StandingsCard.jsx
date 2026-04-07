@@ -62,7 +62,7 @@ export default function StandingsCard({ expanded = false, rosters, leagueName = 
                       {team.name}
                     </button>
                   </td>
-                  <td className="tabular-nums" style={{ fontWeight: 600 }}>{team.rosterProj.toFixed(2)}</td>
+                  <td className="tabular-nums" style={{ fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{team.rosterProj.toFixed(2)}</td>
                   <td style={{ fontSize: 11, color: 'var(--text-muted)' }}>
                     {rosters[team.id]?.length || 0} players
                   </td>

@@ -12,7 +12,9 @@ import PlayerStats from './PlayerStats';
 import TeamPage from './TeamPage';
 import MatchupDetail from './MatchupDetail';
 import TradeCenter from '../trade/TradeCenter';
+import PlayerCompare from './PlayerCompare';
 import LeagueSettings from './LeagueSettings';
+import Breadcrumb from '../ui/Breadcrumb';
 import * as leagueApi from '../../api/leagues';
 
 import { TEAMS, USER_TEAM_ID } from '../../data/teams';
@@ -28,6 +30,7 @@ const TAB_ICONS = {
   players: <svg viewBox="0 0 14 15.5" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d={HEX}/><circle cx="7" cy="6" r="1.5"/><path d="M4.5 11a2.5 2.5 0 015 0"/></svg>,
   standings: <svg viewBox="0 0 14 15.5" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d={HEX}/><line x1="4.5" y1="10.5" x2="4.5" y2="8"/><line x1="7" y1="10.5" x2="7" y2="5.5"/><line x1="9.5" y1="10.5" x2="9.5" y2="7"/></svg>,
   matchups: <svg viewBox="0 0 16 12" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 1.5L8 0 11 1.5v3L8 6 5 4.5z"/><path d="M5 7.5L8 6 11 7.5v3L8 12 5 10.5z" opacity="0.5"/></svg>,
+  compare: <svg viewBox="0 0 14 15.5" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d={HEX}/><line x1="5.5" y1="5" x2="5.5" y2="10.5"/><line x1="8.5" y1="5" x2="8.5" y2="10.5"/><line x1="4" y1="7.75" x2="10" y2="7.75"/></svg>,
   waivers: <svg viewBox="0 0 14 15.5" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d={HEX}/><line x1="7" y1="5.5" x2="7" y2="10"/><line x1="4.5" y1="7.75" x2="9.5" y2="7.75"/></svg>,
   locked: <svg viewBox="0 0 14 15.5" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d={HEX}/><rect x="5" y="7.5" width="4" height="3" rx="0.5"/><path d="M5.8 7.5V6.5a1.2 1.2 0 012.4 0v1"/></svg>,
 };
@@ -147,6 +150,7 @@ export default function LeagueDashboard() {
     { id: 'draft', label: 'Draft' },
     { id: 'trades', label: 'Trades' },
     { id: 'players', label: 'Players' },
+    { id: 'compare', label: 'Compare' },
     { id: 'standings', label: 'Standings' },
     { id: 'matchups', label: 'Matchups' },
     { id: 'waivers', label: 'Waivers' },
@@ -164,7 +168,18 @@ export default function LeagueDashboard() {
   };
 
   if (leagueLoading || !league) {
-    return <div className="ff-loading-screen"><svg className="ff-hex-spinner" viewBox="0 0 48 52"><polygon points="24,2 46,14 46,38 24,50 2,38 2,14" /></svg>Loading</div>;
+    return (
+      <div style={{ padding: '68px clamp(16px, 4vw, 32px) 20px', maxWidth: 1200, margin: '0 auto' }}>
+        <div className="skeleton" style={{ height: 80, borderRadius: 8, marginBottom: 16 }} />
+        <div style={{ display: 'grid', gridTemplateColumns: '65% 1fr', gap: 20 }}>
+          <div className="skeleton" style={{ height: 300, borderRadius: 8 }} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div className="skeleton" style={{ height: 140, borderRadius: 8 }} />
+            <div className="skeleton" style={{ height: 140, borderRadius: 8 }} />
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -174,7 +189,7 @@ export default function LeagueDashboard() {
         <div style={{ width: '100%' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
             <Link to="/hub" className="ff-back-btn">{'\u2190'} My Leagues</Link>
-            <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>{league.type} &middot; {league.scoring_preset?.toUpperCase() || 'PPR'} &middot; {league.league_size} teams</span>
+            <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>{league.type} &middot; {league.scoring_preset?.toUpperCase() || 'PPR'} &middot; {league.league_size} teams</span>
           </div>
           <h1 style={{ fontFamily: "'Playfair Display', serif", color: 'var(--text)' }}>
             {league.name}
@@ -213,16 +228,16 @@ export default function LeagueDashboard() {
       {/* Player Stats View */}
       {viewingPlayerId ? (
         <div className="ff-tab-content ff-tab-content-wide">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, fontSize: 12, color: 'var(--text-muted)' }}>
-            <button onClick={() => {
+          <Breadcrumb
+            onBack={() => {
               setViewingPlayerId(null);
               const params = new URLSearchParams(searchParams);
               params.delete('player');
               setSearchParams(params, { replace: true });
-            }} className="ff-back-btn">{'\u2190'} {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</button>
-            <span style={{ color: 'var(--border-strong)' }}>/</span>
-            <span style={{ fontWeight: 600, color: 'var(--text)' }}>Player Details</span>
-          </div>
+            }}
+            backLabel={activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
+            currentLabel="Player Details"
+          />
           <PlayerStats playerId={viewingPlayerId} onBack={() => {
             setViewingPlayerId(null);
             const params = new URLSearchParams(searchParams);
@@ -232,20 +247,20 @@ export default function LeagueDashboard() {
         </div>
       ) : viewingTeamId ? (
         <div className="ff-tab-content ff-tab-content-wide">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, fontSize: 12, color: 'var(--text-muted)' }}>
-            <button onClick={() => setViewingTeamId(null)} className="ff-back-btn">{'\u2190'} {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</button>
-            <span style={{ color: 'var(--border-strong)' }}>/</span>
-            <span style={{ fontWeight: 600, color: 'var(--text)' }}>Team Details</span>
-          </div>
+          <Breadcrumb
+            onBack={() => setViewingTeamId(null)}
+            backLabel={activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
+            currentLabel="Team Details"
+          />
           <TeamPage teamId={viewingTeamId} rosters={draftedRosters} onBack={() => setViewingTeamId(null)} onPlayerClick={handlePlayerClick} />
         </div>
       ) : viewingMatchupId ? (
         <div className="ff-tab-content ff-tab-content-wide">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, fontSize: 12, color: 'var(--text-muted)' }}>
-            <button onClick={() => setViewingMatchupId(null)} className="ff-back-btn">{'\u2190'} Matchups</button>
-            <span style={{ color: 'var(--border-strong)' }}>/</span>
-            <span style={{ fontWeight: 600, color: 'var(--text)' }}>Matchup Detail</span>
-          </div>
+          <Breadcrumb
+            onBack={() => setViewingMatchupId(null)}
+            backLabel="Matchups"
+            currentLabel="Matchup Detail"
+          />
           <MatchupDetail matchup={MATCHUPS.find(m => m.id === viewingMatchupId) || MATCHUPS[0]} rosters={draftedRosters} onBack={() => setViewingMatchupId(null)} onPlayerClick={handlePlayerClick} />
         </div>
       ) : <>
@@ -369,6 +384,12 @@ export default function LeagueDashboard() {
       {activeTab === 'players' && (
         <div className="ff-tab-content ff-tab-content-full">
           <PlayerRankings onPlayerClick={handlePlayerClick} />
+        </div>
+      )}
+
+      {activeTab === 'compare' && (
+        <div className="ff-tab-content ff-tab-content-wide">
+          <PlayerCompare />
         </div>
       )}
 
