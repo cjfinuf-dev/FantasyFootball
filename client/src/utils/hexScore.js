@@ -89,14 +89,44 @@ function getWeightedProduction(playerId) {
     return p ? p.avg : 0;
   }
 
-  // Get available seasons sorted descending (most recent first)
-  const years = Object.keys(history).map(Number).sort((a, b) => b - a);
-  if (years.length === 0) return 0;
+  // Get qualifying seasons (gp >= 8) sorted descending.
+  // Injury seasons with minimal games are noise, not signal — exclude them
+  // so they don't poison the weighted average with near-zero production.
+  const allYears = Object.keys(history).map(Number).sort((a, b) => b - a);
+  if (allYears.length === 0) return 0;
 
-  const avgs = years.map(y => history[String(y)]?.avgPts || 0);
+  const qualified = allYears
+    .map(y => ({ year: y, avg: history[String(y)]?.avgPts || 0, gp: history[String(y)]?.gp || 0 }))
+    .filter(s => s.gp >= 8);
 
-  // 2025 stats weighted heavily — recent production matters most.
-  // Old weighting was 50/25/15/10 which let legacy seasons prop up declining players.
+  if (qualified.length === 0) {
+    const p = PLAYER_MAP[playerId];
+    return p ? p.avg : 0;
+  }
+
+  const avgs = qualified.map(s => s.avg);
+
+  // Fluke dampener: when the most recent qualifying season is anomalously low
+  // relative to an established track record, partially restore it toward the
+  // historical baseline. A proven elite player's single down year is noise —
+  // the body of work should dominate.
+  if (avgs.length >= 3) {
+    const recent = avgs[0];
+    const priorValid = avgs.slice(1).filter(v => v > 0);
+    if (priorValid.length >= 2) {
+      const sorted = [...priorValid].sort((a, b) => a - b);
+      const priorMedian = sorted[Math.floor(sorted.length / 2)];
+      const dropPct = priorMedian > 0 ? Math.max(0, (priorMedian - recent) / priorMedian) : 0;
+
+      if (dropPct > 0.15) {
+        const trackStrength = Math.min(1.0, priorValid.length / 3);
+        const flukeConf = Math.min(1.0, dropPct / 0.35) * trackStrength;
+        avgs[0] = recent + (priorMedian - recent) * flukeConf * 0.75;
+      }
+    }
+  }
+
+  // Recent production weighted heavily, but only from qualifying seasons.
   if (avgs.length >= 4) return avgs[0] * 0.65 + avgs[1] * 0.20 + avgs[2] * 0.10 + avgs[3] * 0.05;
   if (avgs.length === 3) return avgs[0] * 0.65 + avgs[1] * 0.25 + avgs[2] * 0.10;
   if (avgs.length === 2) return avgs[0] * 0.70 + avgs[1] * 0.30;
@@ -201,6 +231,27 @@ const DEFAULT_LEAGUE_SIZE = 12;
 // QB capped at 85: no QB should rank in the top 20 overall (elite RBs/WRs fill those slots).
 // K/DEF capped at 60: kickers and defenses are always end-of-draft value.
 const POSITION_HEXSCORE_CAP = { K: 65, DEF: 60 };
+
+// ─── Pedigree Bonus System ───
+// Post-sigmoid additive bonus (0–10 pts) rewarding sustained elite performance.
+// Replaces static ELITE_OVERRIDES with a dynamic, data-driven valuation.
+const PEDIGREE_THRESHOLDS = {
+  QB:  { strong: 20, elite: 23, dominant: 25 },
+  RB:  { strong: 14, elite: 18, dominant: 22 },
+  WR:  { strong: 14, elite: 17, dominant: 20 },
+  TE:  { strong: 12, elite: 15, dominant: 18 },
+};
+
+const ARCHETYPE_PEDIGREE = {
+  'dual-threat-elite': 1.0, 'bell-cow': 1.0, 'alpha-wr': 1.0, 'elite-te': 1.0,
+  'dual-threat': 0.80,      'pocket-elite': 0.85, 'elite-pass-catch': 0.85,
+  'target-hog': 0.75,       'power-back': 0.70,   'deep-threat': 0.65,
+  'pocket-passer': 0.60,    'slot-wr': 0.60,      'receiving-te': 0.55,
+  'committee': 0.40,        'game-manager': 0.35,  'blocking-te': 0.30,
+  'wr2-wr3': 0.35,          'backup': 0.20,
+};
+
+const MAX_PEDIGREE_BONUS = 10;
 
 // ─── Draft Value ───
 // How many players at each position are worth spending a draft pick on.
@@ -696,6 +747,149 @@ function calcDraftValue(player, posGroup) {
   return Math.max(0.05, 0.40 * Math.exp(-0.15 * overshoot));
 }
 
+// ─── Elite floor protection ───
+// Historically elite players (by peak avgPts in last 3 seasons) get a minimum
+// HexScore floor that decays 15% per year since their peak. Prevents a single
+// down season from cratering a proven player to replacement level.
+
+const FLOOR_THRESHOLDS = {
+  QB:  { elite: 23, starter: 18, flex: 14 },
+  RB:  { elite: 18, starter: 14, flex: 10 },
+  WR:  { elite: 16, starter: 12, flex: 9 },
+  TE:  { elite: 14, starter: 10, flex: 7 },
+};
+
+function calcHistoricalPeakFloor(playerId, pos, currentScore) {
+  const history = _historicalData?.players?.[playerId];
+  if (!history) return 0;
+
+  const years = Object.keys(history).map(Number).sort((a, b) => b - a);
+  const recentYears = years.slice(0, 3);
+
+  // Find peak season avgPts (must have played 8+ games to count)
+  const peakAvg = Math.max(0, ...recentYears
+    .map(y => history[String(y)])
+    .filter(s => s && s.gp >= 8)
+    .map(s => s.avgPts || 0));
+
+  if (peakAvg === 0) return 0;
+
+  const thresholds = FLOOR_THRESHOLDS[pos];
+  if (!thresholds) return 0;
+
+  let floorScore;
+  if (peakAvg >= thresholds.elite) {
+    floorScore = 55;
+  } else if (peakAvg >= thresholds.starter) {
+    floorScore = 42;
+  } else if (peakAvg >= thresholds.flex) {
+    floorScore = 32;
+  } else {
+    return 0;
+  }
+
+  // Decay the floor 15% per year since the peak season
+  const peakYear = recentYears.find(y => {
+    const s = history[String(y)];
+    return s && s.gp >= 8 && (s.avgPts || 0) === peakAvg;
+  });
+  const currentYear = Math.max(...years);
+  const yearsSincePeak = peakYear ? (currentYear - peakYear) : 2;
+  const decayedFloor = floorScore * Math.pow(0.85, yearsSincePeak);
+
+  return decayedFloor > currentScore ? decayedFloor : 0;
+}
+
+// ─── Pedigree Bonus ───
+// Protection system for proven elite players having an anomalous down season.
+// Only activates when a fluke is detected — stays dormant for players the
+// algorithm already values correctly (consistent performers like Allen).
+
+function calcPedigreeBonus(playerId, pos, archetypeKey) {
+  const thresholds = PEDIGREE_THRESHOLDS[pos];
+  if (!thresholds || !_historicalData?.players) return 0;
+
+  const history = _historicalData.players[playerId];
+  if (!history) return 0;
+
+  const years = Object.keys(history).map(Number).sort((a, b) => a - b); // ascending for streak calc
+  if (years.length === 0) return 0;
+
+  const { strong, elite, dominant } = thresholds;
+
+  // ─── Fluke gate ───
+  // Only activate when the most recent qualifying season is anomalously low
+  // relative to the player's established track record. If performance is
+  // consistent, the base algorithm handles them correctly — no boost needed.
+  const descYears = [...years].sort((a, b) => b - a);
+  const qualifying = descYears
+    .map(y => ({ year: y, avg: history[String(y)]?.avgPts || 0, gp: history[String(y)]?.gp || 0 }))
+    .filter(s => s.gp >= 10);
+  if (qualifying.length < 3) return 0; // not enough data to detect flukes
+
+  const recentAvg = qualifying[0].avg;
+  const priorAvgs = qualifying.slice(1).map(s => s.avg).filter(v => v > 0);
+  if (priorAvgs.length < 2) return 0;
+
+  const sorted = [...priorAvgs].sort((a, b) => a - b);
+  const priorMedian = sorted[Math.floor(sorted.length / 2)];
+  const dropPct = priorMedian > 0 ? Math.max(0, (priorMedian - recentAvg) / priorMedian) : 0;
+  if (dropPct <= 0.15) return 0; // no fluke — algorithm handles this player fine
+
+  // 1. Elite Season Depth (weight: 0.35) — qualifying seasons with gp >= 10
+  let depth = 0;
+  for (const y of years) {
+    const s = history[String(y)];
+    if (!s || s.gp < 10) continue;
+    const avg = s.avgPts || 0;
+    if (avg >= elite) depth += 0.30;
+    else if (avg >= strong) depth += 0.12;
+  }
+  depth = Math.min(1.0, depth);
+
+  // 2. Consecutive Excellence (weight: 0.25) — longest streak of strong-or-better seasons
+  let maxStreak = 0;
+  let currentStreak = 0;
+  for (const y of years) {
+    const s = history[String(y)];
+    if (s && s.gp >= 10 && (s.avgPts || 0) >= strong) {
+      currentStreak++;
+      maxStreak = Math.max(maxStreak, currentStreak);
+    } else {
+      currentStreak = 0;
+    }
+  }
+  const consecutiveBonus = Math.min(0.25, maxStreak * 0.08);
+
+  // 3. Peak Dominance (weight: 0.30) — best single qualifying season
+  const peakAvg = Math.max(0, ...years
+    .map(y => history[String(y)])
+    .filter(s => s && s.gp >= 10)
+    .map(s => s.avgPts || 0));
+  const peakDominance = peakAvg >= strong
+    ? Math.min(1.0, (peakAvg - strong) / (dominant - strong))
+    : 0;
+
+  // 4. Archetype Quality (weight: 0.10)
+  const archetypeQuality = ARCHETYPE_PEDIGREE[archetypeKey] ?? 0.40;
+
+  // Track Record Dampener — fewer qualifying seasons = reduced confidence
+  const qualifyingSeasons = years.filter(y => {
+    const s = history[String(y)];
+    return s && s.gp >= 10;
+  }).length;
+  if (qualifyingSeasons === 0) return 0;
+  const trackRecord = Math.min(1.0, 0.38 + qualifyingSeasons * 0.16);
+
+  const rawPedigree =
+    (depth * 0.35) +
+    consecutiveBonus +
+    (peakDominance * 0.30) +
+    (archetypeQuality * 0.10);
+
+  return rawPedigree * trackRecord * MAX_PEDIGREE_BONUS;
+}
+
 // ─── Sigmoid shaping ───
 // Steepness 8 with inflection at 0.40. The left-shifted inflection
 // accommodates the additive slotValue (total weights = 1.08) and lets
@@ -777,6 +971,19 @@ export function computeAllHexScores(players = PLAYERS, rosterContext = null, sco
 
     let hexScore = parseFloat((sigmoidShape(raw) * 100).toFixed(3));
 
+    // Elite floor protection: historically elite players don't fall below a tier-appropriate minimum.
+    const peakFloor = calcHistoricalPeakFloor(p.id, p.pos, hexScore);
+    if (peakFloor > hexScore) {
+      hexScore = peakFloor;
+    }
+
+    // Pedigree bonus: post-sigmoid additive reward for sustained elite performance.
+    // K/DEF excluded — no historical pedigree signal for those positions.
+    const pedigreeBonus = (p.pos === 'K' || p.pos === 'DEF')
+      ? 0
+      : calcPedigreeBonus(p.id, p.pos, archetype.key);
+    hexScore = Math.min(99.999, hexScore + pedigreeBonus);
+
     // Hard cap for K/DEF — no kicker or defense above 60
     const posCap = POSITION_HEXSCORE_CAP[p.pos];
     if (posCap && hexScore > posCap) hexScore = posCap;
@@ -786,6 +993,7 @@ export function computeAllHexScores(players = PLAYERS, rosterContext = null, sco
       archetype: archetype.key,
       dimensions: { production, scarcity, consistency, situation, health, durability, context, ageFactor, slotValue, xFactor, draftValue },
       tier: getHexTier(hexScore),
+      pedigreeBonus,
     });
   });
 

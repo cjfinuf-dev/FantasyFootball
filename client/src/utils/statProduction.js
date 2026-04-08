@@ -529,11 +529,12 @@ export function calcStatProduction(player) {
   const years = Object.keys(history).map(Number).sort((a, b) => b - a);
   if (years.length === 0) return currentScore;
 
-  // For each historical season, compute the stat-based sub-score
+  // For each historical season, compute the stat-based sub-score.
+  // Skip injury/cup-of-coffee seasons (gp < 8) — too few games to be meaningful.
   const seasonScores = [];
   for (const yr of years) {
     const seasonHist = history[String(yr)];
-    if (!seasonHist || !seasonHist.gp) continue;
+    if (!seasonHist || !seasonHist.gp || seasonHist.gp < 8) continue;
 
     // Try detailed stats first (from playerDetailedStats.js), fall back to historicalStats.js
     const detailed = detailedData?.[player.id]?.[String(yr)];
@@ -561,6 +562,29 @@ export function calcStatProduction(player) {
 
   if (seasonScores.length === 0) return currentScore;
 
+  // ─── Fluke dampener ───
+  // When the most recent qualifying season is anomalously low relative to an
+  // established track record, partially restore it toward the historical baseline.
+  // A proven player's single down year is noise, not signal — the body of work
+  // should dominate over one outlier season.
+  let flukeDetected = false;
+  if (seasonScores.length >= 3) {
+    const recent = seasonScores[0];
+    const priorValid = seasonScores.slice(1).filter(v => v > 0);
+    if (priorValid.length >= 2) {
+      const sorted = [...priorValid].sort((a, b) => a - b);
+      const priorMedian = sorted[Math.floor(sorted.length / 2)];
+      const dropPct = priorMedian > 0 ? Math.max(0, (priorMedian - recent) / priorMedian) : 0;
+
+      if (dropPct > 0.15) {
+        flukeDetected = true;
+        const trackStrength = Math.min(1.0, priorValid.length / 3);
+        const flukeConf = Math.min(1.0, dropPct / 0.35) * trackStrength;
+        seasonScores[0] = recent + (priorMedian - recent) * flukeConf * 0.45;
+      }
+    }
+  }
+
   // Apply year weights
   const weights = getYearWeights(seasonScores.length);
   let weightedHistorical = 0;
@@ -568,8 +592,27 @@ export function calcStatProduction(player) {
     weightedHistorical += seasonScores[i] * weights[i];
   }
 
-  // Blend: 60% historical, 40% current season
-  return (weightedHistorical * 0.60) + (currentScore * 0.40);
+  // Blend historical with current season.
+  // When a fluke is detected, shift weight toward history — the current season's
+  // inline stats carry the same bad data, and double-counting it craters proven players.
+  let histWeight = 0.60;
+  let currWeight = 0.40;
+  if (flukeDetected && seasonScores.length >= 3) {
+    const priorValid = seasonScores.slice(1).filter(v => v > 0);
+    if (priorValid.length >= 2) {
+      const sorted = [...priorValid].sort((a, b) => a - b);
+      const priorMedian = sorted[Math.floor(sorted.length / 2)];
+      const currentDrop = priorMedian > 0 ? Math.max(0, (priorMedian - currentScore) / priorMedian) : 0;
+      if (currentDrop > 0.15) {
+        const trackStrength = Math.min(1.0, priorValid.length / 3);
+        const flukeShift = Math.min(0.12, currentDrop * trackStrength * 0.40);
+        histWeight += flukeShift;
+        currWeight -= flukeShift;
+      }
+    }
+  }
+
+  return (weightedHistorical * histWeight) + (currentScore * currWeight);
 }
 
 /**
