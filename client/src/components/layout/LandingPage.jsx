@@ -12,7 +12,9 @@ export default function LandingPage() {
 
   return (
     <>
-      <div className="ff-hero ff-hero-landing">
+      <div className="ff-hero-landing">
+        <div className="ff-hero-landing-glow" aria-hidden="true" />
+        <div className="ff-hero-landing-hex-float" aria-hidden="true" />
         <img src="/logo-full.png" alt="HexMetrics" className="ff-hero-logo" />
         <p>The ultimate news and analysis platform for fantasy football. Beat your friends. Achieve glory.</p>
         <div className="ff-hero-landing-actions">
@@ -20,29 +22,74 @@ export default function LandingPage() {
           <button className="ff-hero-action ff-hero-landing-action secondary" onClick={onSignIn}>Sign In</button>
         </div>
         <div className="ff-hero-landing-features">
-          <div className="ff-landing-feature">
-            <span className="ff-landing-feature-hex">
-              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><polyline points="13,6 17,6 17,10"/><line x1="17" y1="6" x2="11" y2="12"/><polyline points="7,14 3,14 3,10"/><line x1="3" y1="14" x2="9" y2="8"/></svg>
-            </span>
-            <span className="ff-landing-feature-label">Trade Calculator</span>
+          <div className="ff-feature-group">
+            <span className="ff-feature-group-label">Core Tools</span>
+            <div className="ff-feature-group-cards">
+              <div className="ff-landing-feature">
+                <span className="ff-landing-feature-hex">
+                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><polyline points="13,6 17,6 17,10"/><line x1="17" y1="6" x2="11" y2="12"/><polyline points="7,14 3,14 3,10"/><line x1="3" y1="14" x2="9" y2="8"/></svg>
+                </span>
+                <span className="ff-landing-feature-label">Trade Calculator</span>
+              </div>
+              <div className="ff-landing-feature">
+                <span className="ff-landing-feature-hex">
+                  <svg viewBox="0 0 14 15.5" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M7 1.27L12.6 4.5v6.5L7 14.23 1.4 11V4.5z"/><circle cx="7" cy="6" r="1.5"/><path d="M4.5 11a2.5 2.5 0 015 0"/></svg>
+                </span>
+                <span className="ff-landing-feature-label">Player Database</span>
+              </div>
+              <div className="ff-landing-feature">
+                <span className="ff-landing-feature-hex">
+                  <svg viewBox="0 0 14 15.5" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M7 1.27L12.6 4.5v6.5L7 14.23 1.4 11V4.5z"/><line x1="5.5" y1="5" x2="5.5" y2="10.5"/><line x1="8.5" y1="5" x2="8.5" y2="10.5"/><line x1="4" y1="7.75" x2="10" y2="7.75"/></svg>
+                </span>
+                <span className="ff-landing-feature-label">Player Compare</span>
+              </div>
+              <div className="ff-landing-feature">
+                <span className="ff-landing-feature-hex">
+                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><circle cx="10" cy="10" r="2"/><path d="M10,2 v4 M10,14 v4 M2,10 h4 M14,10 h4"/></svg>
+                </span>
+                <span className="ff-landing-feature-label">Live News Feed</span>
+              </div>
+            </div>
           </div>
-          <div className="ff-landing-feature">
-            <span className="ff-landing-feature-hex">
-              <svg viewBox="0 0 20 22" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10,2 L18,6.5 L18,15.5 L10,20 L2,15.5 L2,6.5z"/><path d="M10,2 L10,20" opacity="0.3"/></svg>
-            </span>
-            <span className="ff-landing-feature-label">Multiple Leagues</span>
-          </div>
-          <div className="ff-landing-feature">
-            <span className="ff-landing-feature-hex">
-              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><circle cx="10" cy="10" r="2"/><path d="M10,2 v4 M10,14 v4 M2,10 h4 M14,10 h4"/></svg>
-            </span>
-            <span className="ff-landing-feature-label">Live News Feed</span>
-          </div>
-          <div className="ff-landing-feature">
-            <span className="ff-landing-feature-hex">
-              <svg viewBox="0 0 20 22" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10,2 L18,6.5 L18,15.5 L10,20 L2,15.5 L2,6.5z"/><line x1="6" y1="9" x2="14" y2="9"/><line x1="6" y1="12" x2="11" y2="12"/></svg>
-            </span>
-            <span className="ff-landing-feature-label">Custom Scoring</span>
+          <div className="ff-feature-group">
+            <span className="ff-feature-group-label">League Features <span className="ff-feature-group-badge"><svg viewBox="0 0 10 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><rect x="1.5" y="5.5" width="7" height="5" rx="1"/><path d="M3 5.5V4a2 2 0 014 0v1.5"/></svg>Unlocks after draft</span></span>
+            <div className="ff-feature-group-cards">
+              <div className="ff-landing-feature ff-landing-feature--locked">
+                <span className="ff-landing-feature-hex">
+                  <svg viewBox="0 0 14 15.5" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M7 1.27L12.6 4.5v6.5L7 14.23 1.4 11V4.5z"/><line x1="4.5" y1="5.5" x2="9.5" y2="5.5"/><line x1="4.5" y1="7.75" x2="9.5" y2="7.75"/><line x1="4.5" y1="10" x2="9.5" y2="10"/></svg>
+                  <span className="ff-landing-feature-lock"><svg viewBox="0 0 10 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><rect x="1.5" y="5.5" width="7" height="5" rx="1"/><path d="M3 5.5V4a2 2 0 014 0v1.5"/></svg></span>
+                </span>
+                <span className="ff-landing-feature-label">Lineup</span>
+              </div>
+              <div className="ff-landing-feature ff-landing-feature--locked">
+                <span className="ff-landing-feature-hex">
+                  <svg viewBox="0 0 16 12" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 1.5L8 0 11 1.5v3L8 6 5 4.5z"/><path d="M5 7.5L8 6 11 7.5v3L8 12 5 10.5z" opacity="0.5"/></svg>
+                  <span className="ff-landing-feature-lock"><svg viewBox="0 0 10 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><rect x="1.5" y="5.5" width="7" height="5" rx="1"/><path d="M3 5.5V4a2 2 0 014 0v1.5"/></svg></span>
+                </span>
+                <span className="ff-landing-feature-label">Matchups</span>
+              </div>
+              <div className="ff-landing-feature ff-landing-feature--locked">
+                <span className="ff-landing-feature-hex">
+                  <svg viewBox="0 0 14 15.5" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M7 1.27L12.6 4.5v6.5L7 14.23 1.4 11V4.5z"/><line x1="4.5" y1="10.5" x2="4.5" y2="8"/><line x1="7" y1="10.5" x2="7" y2="5.5"/><line x1="9.5" y1="10.5" x2="9.5" y2="7"/></svg>
+                  <span className="ff-landing-feature-lock"><svg viewBox="0 0 10 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><rect x="1.5" y="5.5" width="7" height="5" rx="1"/><path d="M3 5.5V4a2 2 0 014 0v1.5"/></svg></span>
+                </span>
+                <span className="ff-landing-feature-label">Standings</span>
+              </div>
+              <div className="ff-landing-feature ff-landing-feature--locked">
+                <span className="ff-landing-feature-hex">
+                  <svg viewBox="0 0 14 15.5" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M7 1.27L12.6 4.5v6.5L7 14.23 1.4 11V4.5z"/><line x1="7" y1="5.5" x2="7" y2="10"/><line x1="4.5" y1="7.75" x2="9.5" y2="7.75"/></svg>
+                  <span className="ff-landing-feature-lock"><svg viewBox="0 0 10 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><rect x="1.5" y="5.5" width="7" height="5" rx="1"/><path d="M3 5.5V4a2 2 0 014 0v1.5"/></svg></span>
+                </span>
+                <span className="ff-landing-feature-label">Waivers</span>
+              </div>
+              <div className="ff-landing-feature ff-landing-feature--locked">
+                <span className="ff-landing-feature-hex">
+                  <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="10,3 13,3 13,6"/><line x1="13" y1="3" x2="8" y2="8"/><polyline points="4,11 1,11 1,8"/><line x1="1" y1="11" x2="6" y2="6"/></svg>
+                  <span className="ff-landing-feature-lock"><svg viewBox="0 0 10 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><rect x="1.5" y="5.5" width="7" height="5" rx="1"/><path d="M3 5.5V4a2 2 0 014 0v1.5"/></svg></span>
+                </span>
+                <span className="ff-landing-feature-label">Trade Center</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>

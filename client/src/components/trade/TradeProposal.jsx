@@ -49,11 +49,11 @@ export default function TradeProposal({ rosters, onPropose, scoringPreset }) {
 
   const sortByHex = (ids) => [...ids].sort((a, b) => getHexScore(b, scoringPreset) - getHexScore(a, scoringPreset));
 
-  // Team selection
+  // Team selection screen
   if (!selectedTeamId) {
     return (
       <div>
-        <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 12 }}>Select a team to trade with</div>
+        <div className="ff-tm-inbox-section-label">Select your trade partner</div>
         <div className="ff-tm-team-grid">
           {TEAMS.filter(t => t.id !== USER_TEAM_ID).map(t => (
             <div
@@ -65,8 +65,14 @@ export default function TradeProposal({ rosters, onPropose, scoringPreset }) {
               onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedTeamId(t.id); } }}
             >
               <div className="ff-tm-team-card-name">{t.name}</div>
-              <div className="ff-tm-team-card-meta">{t.abbr}</div>
-              <div className="ff-tm-team-card-meta">{t.wins}-{t.losses}</div>
+              <div className="ff-tm-team-card-meta">{t.owner}</div>
+              <div className="ff-tm-team-card-record">
+                <span className="wins">{t.wins}W</span>
+                <span className="losses">{t.losses}L</span>
+                <div className="ff-tm-power-gauge">
+                  <div className="ff-tm-power-gauge-fill" style={{ width: `${t.power}%` }} />
+                </div>
+              </div>
             </div>
           ))}
         </div>
@@ -76,16 +82,16 @@ export default function TradeProposal({ rosters, onPropose, scoringPreset }) {
 
   return (
     <div>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      {/* Builder header */}
+      <div className="ff-tm-builder-header">
+        <div className="ff-tm-builder-opponent">
           <button className="ff-btn ff-btn-secondary ff-btn-sm" onClick={() => { setSelectedTeamId(null); setSendIds([]); setReceiveIds([]); }}>
-            {'\u2190'} Back
+            {'\u2190'}
           </button>
-          <span style={{ fontSize: 14, fontWeight: 700 }}>Trade with {partnerTeam?.name || 'Team'}</span>
-          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{partnerTeam?.wins}-{partnerTeam?.losses}</span>
+          <span className="team-label">Trade with {partnerTeam?.name}</span>
+          <span className="team-record">{partnerTeam?.wins}-{partnerTeam?.losses}</span>
         </div>
-        <div style={{ display: 'flex', gap: 4 }}>
+        <div className="ff-tm-pos-filters">
           {['ALL', 'QB', 'RB', 'WR', 'TE', 'K', 'DEF'].map(pos => (
             <button key={pos} className={`ff-tm-filter-pill${posFilter === pos ? ' active' : ''}`} onClick={() => setPosFilter(pos)}>
               {pos}
@@ -94,33 +100,33 @@ export default function TradeProposal({ rosters, onPropose, scoringPreset }) {
         </div>
       </div>
 
-      {/* Trade Zone */}
+      {/* Trade staging zone */}
       {(sendIds.length > 0 || receiveIds.length > 0) && (
         <div className="ff-tm-trade-zone">
-          <div className="ff-tm-zone-panel">
-            <h4>Sending</h4>
+          <div className="ff-tm-zone-panel send-panel">
+            <h4><span className="arrow">{'\u2191'}</span> Sending</h4>
             {sendIds.length === 0 ? (
-              <div className="ff-tm-zone-empty">Click players from your roster</div>
+              <div className="ff-tm-zone-empty">Select players from your roster</div>
             ) : (
               sendIds.map(id => (
                 <div key={id} className="ff-tm-zone-player">
-                  <span style={{ fontSize: 12, fontWeight: 500 }}>{PLAYER_MAP[id]?.name}</span>
-                  <span style={{ fontSize: 10, color: 'var(--text-muted)', marginLeft: 4 }}>{PLAYER_MAP[id]?.pos}</span>
+                  <span style={{ fontSize: 12, fontWeight: 600 }}>{PLAYER_MAP[id]?.name}</span>
+                  <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{PLAYER_MAP[id]?.pos}</span>
                   <span className={hexChipClass(getHexScore(id, scoringPreset))} style={{ marginLeft: 'auto', marginRight: 4 }}>{formatHex(getHexScore(id, scoringPreset))}</span>
                   <button className="remove-btn" onClick={() => toggleSend(id)}>{'\u2715'}</button>
                 </div>
               ))
             )}
           </div>
-          <div className="ff-tm-zone-panel">
-            <h4>Receiving</h4>
+          <div className="ff-tm-zone-panel receive-panel">
+            <h4><span className="arrow">{'\u2193'}</span> Receiving</h4>
             {receiveIds.length === 0 ? (
-              <div className="ff-tm-zone-empty">Click players from their roster</div>
+              <div className="ff-tm-zone-empty">Select players from their roster</div>
             ) : (
               receiveIds.map(id => (
                 <div key={id} className="ff-tm-zone-player">
-                  <span style={{ fontSize: 12, fontWeight: 500 }}>{PLAYER_MAP[id]?.name}</span>
-                  <span style={{ fontSize: 10, color: 'var(--text-muted)', marginLeft: 4 }}>{PLAYER_MAP[id]?.pos}</span>
+                  <span style={{ fontSize: 12, fontWeight: 600 }}>{PLAYER_MAP[id]?.name}</span>
+                  <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{PLAYER_MAP[id]?.pos}</span>
                   <span className={hexChipClass(getHexScore(id, scoringPreset))} style={{ marginLeft: 'auto', marginRight: 4 }}>{formatHex(getHexScore(id, scoringPreset))}</span>
                   <button className="remove-btn" onClick={() => toggleReceive(id)}>{'\u2715'}</button>
                 </div>
@@ -142,7 +148,10 @@ export default function TradeProposal({ rosters, onPropose, scoringPreset }) {
       {/* Roster columns */}
       <div className="ff-tm-columns">
         <div className="ff-tm-column">
-          <div className="ff-tm-column-header">Your Roster</div>
+          <div className="ff-tm-column-header send">
+            <span>Your Roster</span>
+            <span className="count">{filterPlayers(userRoster).length} players</span>
+          </div>
           <div className="ff-tm-column-list">
             {sortByHex(filterPlayers(userRoster)).map(id => (
               <TradePlayerRow
@@ -151,15 +160,19 @@ export default function TradeProposal({ rosters, onPropose, scoringPreset }) {
                 selected={sendIds.includes(id)}
                 onClick={toggleSend}
                 scoringPreset={scoringPreset}
+                side="send"
               />
             ))}
             {filterPlayers(userRoster).length === 0 && (
-              <div style={{ padding: 16, textAlign: 'center', fontSize: 12, color: 'var(--text-muted)' }}>No players</div>
+              <div style={{ padding: 20, textAlign: 'center', fontSize: 12, color: 'var(--text-muted)' }}>No players at this position</div>
             )}
           </div>
         </div>
         <div className="ff-tm-column">
-          <div className="ff-tm-column-header">{partnerTeam?.name || 'Team'} Roster</div>
+          <div className="ff-tm-column-header receive">
+            <span>{partnerTeam?.name}</span>
+            <span className="count">{filterPlayers(partnerRoster).length} players</span>
+          </div>
           <div className="ff-tm-column-list">
             {sortByHex(filterPlayers(partnerRoster)).map(id => (
               <TradePlayerRow
@@ -168,10 +181,11 @@ export default function TradeProposal({ rosters, onPropose, scoringPreset }) {
                 selected={receiveIds.includes(id)}
                 onClick={toggleReceive}
                 scoringPreset={scoringPreset}
+                side="receive"
               />
             ))}
             {filterPlayers(partnerRoster).length === 0 && (
-              <div style={{ padding: 16, textAlign: 'center', fontSize: 12, color: 'var(--text-muted)' }}>No players</div>
+              <div style={{ padding: 20, textAlign: 'center', fontSize: 12, color: 'var(--text-muted)' }}>No players at this position</div>
             )}
           </div>
         </div>
@@ -179,20 +193,20 @@ export default function TradeProposal({ rosters, onPropose, scoringPreset }) {
 
       {/* Message & Submit */}
       {sendIds.length > 0 && receiveIds.length > 0 && (
-        <div style={{ marginTop: 16 }}>
+        <div className="ff-tm-submit-area">
           <textarea
             className="ff-tm-message-input"
-            placeholder="Add a message (optional)..."
+            placeholder="Add a message to your trade offer..."
             value={message}
             onChange={e => setMessage(e.target.value)}
           />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 10 }}>
+          <div className="ff-tm-submit-row">
             <select className="ff-tm-expiry-select" value={expiry} onChange={e => setExpiry(Number(e.target.value))}>
               <option value={24}>Expires in 24h</option>
               <option value={48}>Expires in 48h</option>
               <option value={72}>Expires in 72h</option>
             </select>
-            <button className="ff-btn ff-btn-primary" onClick={handlePropose}>
+            <button className="ff-tm-propose-btn" onClick={handlePropose}>
               Propose Trade
             </button>
           </div>

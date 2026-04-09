@@ -9,7 +9,7 @@ const PLAYER_MAP = {};
 PLAYERS.forEach(p => { PLAYER_MAP[p.id] = p; });
 
 export default function TradeInbox({ trades, rosters, onAccept, onReject, onWithdraw }) {
-  const [confirmAction, setConfirmAction] = useState(null); // { tradeId, action }
+  const [confirmAction, setConfirmAction] = useState(null);
 
   const incoming = trades.filter(t => t.toTeamId === USER_TEAM_ID && t.status === 'pending');
   const outgoing = trades.filter(t => t.fromTeamId === USER_TEAM_ID && t.status === 'pending');
@@ -28,8 +28,6 @@ export default function TradeInbox({ trades, rosters, onAccept, onReject, onWith
     const timeLeft = timeUntil(trade.expiresAt);
     const isUrgent = trade.expiresAt - Date.now() < 6 * 3600000;
 
-    // For incoming: they send offeringPlayerIds, we send requestingPlayerIds
-    // Our perspective: we receive offeringPlayerIds, we send requestingPlayerIds
     const sendIds = isIncoming ? trade.requestingPlayerIds : trade.offeringPlayerIds;
     const receiveIds = isIncoming ? trade.offeringPlayerIds : trade.requestingPlayerIds;
 
@@ -42,10 +40,9 @@ export default function TradeInbox({ trades, rosters, onAccept, onReject, onWith
           <span className={`ff-tm-inbox-countdown${isUrgent ? ' urgent' : ''}`}>{timeLeft}</span>
         </div>
 
-        {/* Players */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, margin: '8px 0' }}>
+        <div className="ff-tm-inbox-players">
           <div>
-            <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4 }}>
+            <div className="ff-tm-inbox-side-label">
               {isIncoming ? 'They Send' : 'You Send'}
             </div>
             {(isIncoming ? trade.offeringPlayerIds : trade.offeringPlayerIds).map(id => (
@@ -53,7 +50,7 @@ export default function TradeInbox({ trades, rosters, onAccept, onReject, onWith
             ))}
           </div>
           <div>
-            <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4 }}>
+            <div className="ff-tm-inbox-side-label">
               {isIncoming ? 'They Want' : 'You Want'}
             </div>
             {(isIncoming ? trade.requestingPlayerIds : trade.requestingPlayerIds).map(id => (
@@ -62,15 +59,12 @@ export default function TradeInbox({ trades, rosters, onAccept, onReject, onWith
           </div>
         </div>
 
-        {/* Analyzer */}
         <TradeAnalyzer sendIds={sendIds} receiveIds={receiveIds} />
 
-        {/* Message */}
         {trade.message && (
           <div className="ff-tm-inbox-message">{trade.message}</div>
         )}
 
-        {/* Actions */}
         {confirmAction?.tradeId === trade.id ? (
           <div className="ff-tm-confirm-bar">
             <span>{confirmAction.action === 'accept' ? 'Accept this trade?' : confirmAction.action === 'reject' ? 'Reject this trade?' : 'Withdraw this trade?'}</span>
@@ -105,17 +99,17 @@ export default function TradeInbox({ trades, rosters, onAccept, onReject, onWith
   return (
     <div>
       {incoming.length > 0 && (
-        <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 8 }}>
-            Incoming ({incoming.length})
+        <div style={{ marginBottom: 20 }}>
+          <div className="ff-tm-inbox-section-label">
+            Incoming <span className="count">{incoming.length}</span>
           </div>
           {incoming.map(t => renderTradeCard(t, 'incoming'))}
         </div>
       )}
       {outgoing.length > 0 && (
         <div>
-          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 8 }}>
-            Outgoing ({outgoing.length})
+          <div className="ff-tm-inbox-section-label">
+            Outgoing <span className="count">{outgoing.length}</span>
           </div>
           {outgoing.map(t => renderTradeCard(t, 'outgoing'))}
         </div>

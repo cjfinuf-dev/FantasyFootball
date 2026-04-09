@@ -164,7 +164,7 @@ export default function NewsFeed({ onPlayerClick }) {
     <div className="ff-card">
       <div className="ff-card-top-accent" style={{ background: 'var(--charcoal-slate)' }} />
 
-      <div style={{ maxHeight: 'min(560px, 65vh)', overflowY: 'auto' }}>
+      <div style={{ maxHeight: 'min(680px, 75vh)', overflowY: 'auto' }}>
         {/* Two-column header: tabs left, "Players" label right */}
         <div className="ff-news-sticky-header">
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -220,8 +220,16 @@ export default function NewsFeed({ onPlayerClick }) {
         )}
 
         {error && (
-          <div style={{ padding: 20, textAlign: 'center', color: 'var(--red)', fontSize: 12 }}>
-            {error}
+          <div style={{ padding: 20, textAlign: 'center', fontSize: 12 }}>
+            <div style={{ color: 'var(--red)', marginBottom: 8 }}>{error}</div>
+            <button className="ff-btn ff-btn-secondary ff-btn-sm" onClick={() => {
+              setError(null);
+              setLoading(true);
+              getNews({ limit: 15, category: activeTab === 'all' ? null : activeTab })
+                .then(data => { setArticles(data.articles); setNextCursor(data.nextCursor); })
+                .catch(err => setError(err.message))
+                .finally(() => setLoading(false));
+            }}>Retry</button>
           </div>
         )}
 

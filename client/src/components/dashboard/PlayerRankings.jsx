@@ -103,6 +103,7 @@ export default function PlayerRankings({ onPlayerClick }) {
   const [rowLimit, setRowLimit] = useState(50);
   const [detailView, setDetailView] = useState(false);
   const [tableScrolled, setTableScrolled] = useState(false);
+  const [csvToast, setCsvToast] = useState(false);
   const tableWrapRef = useRef(null);
 
   const handleTableScroll = useCallback((e) => {
@@ -201,9 +202,11 @@ export default function PlayerRankings({ onPlayerClick }) {
     return <span className="sort-arrow">{sortDir === 'asc' ? '\u25B2' : '\u25BC'}</span>;
   };
 
+  // Color scale instead of opacity — maintains WCAG contrast at all tiers
   const hexChipStyle = (score) => {
-    const opacity = score >= 85 ? 1.0 : score >= 75 ? 0.9 : score >= 60 ? 0.8 : score >= 45 ? 0.65 : 0.4;
-    return { fontWeight: 700, color: `var(--hex-purple)`, opacity, fontFamily: 'monospace' };
+    const color = score >= 85 ? 'var(--hex-purple-hot)' : score >= 75 ? 'var(--hex-purple-vivid)' : score >= 60 ? 'var(--hex-purple)' : score >= 45 ? 'rgba(139,92,246,0.7)' : 'rgba(139,92,246,0.55)';
+    const shadow = score >= 85 ? 'var(--hex-purple-glow)' : score >= 75 ? '0 0 4px rgba(139,92,246,0.25)' : 'none';
+    return { fontWeight: 700, color, textShadow: shadow, fontFamily: 'monospace' };
   };
 
   const handleExportCSV = () => {
@@ -234,6 +237,8 @@ export default function PlayerRankings({ onPlayerClick }) {
     a.download = `hexmetrics-players-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
+    setCsvToast(true);
+    setTimeout(() => setCsvToast(false), 2000);
   };
 
   return (
@@ -312,12 +317,15 @@ export default function PlayerRankings({ onPlayerClick }) {
             CSV
           </button>
           <input className="ff-search-input" type="text" placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)}
-            style={{ width: 160, fontSize: 11, padding: '4px 8px' }} />
+            style={{ width: 160, fontSize: 11, padding: '4px 8px', transition: 'width var(--duration-fast) ease' }}
+            onFocus={e => { e.target.style.width = '240px'; }}
+            onBlur={e => { if (!e.target.value) e.target.style.width = '160px'; }} />
         </div>
       </div>
       <div className="ff-card-body" style={{ padding: detailView ? '4px 0 0' : '12px 0 0' }}>
-        <div className={detailView ? '' : `ff-table-fade${tableScrolled ? ' scrolled-right' : ''}`} style={detailView ? { fontSize: 12 } : undefined}>
-        <div className="ff-table-wrap" ref={tableWrapRef} onScroll={handleTableScroll} style={{ maxHeight: detailView ? 2400 : (effectiveRowLimit > 50 ? 800 : (effectiveShowHistory ? 600 : 440)) }}>
+        <div className={detailView ? '' : `ff-table-fade${tableScrolled ? ' scrolled-right' : ''}`} style={detailView ? { fontSize: 12 } : { position: 'relative' }}>
+        {/* 280px = navbar(48) + hero(~80) + card header(52) + controls(60) + breathing(40) */}
+        <div className="ff-table-wrap" ref={tableWrapRef} onScroll={handleTableScroll} style={{ maxHeight: detailView ? 2400 : `min(calc(100vh - 280px), ${effectiveRowLimit > 50 ? 800 : (effectiveShowHistory ? 600 : 440)}px)` }}>
           <table className="ff-table" style={detailView ? { fontSize: 11 } : undefined}>
             <thead>
               {/* Grouping header — shown when stat columns or history are on */}
@@ -380,7 +388,7 @@ export default function PlayerRankings({ onPlayerClick }) {
                     {col.label} <SortArrow field={col.key} />
                   </th>
                 ))}
-                {!detailView && statColumns.length === 0 && <th style={{ width: 56 }}>Trend</th>}
+                {!detailView && statColumns.length === 0 && !effectiveShowHistory && <th style={{ width: 56 }}>Trend</th>}
                 {effectiveShowHistory && seasons.map((yr, i) => {
                   const yrColor = sortField === `yr_${yr}` ? '#fff' : 'var(--text-muted)';
                   const borderLeft = '2px solid var(--border-strong)';
@@ -475,7 +483,7 @@ export default function PlayerRankings({ onPlayerClick }) {
                         </td>
                       );
                     })}
-                    {!detailView && statColumns.length === 0 && <td>{(() => {
+                    {!detailView && statColumns.length === 0 && !effectiveShowHistory && <td>{(() => {
                       const seed = parseInt(p.id.slice(1)) || 1;
                       const base = p.avg || p.proj || 10;
                       const weeks = Array.from({ length: 5 }, (_, w) => {
@@ -511,6 +519,12 @@ export default function PlayerRankings({ onPlayerClick }) {
           </div>
         )}
       </div>
+      {csvToast && (
+        <div className="ff-draft-toast" style={{ animation: 'toastUp 0.3s ease-out' }}>
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="var(--success-green)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 8l4 4 8-8"/></svg>
+          CSV downloaded
+        </div>
+      )}
     </div>
   );
 }

@@ -30,24 +30,20 @@ export default function TradeCenter({ rosters, onRostersChange, scoringPreset = 
     const trade = trades.find(t => t.id === tradeId);
     if (!trade) return;
 
-    // Move trade to history
     setTrades(prev => prev.filter(t => t.id !== tradeId));
     setHistory(prev => [{ ...trade, status: 'completed', resolvedAt: Date.now() }, ...prev]);
 
-    // Swap players between rosters
     if (onRostersChange && rosters) {
       const newRosters = deepClone(rosters);
       const fromRoster = newRosters[trade.fromTeamId] || [];
       const toRoster = newRosters[trade.toTeamId] || [];
 
-      // Remove offering players from sender, add to receiver
       trade.offeringPlayerIds.forEach(pid => {
         const idx = fromRoster.indexOf(pid);
         if (idx !== -1) fromRoster.splice(idx, 1);
         toRoster.push(pid);
       });
 
-      // Remove requesting players from receiver, add to sender
       trade.requestingPlayerIds.forEach(pid => {
         const idx = toRoster.indexOf(pid);
         if (idx !== -1) toRoster.splice(idx, 1);
@@ -75,26 +71,27 @@ export default function TradeCenter({ rosters, onRostersChange, scoringPreset = 
   };
 
   return (
-    <div className="ff-card">
-      <div className="ff-card-top-accent" style={{ background: 'var(--accent-secondary)' }} />
-      <div className="ff-card-header">
-        <h2>Trade Center</h2>
+    <div className="ff-tm-shell">
+      <div className="ff-tm-header">
+        <div>
+          <h2>Trade Center</h2>
+          <div className="ff-tm-header-sub">NEGOTIATE &middot; ANALYZE &middot; EXECUTE</div>
+        </div>
+
+        <div className="ff-tm-subtabs">
+          <button className={`ff-tm-subtab${subTab === 'propose' ? ' active' : ''}`} onClick={() => setSubTab('propose')}>
+            Propose
+          </button>
+          <button className={`ff-tm-subtab${subTab === 'inbox' ? ' active' : ''}`} onClick={() => setSubTab('inbox')}>
+            Inbox{pendingCount > 0 && <span className="ff-tm-badge">{pendingCount}</span>}
+          </button>
+          <button className={`ff-tm-subtab${subTab === 'history' ? ' active' : ''}`} onClick={() => setSubTab('history')}>
+            History
+          </button>
+        </div>
       </div>
 
-      {/* Sub-tab navigation */}
-      <div className="ff-tabs">
-        <button className={`ff-tab${subTab === 'propose' ? ' active' : ''}`} onClick={() => setSubTab('propose')}>
-          Propose
-        </button>
-        <button className={`ff-tab${subTab === 'inbox' ? ' active' : ''}`} onClick={() => setSubTab('inbox')}>
-          Inbox {pendingCount > 0 && <span style={{ marginLeft: 4, fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 'var(--radius-full)', background: 'var(--accent-secondary)', color: '#fff' }}>{pendingCount}</span>}
-        </button>
-        <button className={`ff-tab${subTab === 'history' ? ' active' : ''}`} onClick={() => setSubTab('history')}>
-          History
-        </button>
-      </div>
-
-      <div className="ff-card-body">
+      <div className="ff-tm-body">
         {subTab === 'propose' && (
           <TradeProposal rosters={rosters} onPropose={handlePropose} scoringPreset={scoringPreset} />
         )}

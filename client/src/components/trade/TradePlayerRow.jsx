@@ -28,15 +28,16 @@ export function hexChipClass(score) {
   return 'hex-chip hex-chip-waiver';
 }
 
-export default function TradePlayerRow({ playerId, onClick, selected, showRemove, onRemove, scoringPreset }) {
+export default function TradePlayerRow({ playerId, onClick, selected, showRemove, onRemove, scoringPreset, side }) {
   const player = PLAYER_MAP[playerId];
   if (!player) return null;
 
   const score = getHexScore(playerId, scoringPreset);
+  const sideClass = selected && side === 'send' ? ' send-side' : '';
 
   return (
     <div
-      className={`ff-tm-player-row${selected ? ' selected' : ''}`}
+      className={`ff-tm-player-row${selected ? ' selected' : ''}${sideClass}`}
       onClick={() => onClick?.(playerId)}
     >
       <PlayerHeadshot espnId={getEspnId(player.name)} name={player.name} size="xs" pos={player.pos} team={player.team} />

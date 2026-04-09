@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 210" width="200" height="210">
+  <defs>
+    <!-- Outer hex gradient stroke -->
+    <linearGradient id="hexStroke" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#C4B5FD"/>
+      <stop offset="50%" stop-color="#8B5CF6"/>
+      <stop offset="100%" stop-color="#A78BFA"/>
+    </linearGradient>
+    <!-- Inner hex gradient stroke (lighter) -->
+    <linearGradient id="hexInner" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#DDD6FE"/>
+      <stop offset="100%" stop-color="#C4B5FD"/>
+    </linearGradient>
+    <!-- Football gradient -->
+    <linearGradient id="ballGrad" x1="0.3" y1="0" x2="0.7" y2="1">
+      <stop offset="0%" stop-color="#7C3AED"/>
+      <stop offset="40%" stop-color="#8B5CF6"/>
+      <stop offset="100%" stop-color="#A78BFA"/>
+    </linearGradient>
+    <!-- Football shadow -->
+    <linearGradient id="ballShadow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#6D28D9" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#6D28D9" stop-opacity="0"/>
+    </linearGradient>
+    <!-- Clip for corner accents -->
+    <clipPath id="hexClip">
+      <polygon points="100,12 178,57 178,147 100,192 22,147 22,57"/>
+    </clipPath>
+  </defs>
+
+  <!-- Outer hexagon (thick gradient stroke) -->
+  <polygon
+    points="100,8 182,55 182,149 100,196 18,149 18,55"
+    fill="none"
+    stroke="url(#hexStroke)"
+    stroke-width="10"
+    stroke-linejoin="round"
+  />
+
+  <!-- Inner hexagon (thin lighter stroke) -->
+  <polygon
+    points="100,22 170,62 170,142 100,182 30,142 30,62"
+    fill="none"
+    stroke="url(#hexInner)"
+    stroke-width="3"
+    stroke-linejoin="round"
+  />
+
+  <!-- Football group (rotated -30deg around center) -->
+  <g transform="rotate(-30, 100, 102)">
+    <!-- Football body -->
+    <ellipse cx="100" cy="102" rx="62" ry="38" fill="url(#ballGrad)"/>
+    <!-- Subtle shadow on bottom -->
+    <ellipse cx="100" cy="108" rx="58" ry="28" fill="url(#ballShadow)"/>
+
+    <!-- Seam (vertical center line) -->
+    <line x1="100" y1="66" x2="100" y2="138" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+
+    <!-- Laces -->
+    <line x1="85" y1="88" x2="115" y2="88" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+    <line x1="83" y1="96" x2="117" y2="96" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+    <line x1="83" y1="104" x2="117" y2="104" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+    <line x1="85" y1="112" x2="115" y2="112" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+  </g>
+
+  <!-- Corner accent triangles (clipped to hex) -->
+  <g clip-path="url(#hexClip)" opacity="0.7">
+    <!-- Top-right corner -->
+    <polygon points="155,45 178,57 178,80 145,65" fill="#A78BFA"/>
+    <!-- Top-left corner -->
+    <polygon points="45,45 22,57 22,80 55,65" fill="#A78BFA"/>
+    <!-- Bottom-right corner -->
+    <polygon points="155,159 178,147 178,124 145,139" fill="#8B5CF6"/>
+    <!-- Bottom-left corner -->
+    <polygon points="45,159 22,147 22,124 55,139" fill="#8B5CF6"/>
+  </g>
+</svg>

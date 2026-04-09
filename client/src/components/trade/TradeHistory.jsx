@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { TEAMS } from '../../data/teams';
 import { PLAYERS } from '../../data/players';
-import { getHexScore } from '../../utils/hexScore';
 import TradePlayerRow from './TradePlayerRow';
 
 const PLAYER_MAP = {};
@@ -34,7 +33,7 @@ export default function TradeHistory({ history }) {
       </div>
 
       {filtered.length === 0 ? (
-        <div style={{ padding: 20, textAlign: 'center', fontSize: 12, color: 'var(--text-muted)' }}>
+        <div style={{ padding: 24, textAlign: 'center', fontSize: 12, color: 'var(--text-muted)' }}>
           No {filter} trades
         </div>
       ) : (
@@ -45,37 +44,31 @@ export default function TradeHistory({ history }) {
           const resolvedDate = trade.resolvedAt ? new Date(trade.resolvedAt).toLocaleDateString() : '';
 
           return (
-            <div key={trade.id} className="ff-tm-history-row">
+            <div key={trade.id} className={`ff-tm-history-row status-${trade.status}`}>
               <div className="ff-tm-history-header" onClick={() => setExpandedId(isExpanded ? null : trade.id)}>
                 <span className={`ff-tm-status-pill ${trade.status}`}>{trade.status}</span>
-                <span style={{ flex: 1, fontWeight: 600 }}>{from?.name} {'\u2194'} {to?.name}</span>
-                <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{resolvedDate}</span>
+                <span className="ff-tm-history-teams">{from?.name} {'\u2194'} {to?.name}</span>
+                <span className="ff-tm-history-date">{resolvedDate}</span>
                 <span className={`ff-tm-history-arrow${isExpanded ? ' open' : ''}`}>{'\u25BC'}</span>
               </div>
               {isExpanded && (
                 <div className="ff-tm-history-detail">
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, padding: '12px 0' }}>
+                  <div className="ff-tm-inbox-players" style={{ margin: '12px 0' }}>
                     <div>
-                      <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4 }}>
-                        {from?.name} Sent
-                      </div>
+                      <div className="ff-tm-inbox-side-label">{from?.name} Sent</div>
                       {trade.offeringPlayerIds.map(id => (
                         <TradePlayerRow key={id} playerId={id} />
                       ))}
                     </div>
                     <div>
-                      <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4 }}>
-                        {to?.name} Sent
-                      </div>
+                      <div className="ff-tm-inbox-side-label">{to?.name} Sent</div>
                       {trade.requestingPlayerIds.map(id => (
                         <TradePlayerRow key={id} playerId={id} />
                       ))}
                     </div>
                   </div>
                   {trade.message && (
-                    <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--text-muted)', paddingBottom: 8 }}>
-                      "{trade.message}"
-                    </div>
+                    <div className="ff-tm-inbox-message">"{trade.message}"</div>
                   )}
                 </div>
               )}

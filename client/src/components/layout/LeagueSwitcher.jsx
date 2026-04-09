@@ -15,22 +15,29 @@ export default function LeagueSwitcher({ leagues, activeLeague, onSelect }) {
 
   return (
     <div className="ff-nav-center" ref={ref} style={{ position: 'relative' }}>
-      <button className="ff-leagues-trigger"
-        onClick={() => { if (!activeLeague && leagues.length <= 2) return; setShow(prev => !prev); setFocusedIndex(-1); }}
-        onKeyDown={(e) => {
-          if (!show && (e.key === 'ArrowDown' || e.key === 'Enter')) {
-            e.preventDefault(); setShow(true); setFocusedIndex(0);
-          } else if (show) {
-            if (e.key === 'ArrowDown') { e.preventDefault(); setFocusedIndex(i => Math.min(i + 1, leagues.length - 1)); }
-            else if (e.key === 'ArrowUp') { e.preventDefault(); setFocusedIndex(i => Math.max(i - 1, 0)); }
-            else if (e.key === 'Enter' && focusedIndex >= 0) { e.preventDefault(); onSelect(leagues[focusedIndex]); setShow(false); }
-            else if (e.key === 'Escape') { e.preventDefault(); setShow(false); }
-          }
-        }}>
-        <span className="ff-live-dot league-dot"></span>
-        <span className="league-name">{activeLeague ? activeLeague.name : `${leagues.length} league${leagues.length !== 1 ? 's' : ''}`}</span>
-        {(activeLeague || leagues.length > 2) && <span className={`chevron${show ? ' open' : ''}`}>{'\u25BE'}</span>}
-      </button>
+      {leagues.length <= 1 ? (
+        <span className="ff-leagues-trigger" style={{ cursor: 'default' }}>
+          <span className="ff-live-dot league-dot"></span>
+          <span className="league-name">{activeLeague ? activeLeague.name : (leagues.length === 1 ? leagues[0].name : '')}</span>
+        </span>
+      ) : (
+        <button className="ff-leagues-trigger"
+          onClick={() => { setShow(prev => !prev); setFocusedIndex(-1); }}
+          onKeyDown={(e) => {
+            if (!show && (e.key === 'ArrowDown' || e.key === 'Enter')) {
+              e.preventDefault(); setShow(true); setFocusedIndex(0);
+            } else if (show) {
+              if (e.key === 'ArrowDown') { e.preventDefault(); setFocusedIndex(i => Math.min(i + 1, leagues.length - 1)); }
+              else if (e.key === 'ArrowUp') { e.preventDefault(); setFocusedIndex(i => Math.max(i - 1, 0)); }
+              else if (e.key === 'Enter' && focusedIndex >= 0) { e.preventDefault(); onSelect(leagues[focusedIndex]); setShow(false); }
+              else if (e.key === 'Escape') { e.preventDefault(); setShow(false); }
+            }
+          }}>
+          <span className="ff-live-dot league-dot"></span>
+          <span className="league-name">{activeLeague ? activeLeague.name : `${leagues.length} leagues`}</span>
+          <span className={`chevron${show ? ' open' : ''}`}>{'\u25BE'}</span>
+        </button>
+      )}
       {show && (
         <div className="ff-leagues-dropdown">
           <div className="ff-leagues-dropdown-header">

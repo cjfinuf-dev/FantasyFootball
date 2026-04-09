@@ -108,20 +108,23 @@ function getWeightedProduction(playerId) {
 
   // Fluke dampener: when the most recent qualifying season is anomalously low
   // relative to an established track record, partially restore it toward the
-  // historical baseline. A proven elite player's single down year is noise —
-  // the body of work should dominate.
+  // historical baseline. Only fires on large drops (30%+) and skips players
+  // showing a consistent downward trend — that's real regression, not a fluke.
   if (avgs.length >= 3) {
     const recent = avgs[0];
-    const priorValid = avgs.slice(1).filter(v => v > 0);
-    if (priorValid.length >= 2) {
-      const sorted = [...priorValid].sort((a, b) => a - b);
-      const priorMedian = sorted[Math.floor(sorted.length / 2)];
-      const dropPct = priorMedian > 0 ? Math.max(0, (priorMedian - recent) / priorMedian) : 0;
+    const declining = avgs[0] < avgs[1] && avgs[1] < avgs[2];
+    if (!declining) {
+      const priorValid = avgs.slice(1).filter(v => v > 0);
+      if (priorValid.length >= 2) {
+        const sorted = [...priorValid].sort((a, b) => a - b);
+        const priorMedian = sorted[Math.floor(sorted.length / 2)];
+        const dropPct = priorMedian > 0 ? Math.max(0, (priorMedian - recent) / priorMedian) : 0;
 
-      if (dropPct > 0.15) {
-        const trackStrength = Math.min(1.0, priorValid.length / 3);
-        const flukeConf = Math.min(1.0, dropPct / 0.35) * trackStrength;
-        avgs[0] = recent + (priorMedian - recent) * flukeConf * 0.75;
+        if (dropPct > 0.30) {
+          const trackStrength = Math.min(1.0, priorValid.length / 4);
+          const flukeConf = Math.min(1.0, dropPct / 0.50) * trackStrength;
+          avgs[0] = recent + (priorMedian - recent) * flukeConf * 0.50;
+        }
       }
     }
   }
@@ -251,7 +254,7 @@ const ARCHETYPE_PEDIGREE = {
   'wr2-wr3': 0.35,          'backup': 0.20,
 };
 
-const MAX_PEDIGREE_BONUS = 10;
+const MAX_PEDIGREE_BONUS = 6;
 
 // ─── Draft Value ───
 // How many players at each position are worth spending a draft pick on.
@@ -760,11 +763,16 @@ const FLOOR_THRESHOLDS = {
 };
 
 function calcHistoricalPeakFloor(playerId, pos, currentScore) {
+  // Past-cliff players get no floor protection — the age decline is structural
+  const age = getPlayerAge(playerId);
+  const ageCurve = AGE_CURVES[pos];
+  if (age !== null && ageCurve && age > ageCurve.cliff) return 0;
+
   const history = _historicalData?.players?.[playerId];
   if (!history) return 0;
 
   const years = Object.keys(history).map(Number).sort((a, b) => b - a);
-  const recentYears = years.slice(0, 3);
+  const recentYears = years.slice(0, 2);
 
   // Find peak season avgPts (must have played 8+ games to count)
   const peakAvg = Math.max(0, ...recentYears
@@ -795,7 +803,7 @@ function calcHistoricalPeakFloor(playerId, pos, currentScore) {
   });
   const currentYear = Math.max(...years);
   const yearsSincePeak = peakYear ? (currentYear - peakYear) : 2;
-  const decayedFloor = floorScore * Math.pow(0.85, yearsSincePeak);
+  const decayedFloor = floorScore * Math.pow(0.80, yearsSincePeak);
 
   return decayedFloor > currentScore ? decayedFloor : 0;
 }
@@ -827,6 +835,10 @@ function calcPedigreeBonus(playerId, pos, archetypeKey) {
     .filter(s => s.gp >= 10);
   if (qualifying.length < 3) return 0; // not enough data to detect flukes
 
+  // Trend guard: monotonic decline across last 3 qualifying seasons = real
+  // regression, not a fluke. No pedigree bonus for players trending down.
+  if (qualifying[0].avg < qualifying[1].avg && qualifying[1].avg < qualifying[2].avg) return 0;
+
   const recentAvg = qualifying[0].avg;
   const priorAvgs = qualifying.slice(1).map(s => s.avg).filter(v => v > 0);
   if (priorAvgs.length < 2) return 0;
@@ -834,7 +846,7 @@ function calcPedigreeBonus(playerId, pos, archetypeKey) {
   const sorted = [...priorAvgs].sort((a, b) => a - b);
   const priorMedian = sorted[Math.floor(sorted.length / 2)];
   const dropPct = priorMedian > 0 ? Math.max(0, (priorMedian - recentAvg) / priorMedian) : 0;
-  if (dropPct <= 0.15) return 0; // no fluke — algorithm handles this player fine
+  if (dropPct <= 0.30) return 0; // no fluke — algorithm handles this player fine
 
   // 1. Elite Season Depth (weight: 0.35) — qualifying seasons with gp >= 10
   let depth = 0;

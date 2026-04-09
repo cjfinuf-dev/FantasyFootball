@@ -565,22 +565,25 @@ export function calcStatProduction(player) {
   // ─── Fluke dampener ───
   // When the most recent qualifying season is anomalously low relative to an
   // established track record, partially restore it toward the historical baseline.
-  // A proven player's single down year is noise, not signal — the body of work
-  // should dominate over one outlier season.
+  // Only fires on large drops (30%+) and skips players showing a consistent
+  // downward trend — that's real regression, not a fluke.
   let flukeDetected = false;
   if (seasonScores.length >= 3) {
     const recent = seasonScores[0];
-    const priorValid = seasonScores.slice(1).filter(v => v > 0);
-    if (priorValid.length >= 2) {
-      const sorted = [...priorValid].sort((a, b) => a - b);
-      const priorMedian = sorted[Math.floor(sorted.length / 2)];
-      const dropPct = priorMedian > 0 ? Math.max(0, (priorMedian - recent) / priorMedian) : 0;
+    const declining = seasonScores[0] < seasonScores[1] && seasonScores[1] < seasonScores[2];
+    if (!declining) {
+      const priorValid = seasonScores.slice(1).filter(v => v > 0);
+      if (priorValid.length >= 2) {
+        const sorted = [...priorValid].sort((a, b) => a - b);
+        const priorMedian = sorted[Math.floor(sorted.length / 2)];
+        const dropPct = priorMedian > 0 ? Math.max(0, (priorMedian - recent) / priorMedian) : 0;
 
-      if (dropPct > 0.15) {
-        flukeDetected = true;
-        const trackStrength = Math.min(1.0, priorValid.length / 3);
-        const flukeConf = Math.min(1.0, dropPct / 0.35) * trackStrength;
-        seasonScores[0] = recent + (priorMedian - recent) * flukeConf * 0.45;
+        if (dropPct > 0.30) {
+          flukeDetected = true;
+          const trackStrength = Math.min(1.0, priorValid.length / 4);
+          const flukeConf = Math.min(1.0, dropPct / 0.50) * trackStrength;
+          seasonScores[0] = recent + (priorMedian - recent) * flukeConf * 0.30;
+        }
       }
     }
   }
@@ -603,9 +606,9 @@ export function calcStatProduction(player) {
       const sorted = [...priorValid].sort((a, b) => a - b);
       const priorMedian = sorted[Math.floor(sorted.length / 2)];
       const currentDrop = priorMedian > 0 ? Math.max(0, (priorMedian - currentScore) / priorMedian) : 0;
-      if (currentDrop > 0.15) {
-        const trackStrength = Math.min(1.0, priorValid.length / 3);
-        const flukeShift = Math.min(0.12, currentDrop * trackStrength * 0.40);
+      if (currentDrop > 0.30) {
+        const trackStrength = Math.min(1.0, priorValid.length / 4);
+        const flukeShift = Math.min(0.08, currentDrop * trackStrength * 0.25);
         histWeight += flukeShift;
         currWeight -= flukeShift;
       }

@@ -78,7 +78,7 @@ function PlayerRow({ player, onPlayerClick }) {
     <div className="ff-matchup-player">
       <span className="ff-matchup-player-name" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <PlayerHeadshot espnId={getEspnId(player.name)} name={player.name} size="xs" pos={player.pos} team={player.team} />
-        <PosBadge pos={player.pos} />
+        <PosBadge pos={player.pos} size="xs" />
         <PlayerLink name={player.name} playerId={player.id} onPlayerClick={onPlayerClick} />
       </span>
       <span style={{ fontWeight: 600 }} className="tabular-nums">{player.proj}</span>
@@ -112,12 +112,12 @@ function MatchupCard({ matchup, expanded, rosters, onPlayerClick, onToggle, onMa
     >
       <div className="ff-card-top-accent" style={{ background: isUserMatchup ? 'var(--accent)' : 'var(--border-strong)' }} />
 
-      {isUserMatchup && !expanded && (
+      {isUserMatchup && (
         <div className="ff-your-matchup-label">Your Matchup</div>
       )}
       {expanded && (
         <div className="ff-card-header">
-          <h2>{isUserMatchup ? 'Your Matchup' : 'Matchup Preview'}</h2>
+          <h2>{isUserMatchup ? 'Matchup Details' : 'Matchup Preview'}</h2>
           <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Week 12</span>
         </div>
       )}
@@ -131,7 +131,7 @@ function MatchupCard({ matchup, expanded, rosters, onPlayerClick, onToggle, onMa
             <StreakBadge streak={homeTeam.streak} />
           </div>
           <div className="ff-matchup-score tabular-nums" style={!expanded ? { fontSize: 24 } : undefined}>
-            {matchup.home.projected.toFixed(2)}
+            {matchup.home.projected.toFixed(1)}
           </div>
           <div className="ff-matchup-projected tabular-nums">Projected</div>
           <span className={`ff-matchup-tag ${isTossUp ? 'ff-tag-even' : homeFavored ? 'ff-tag-fav' : 'ff-tag-dog'}`}>
@@ -157,7 +157,7 @@ function MatchupCard({ matchup, expanded, rosters, onPlayerClick, onToggle, onMa
             <StreakBadge streak={awayTeam.streak} />
           </div>
           <div className="ff-matchup-score tabular-nums" style={!expanded ? { fontSize: 24 } : undefined}>
-            {matchup.away.projected.toFixed(2)}
+            {matchup.away.projected.toFixed(1)}
           </div>
           <div className="ff-matchup-projected tabular-nums">Projected</div>
           <span className={`ff-matchup-tag ${isTossUp ? 'ff-tag-even' : awayFavored ? 'ff-tag-fav' : 'ff-tag-dog'}`}>

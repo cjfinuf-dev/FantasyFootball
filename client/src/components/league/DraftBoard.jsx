@@ -838,7 +838,7 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
                   </div>
                 </div>
                 <div style={{ textAlign: 'center' }}>
-                  <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 72, height: 78, clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)', background: gradeColor, fontSize: 28, fontWeight: 900, color: '#fff' }}>
+                  <div className="ff-draft-grade-reveal" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 72, height: 78, clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)', background: gradeColor, fontSize: 28, fontWeight: 900, color: '#fff' }}>
                     {draftGrade}
                   </div>
                   <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginTop: 4 }}><HexBrand word="Grade" size="sm" /></div>
@@ -1049,12 +1049,8 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
   // ---- ACTIVE DRAFT ----
   return (
     <div className="ff-draft-immersive">
-      <style>{`
-        @keyframes pickFlash { 0% { background: var(--accent); } 100% { background: transparent; } }
-      `}</style>
-
       {/* Compact Draft Header Bar */}
-      <div className="ff-draft-header">
+      <div className={`ff-draft-header${isUserTurn ? ' user-turn' : ''}`}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <button style={{ background: 'none', border: 'none', color: 'var(--di-text-muted, #999)', fontSize: 12, cursor: 'pointer' }} onClick={() => window.history.back()}>{'\u2190'} Exit</button>
           <span style={{ color: 'var(--di-text-faint, #666)', fontSize: 11 }}>|</span>
@@ -1126,11 +1122,10 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
                   {row.map((cell, colIdx) => {
                     const isU = cell.teamId === USER_TEAM_ID;
                     return (
-                      <td key={colIdx} style={{
+                      <td key={colIdx} className={`${cell.isCurrent ? 'current-cell' : ''}${isU && cell.pick ? ' user-pick' : ''}`} style={{
                         background: cell.isCurrent ? 'rgba(139,92,246,0.25)'
                           : cell.pick ? POS_BG[cell.pick.player?.pos] || 'transparent'
                           : isU ? 'rgba(139,92,246,0.05)' : 'transparent',
-                        animation: cell.isCurrent ? 'pickFlash 1s ease-in-out infinite alternate' : undefined,
                       }}>
                         {cell.pick ? (
                           <div>

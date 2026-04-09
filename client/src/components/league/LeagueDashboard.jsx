@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
 import MatchupWidget from '../dashboard/MatchupWidget';
 import PlayerRankings from '../dashboard/PlayerRankings';
@@ -14,6 +14,7 @@ import MatchupDetail from './MatchupDetail';
 import TradeCenter from '../trade/TradeCenter';
 import PlayerCompare from './PlayerCompare';
 import LeagueSettings from './LeagueSettings';
+import LeagueChat from './LeagueChat';
 import Breadcrumb from '../ui/Breadcrumb';
 import * as leagueApi from '../../api/leagues';
 
@@ -32,6 +33,7 @@ const TAB_ICONS = {
   matchups: <svg viewBox="0 0 16 12" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 1.5L8 0 11 1.5v3L8 6 5 4.5z"/><path d="M5 7.5L8 6 11 7.5v3L8 12 5 10.5z" opacity="0.5"/></svg>,
   compare: <svg viewBox="0 0 14 15.5" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d={HEX}/><line x1="5.5" y1="5" x2="5.5" y2="10.5"/><line x1="8.5" y1="5" x2="8.5" y2="10.5"/><line x1="4" y1="7.75" x2="10" y2="7.75"/></svg>,
   waivers: <svg viewBox="0 0 14 15.5" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d={HEX}/><line x1="7" y1="5.5" x2="7" y2="10"/><line x1="4.5" y1="7.75" x2="9.5" y2="7.75"/></svg>,
+  chat: <svg viewBox="0 0 14 15.5" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d={HEX}/><path d="M5 6h4M5 8.5h2.5"/></svg>,
   locked: <svg viewBox="0 0 14 15.5" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d={HEX}/><rect x="5" y="7.5" width="4" height="3" rx="0.5"/><path d="M5.8 7.5V6.5a1.2 1.2 0 012.4 0v1"/></svg>,
 };
 
@@ -49,10 +51,14 @@ export default function LeagueDashboard() {
   const [draftLoading, setDraftLoading] = useState(true);
   const members = league?.members || [];
   const [viewingPlayerId, setViewingPlayerId] = useState(() => searchParams.get('player') || null);
-  const [viewingTeamId, setViewingTeamId] = useState(null);
-  const [viewingMatchupId, setViewingMatchupId] = useState(null);
+  const [viewingTeamId, setViewingTeamId] = useState(() => searchParams.get('team') || null);
+  const [viewingMatchupId, setViewingMatchupId] = useState(() => searchParams.get('matchup') || null);
+  const savedScrollRef = useRef(0);
+  const tabScrollRef = useRef({});
+  const tabsWrapRef = useRef(null);
 
   const handlePlayerClick = (playerId) => {
+    savedScrollRef.current = window.scrollY;
     setViewingTeamId(null);
     setViewingPlayerId(playerId);
     const params = new URLSearchParams(searchParams);
@@ -61,22 +67,36 @@ export default function LeagueDashboard() {
   };
 
   const handleTeamClick = (teamId) => {
+    savedScrollRef.current = window.scrollY;
     setViewingPlayerId(null);
     setViewingTeamId(teamId);
     setViewingMatchupId(null);
+    const params = new URLSearchParams(searchParams);
+    params.delete('player');
+    params.delete('matchup');
+    params.set('team', teamId);
+    setSearchParams(params, { replace: true });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleMatchupClick = (matchupId) => {
+    savedScrollRef.current = window.scrollY;
     setViewingPlayerId(null);
     setViewingTeamId(null);
     setViewingMatchupId(matchupId);
+    const params = new URLSearchParams(searchParams);
+    params.delete('player');
+    params.delete('team');
+    params.set('matchup', matchupId);
+    setSearchParams(params, { replace: true });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const setActiveTab = (tabId) => {
+    tabScrollRef.current[activeTab] = window.scrollY;
     navigate(`/league/${leagueId}/${tabId}`, { replace: true });
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    const saved = tabScrollRef.current[tabId];
+    window.scrollTo({ top: saved || 0, behavior: 'smooth' });
   };
 
   // Fetch league data
@@ -141,19 +161,31 @@ export default function LeagueDashboard() {
     } catch (err) { alert(err.message || 'Failed to remove member.'); }
   };
 
-  const draftRequiredTabs = new Set(['overview', 'lineup', 'matchups', 'standings', 'waivers', 'trades']);
+  // Left-side scroll fade on tab strip
+  useEffect(() => {
+    const el = tabsWrapRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      el.classList.toggle('scrolled-left', el.scrollLeft > 4);
+    };
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => el.removeEventListener('scroll', onScroll);
+  }, [league]);
+
+  const draftRequiredTabs = new Set(['overview', 'lineup', 'matchups', 'standings', 'waivers', 'trades', 'chat']);
   const isTabDisabled = (id) => !draftComplete && draftRequiredTabs.has(id);
 
   const allTabs = [
-    { id: 'overview', label: 'Overview' },
-    { id: 'lineup', label: 'My Lineup' },
-    { id: 'draft', label: 'Draft' },
-    { id: 'trades', label: 'Trades' },
     { id: 'players', label: 'Players' },
     { id: 'compare', label: 'Compare' },
-    { id: 'standings', label: 'Standings' },
+    { id: 'draft', label: 'Draft' },
+    { id: 'overview', label: 'League Overview' },
+    { id: 'lineup', label: 'My Lineup' },
     { id: 'matchups', label: 'Matchups' },
+    { id: 'standings', label: 'League Standings' },
     { id: 'waivers', label: 'Waivers' },
+    { id: 'trades', label: 'Trades' },
+    { id: 'chat', label: 'League Chat' },
   ];
 
   const handleTabKeyDown = (e, idx) => {
@@ -194,31 +226,43 @@ export default function LeagueDashboard() {
           <h1 style={{ fontFamily: "'Playfair Display', serif", color: 'var(--text)' }}>
             {league.name}
           </h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>
+          <p style={{ color: 'var(--text-muted)', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
             Your team: <strong style={{ color: 'var(--accent-text)' }}>{league.team_name}</strong> &middot; {league.role === 'commissioner' ? 'Commissioner' : 'Member'}
           </p>
 
           {/* League Nav Tabs */}
-          <div className="ff-league-tabs-wrap" role="tablist">
+          <span id="tab-lock-desc" hidden>Complete the draft first</span>
+          <div className="ff-league-tabs-wrap" role="tablist" ref={tabsWrapRef}>
             {allTabs.map((t, idx) => (
               <button key={t.id}
                 role="tab"
                 aria-selected={activeTab === t.id}
                 data-tab-index={idx}
                 tabIndex={activeTab === t.id ? 0 : -1}
-                onClick={() => !isTabDisabled(t.id) && setActiveTab(t.id)}
+                onClick={(e) => {
+                  if (isTabDisabled(t.id)) {
+                    e.currentTarget.classList.remove('shake');
+                    void e.currentTarget.offsetWidth;
+                    e.currentTarget.classList.add('shake');
+                  } else {
+                    setActiveTab(t.id);
+                  }
+                }}
                 onKeyDown={(e) => handleTabKeyDown(e, idx)}
-                className={`ff-league-tab${activeTab === t.id ? ' active' : ''}${isTabDisabled(t.id) ? ' disabled' : ''}`}
+                className={`ff-league-tab${activeTab === t.id ? ' active' : ''}${isTabDisabled(t.id) ? ' disabled' : ''}${t.id === 'draft' ? ' ff-league-tab-draft' : ''}`}
                 aria-disabled={isTabDisabled(t.id) || undefined}
+                aria-describedby={isTabDisabled(t.id) ? 'tab-lock-desc' : undefined}
                 title={isTabDisabled(t.id) ? 'Complete the draft first' : undefined}>
-                {isTabDisabled(t.id) ? TAB_ICONS.locked : TAB_ICONS[t.id]}{t.label}
+                {isTabDisabled(t.id) ? TAB_ICONS.locked : TAB_ICONS[t.id]}{t.label}{t.id === 'draft' && !draftComplete && <span className="ff-tab-unlock-arrow">›</span>}
               </button>
             ))}
             <button onClick={() => setActiveTab('settings')}
+              role="tab"
+              aria-selected={activeTab === 'settings'}
               className={`ff-league-tab ff-league-tab-gear${activeTab === 'settings' ? ' active' : ''}`}
               title="League Info">
               <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" style={{ margin: 0 }}>
-                <circle cx="7" cy="7" r="2"/><path d="M7 1v1.5M7 11.5V13M1 7h1.5M11.5 7H13M2.76 2.76l1.06 1.06M10.18 10.18l1.06 1.06M11.24 2.76l-1.06 1.06M3.82 10.18l-1.06 1.06"/>
+                <path d="M6.1 1.5h1.8l.3 1.3.9.4 1.1-.7 1.3 1.3-.7 1.1.4.9 1.3.3v1.8l-1.3.3-.4.9.7 1.1-1.3 1.3-1.1-.7-.9.4-.3 1.3H6.1l-.3-1.3-.9-.4-1.1.7-1.3-1.3.7-1.1-.4-.9-1.3-.3V6.1l1.3-.3.4-.9-.7-1.1 1.3-1.3 1.1.7.9-.4z"/><circle cx="7" cy="7" r="2"/>
               </svg>
             </button>
           </div>
@@ -227,13 +271,14 @@ export default function LeagueDashboard() {
 
       {/* Player Stats View */}
       {viewingPlayerId ? (
-        <div className="ff-tab-content ff-tab-content-wide">
+        <div className="ff-tab-content ff-tab-content-wide ff-detail-view">
           <Breadcrumb
             onBack={() => {
               setViewingPlayerId(null);
               const params = new URLSearchParams(searchParams);
               params.delete('player');
               setSearchParams(params, { replace: true });
+              requestAnimationFrame(() => window.scrollTo({ top: savedScrollRef.current, behavior: 'smooth' }));
             }}
             backLabel={activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
             currentLabel="Player Details"
@@ -243,25 +288,50 @@ export default function LeagueDashboard() {
             const params = new URLSearchParams(searchParams);
             params.delete('player');
             setSearchParams(params, { replace: true });
+            window.scrollTo({ top: savedScrollRef.current, behavior: 'smooth' });
           }} />
         </div>
       ) : viewingTeamId ? (
-        <div className="ff-tab-content ff-tab-content-wide">
+        <div className="ff-tab-content ff-tab-content-wide ff-detail-view">
           <Breadcrumb
-            onBack={() => setViewingTeamId(null)}
+            onBack={() => {
+              setViewingTeamId(null);
+              const params = new URLSearchParams(searchParams);
+              params.delete('team');
+              setSearchParams(params, { replace: true });
+              requestAnimationFrame(() => window.scrollTo({ top: savedScrollRef.current, behavior: 'smooth' }));
+            }}
             backLabel={activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
             currentLabel="Team Details"
           />
-          <TeamPage teamId={viewingTeamId} rosters={draftedRosters} onBack={() => setViewingTeamId(null)} onPlayerClick={handlePlayerClick} />
+          <TeamPage teamId={viewingTeamId} rosters={draftedRosters} onBack={() => {
+            setViewingTeamId(null);
+            const params = new URLSearchParams(searchParams);
+            params.delete('team');
+            setSearchParams(params, { replace: true });
+            window.scrollTo({ top: savedScrollRef.current, behavior: 'smooth' });
+          }} onPlayerClick={handlePlayerClick} />
         </div>
       ) : viewingMatchupId ? (
-        <div className="ff-tab-content ff-tab-content-wide">
+        <div className="ff-tab-content ff-tab-content-wide ff-detail-view">
           <Breadcrumb
-            onBack={() => setViewingMatchupId(null)}
+            onBack={() => {
+              setViewingMatchupId(null);
+              const params = new URLSearchParams(searchParams);
+              params.delete('matchup');
+              setSearchParams(params, { replace: true });
+              requestAnimationFrame(() => window.scrollTo({ top: savedScrollRef.current, behavior: 'smooth' }));
+            }}
             backLabel="Matchups"
             currentLabel="Matchup Detail"
           />
-          <MatchupDetail matchup={MATCHUPS.find(m => m.id === viewingMatchupId) || MATCHUPS[0]} rosters={draftedRosters} onBack={() => setViewingMatchupId(null)} onPlayerClick={handlePlayerClick} />
+          <MatchupDetail matchup={MATCHUPS.find(m => m.id === viewingMatchupId) || MATCHUPS[0]} rosters={draftedRosters} onBack={() => {
+            setViewingMatchupId(null);
+            const params = new URLSearchParams(searchParams);
+            params.delete('matchup');
+            setSearchParams(params, { replace: true });
+            window.scrollTo({ top: savedScrollRef.current, behavior: 'smooth' });
+          }} onPlayerClick={handlePlayerClick} />
         </div>
       ) : <>
 
@@ -345,13 +415,13 @@ export default function LeagueDashboard() {
       )}
 
       {activeTab === 'standings' && (
-        <div className="ff-tab-content ff-tab-content-mid">
+        <div className="ff-tab-content ff-tab-content-wide">
           <StandingsCard expanded rosters={draftedRosters} leagueName={league.name} onTeamClick={handleTeamClick} />
         </div>
       )}
 
       {activeTab === 'waivers' && (
-        <div className="ff-tab-content ff-tab-content-mid">
+        <div className="ff-tab-content ff-tab-content-wide">
           <WaiverWireCard expanded rosters={draftedRosters} onPlayerClick={handlePlayerClick} onClaimPlayer={(playerId) => {
             setDraftedRosters(prev => {
               const next = { ...prev };
@@ -396,6 +466,12 @@ export default function LeagueDashboard() {
       {activeTab === 'settings' && (
         <div className="ff-tab-content ff-tab-content-wide">
           <LeagueSettings league={league} members={members} onRemoveMember={handleRemoveMember} />
+        </div>
+      )}
+
+      {activeTab === 'chat' && (
+        <div className="ff-tab-content ff-tab-content-mid">
+          <LeagueChat league={league} leagueId={leagueId} />
         </div>
       )}
       </>}

@@ -49,7 +49,7 @@ export default function PlayerHeadshot({ espnId, name, size = 'sm', pos, team })
   }
 
   const posColors = {
-    QB: '#3b82f6', RB: '#22c55e', WR: '#f59e0b', TE: '#ef4444', K: '#a855f7', DEF: '#64748b',
+    QB: '#2563eb', RB: '#16a34a', WR: '#f59e0b', TE: '#dc2626', K: '#7c3aed', DEF: '#5A5F6B',
   };
 
   // Fallback: position initial on subtle tinted background
