@@ -1597,6 +1597,7 @@
     font-size: 12px; font-weight: 500;
     color: var(--text-muted);
     border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
     cursor: pointer; white-space: nowrap;
     transition: color var(--duration-fast) var(--ease), border-color var(--duration-fast) var(--ease);
   }
@@ -1632,12 +1633,27 @@
     border-radius: var(--radius-sm) var(--radius-sm) 0 0;
   }
   .ff-league-tab-gear { margin-left: auto; }
+  /* ---- League Dropdown Trigger ---- */
+  .ff-league-dropdown-trigger {
+    display: flex; align-items: center; gap: 6px;
+    background: none; border: none; padding: 10px 16px;
+    font-size: 13px; font-weight: 600; color: var(--text);
+    cursor: pointer; white-space: nowrap; font-family: inherit;
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+  }
+  .ff-league-dropdown-trigger:hover { color: var(--accent-text); }
+  .ff-league-dropdown-trigger .chevron {
+    font-size: 10px; transition: transform 150ms var(--ease);
+  }
+  .ff-league-dropdown-trigger[aria-expanded="true"] .chevron {
+    transform: rotate(180deg);
+  }
   /* ---- More Tabs Dropdown ---- */
   .ff-more-tabs-menu {
     position: absolute; top: 100%; right: 0; z-index: 200;
     background: var(--bg-white); border: 1px solid var(--border);
     border-radius: var(--radius-md); box-shadow: var(--shadow-lg);
-    min-width: 168px; padding: 4px 0;
+    min-width: 200px; padding: 4px 0;
     animation: slideFadeIn 150ms var(--ease);
   }
   [data-theme="dark"] .ff-more-tabs-menu { background: var(--gray-800); border-color: var(--border); }
@@ -1657,6 +1673,7 @@
     display: flex; align-items: stretch;
     margin-top: 12px;
     background: var(--surface);
+    border-bottom: 1px solid var(--border);
   }
   [data-theme="dark"] .ff-tabs-container { background: var(--gray-800); }
   .ff-tabs-arrow {
@@ -1703,7 +1720,24 @@
 
   .ff-league-tab svg { width: 16px; height: 16px; vertical-align: -2px; margin-right: 6px; flex-shrink: 0; }
   .ff-league-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--radius-sm); }
-  .ff-league-tab-gear { font-size: 16px; margin-left: auto; }
+  .ff-league-tab-gear { font-size: 16px; margin-left: 0; }
+
+  /* ---- Tab Actions (gear + more) pinned right of scroll arrows ---- */
+  .ff-tab-actions {
+    display: flex; align-items: stretch; flex-shrink: 0; gap: 0;
+    border-left: 1px solid var(--border);
+  }
+  .ff-more-trigger {
+    width: 40px; justify-content: center; display: inline-flex; align-items: center;
+    font-size: 18px; letter-spacing: 2px; padding: 10px 0;
+    position: relative;
+  }
+  .ff-more-trigger.active::after {
+    content: '';
+    position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%);
+    width: 5px; height: 5px; border-radius: 50%;
+    background: var(--accent);
+  }
 
   /* Draft tab — visual unlock divider between always-available and draft-locked tabs */
   .ff-league-tab-draft {

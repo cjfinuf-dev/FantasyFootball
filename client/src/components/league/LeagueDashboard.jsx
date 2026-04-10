@@ -39,6 +39,10 @@ const TAB_ICONS = {
   locked: <svg viewBox="0 0 14 15.5" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d={HEX}/><rect x="5" y="7.5" width="4" height="3" rx="0.5"/><path d="M5.8 7.5V6.5a1.2 1.2 0 012.4 0v1"/></svg>,
 };
 
+// Tabs that require a completed draft before they become clickable
+const DRAFT_REQUIRED_TABS = new Set(['overview', 'lineup', 'matchups', 'standings', 'playoffs', 'waivers', 'trades', 'chat']);
+
+
 export default function LeagueDashboard() {
   const { leagueId, tab } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -57,7 +61,6 @@ export default function LeagueDashboard() {
   const [viewingMatchupId, setViewingMatchupId] = useState(() => searchParams.get('matchup') || null);
   const savedScrollRef = useRef(0);
   const tabScrollRef = useRef({});
-  const tabsWrapRef = useRef(null);
 
   const handlePlayerClick = (playerId) => {
     savedScrollRef.current = window.scrollY;
@@ -163,28 +166,8 @@ export default function LeagueDashboard() {
     } catch (err) { alert(err.message || 'Failed to remove member.'); }
   };
 
-  const [tabOverflow, setTabOverflow] = useState({ left: false, right: false });
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const moreMenuRef = useRef(null);
-
-  // Scroll fade + overflow detection on tab strip
-  useEffect(() => {
-    const el = tabsWrapRef.current;
-    if (!el) return;
-    const check = () => {
-      const hasRight = el.scrollLeft + el.clientWidth < el.scrollWidth - 4;
-      el.classList.toggle('scrolled-left', el.scrollLeft > 4);
-      el.classList.toggle('has-right-overflow', hasRight);
-      setTabOverflow({
-        left: el.scrollLeft > 4,
-        right: hasRight,
-      });
-    };
-    check();
-    el.addEventListener('scroll', check, { passive: true });
-    window.addEventListener('resize', check);
-    return () => { el.removeEventListener('scroll', check); window.removeEventListener('resize', check); };
-  }, [league]);
 
   // Close more-tabs menu on outside click
   useEffect(() => {
@@ -224,11 +207,7 @@ export default function LeagueDashboard() {
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [viewingPlayerId, viewingTeamId, viewingMatchupId, searchParams]);
 
-  const draftRequiredTabs = new Set(['overview', 'lineup', 'matchups', 'standings', 'playoffs', 'waivers', 'trades', 'chat']);
-  const isTabDisabled = (id) => !draftComplete && draftRequiredTabs.has(id);
-
-  // Post-draft: first 8 tabs in strip, rest in "More" dropdown
-  const PRIMARY_TAB_IDS = new Set(['overview', 'lineup', 'matchups', 'standings', 'playoffs', 'players', 'waivers', 'trades', 'draft']);
+  const isTabDisabled = (id) => !draftComplete && DRAFT_REQUIRED_TABS.has(id);
 
   const allTabs = draftComplete
     ? [
@@ -258,21 +237,6 @@ export default function LeagueDashboard() {
         { id: 'chat', label: 'League Chat' },
       ];
 
-  const handleTabKeyDown = (e, idx) => {
-    if (e.key === 'ArrowRight' && idx === allTabs.length - 1) {
-      e.preventDefault();
-      document.querySelector('.ff-league-tab-gear')?.focus();
-      return;
-    }
-    let next = -1;
-    if (e.key === 'ArrowRight' && idx < allTabs.length - 1) next = idx + 1;
-    else if (e.key === 'ArrowLeft' && idx > 0) next = idx - 1;
-    if (next >= 0) {
-      e.preventDefault();
-      const nextTab = document.querySelector(`[data-tab-index="${next}"]`);
-      if (nextTab) { nextTab.focus(); setActiveTab(allTabs[next].id); }
-    }
-  };
 
   if (leagueLoading || !league) {
     return (
@@ -310,96 +274,50 @@ export default function LeagueDashboard() {
           {/* League Nav Tabs */}
           <span id="tab-lock-desc" hidden>Complete the draft first</span>
           <div className="ff-tabs-container">
-          {tabOverflow.left && (
-            <button className="ff-tabs-arrow ff-tabs-arrow--left" aria-label="Scroll tabs left"
-              onClick={() => tabsWrapRef.current?.scrollBy({ left: -160, behavior: 'smooth' })}>
-              <svg viewBox="0 0 8 12" width="8" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="6,1 1,6 6,11"/></svg>
+          <div style={{ position: 'relative' }} ref={moreMenuRef}>
+            <button
+              className="ff-league-dropdown-trigger"
+              onClick={() => setShowMoreMenu(prev => !prev)}
+              aria-haspopup="listbox"
+              aria-expanded={showMoreMenu}>
+              Hex Fantasy League <span className="chevron">▾</span>
             </button>
-          )}
-          <div className="ff-league-tabs-wrap" role="tablist" ref={tabsWrapRef}
-            title="Use arrow keys to navigate tabs"
-            aria-label="League navigation (arrow keys to switch tabs)">
-            {draftComplete ? (() => {
-              const primaryTabs = allTabs.filter(t => PRIMARY_TAB_IDS.has(t.id));
-              const moreTabs = allTabs.filter(t => !PRIMARY_TAB_IDS.has(t.id));
-              const activeInMore = moreTabs.some(t => t.id === activeTab);
-              return (
-                <>
-                  {primaryTabs.map((t, idx) => (
+            {showMoreMenu && (
+              <div className="ff-more-tabs-menu">
+                {allTabs.map(t => {
+                  const locked = isTabDisabled(t.id);
+                  return (
                     <button key={t.id}
-                      role="tab"
-                      aria-selected={activeTab === t.id}
-                      data-tab-index={idx}
-                      tabIndex={activeTab === t.id ? 0 : -1}
-                      onClick={() => setActiveTab(t.id)}
-                      onKeyDown={(e) => handleTabKeyDown(e, idx)}
-                      className={`ff-league-tab${activeTab === t.id ? ' active' : ''}${t.id === 'draft' ? ' ff-league-tab-draft' : ''}`}>
-                      {TAB_ICONS[t.id]}{t.label}
+                      className={`ff-more-tab-item${activeTab === t.id ? ' active' : ''}${locked ? ' disabled' : ''}`}
+                      aria-disabled={locked || undefined}
+                      title={locked ? 'Complete the draft first' : undefined}
+                      onClick={(e) => {
+                        if (locked) {
+                          e.currentTarget.classList.remove('shake');
+                          void e.currentTarget.offsetWidth;
+                          e.currentTarget.classList.add('shake');
+                          return;
+                        }
+                        setActiveTab(t.id); setShowMoreMenu(false);
+                      }}>
+                      {locked ? TAB_ICONS.locked : TAB_ICONS[t.id]}{t.label}
                     </button>
-                  ))}
-                  <div style={{ position: 'relative' }} ref={moreMenuRef}>
-                    <button
-                      className={`ff-league-tab${activeInMore ? ' active' : ''}`}
-                      onClick={() => setShowMoreMenu(prev => !prev)}
-                      aria-haspopup="listbox"
-                      aria-expanded={showMoreMenu}>
-                      {activeInMore ? TAB_ICONS[activeTab] : null}
-                      {activeInMore ? allTabs.find(t => t.id === activeTab)?.label : 'More'} ›
-                    </button>
-                    {showMoreMenu && (
-                      <div className="ff-more-tabs-menu">
-                        {moreTabs.map(t => (
-                          <button key={t.id}
-                            className={`ff-more-tab-item${activeTab === t.id ? ' active' : ''}`}
-                            onClick={() => { setActiveTab(t.id); setShowMoreMenu(false); }}>
-                            {TAB_ICONS[t.id]}{t.label}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </>
-              );
-            })() : allTabs.map((t, idx) => (
-              <button key={t.id}
-                role="tab"
-                aria-selected={activeTab === t.id}
-                data-tab-index={idx}
-                tabIndex={activeTab === t.id ? 0 : -1}
-                onClick={(e) => {
-                  if (isTabDisabled(t.id)) {
-                    e.currentTarget.classList.remove('shake');
-                    void e.currentTarget.offsetWidth;
-                    e.currentTarget.classList.add('shake');
-                  } else {
-                    setActiveTab(t.id);
-                  }
-                }}
-                onKeyDown={(e) => handleTabKeyDown(e, idx)}
-                className={`ff-league-tab${activeTab === t.id ? ' active' : ''}${isTabDisabled(t.id) ? ' disabled' : ''}${t.id === 'draft' ? ' ff-league-tab-draft' : ''}`}
-                aria-disabled={isTabDisabled(t.id) || undefined}
-                aria-describedby={isTabDisabled(t.id) ? 'tab-lock-desc' : undefined}
-                title={isTabDisabled(t.id) ? 'Complete the draft first' : undefined}>
-                {isTabDisabled(t.id) ? TAB_ICONS.locked : TAB_ICONS[t.id]}{t.label}{t.id === 'draft' && !draftComplete && <span className="ff-tab-unlock-arrow">›</span>}
-              </button>
-            ))}
+                  );
+                })}
+              </div>
+            )}
+          </div>
+          <div className="ff-tab-actions">
             <button onClick={() => setActiveTab('settings')}
               role="tab"
               aria-selected={activeTab === 'settings'}
               className={`ff-league-tab ff-league-tab-gear${activeTab === 'settings' ? ' active' : ''}`}
-              onKeyDown={(e) => { if (e.key === 'ArrowLeft') { e.preventDefault(); const last = document.querySelector(`[data-tab-index="${allTabs.length - 1}"]`); if (last) last.focus(); } }}
               title="League Info">
               <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" style={{ margin: 0 }}>
                 <path d="M6.1 1.5h1.8l.3 1.3.9.4 1.1-.7 1.3 1.3-.7 1.1.4.9 1.3.3v1.8l-1.3.3-.4.9.7 1.1-1.3 1.3-1.1-.7-.9.4-.3 1.3H6.1l-.3-1.3-.9-.4-1.1.7-1.3-1.3.7-1.1-.4-.9-1.3-.3V6.1l1.3-.3.4-.9-.7-1.1 1.3-1.3 1.1.7.9-.4z"/><circle cx="7" cy="7" r="2"/>
               </svg>
             </button>
           </div>
-          {tabOverflow.right && (
-            <button className="ff-tabs-arrow ff-tabs-arrow--right" aria-label="Scroll tabs right"
-              onClick={() => tabsWrapRef.current?.scrollBy({ left: 160, behavior: 'smooth' })}>
-              <svg viewBox="0 0 8 12" width="8" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="2,1 7,6 2,11"/></svg>
-            </button>
-          )}
           </div>
         </div>
       </header>
