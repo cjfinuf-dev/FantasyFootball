@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useLeagues } from '../../hooks/useLeagues';
@@ -8,6 +8,7 @@ import CreateLeagueModal from '../league/CreateLeagueModal';
 import DeleteLeagueModal from '../league/DeleteLeagueModal';
 import { getSituationEvents } from '../../api/stats';
 import { setSituationEvents } from '../../utils/hexScore';
+import { getHexIconOverlay } from '../../utils/hexMeshIcons';
 
 export default function AppLayout() {
   const { user } = useAuth();
@@ -43,17 +44,39 @@ export default function AppLayout() {
 
   const isLeagueView = location.pathname.startsWith('/league/');
 
+  const activeIconTab = useMemo(() => {
+    const p = location.pathname;
+    if (p === '/') return null;
+    const lm = p.match(/^\/league\/[^/]+\/([^/]+)/);
+    if (lm) return lm[1];
+    if (/^\/league\/[^/]+\/?$/.test(p)) return 'overview';
+    const hm = p.match(/^\/hub\/([^/]+)/);
+    if (hm) return hm[1];
+    return null;
+  }, [location.pathname]);
+
+  const hexIconStyle = useMemo(() => {
+    const overlay = getHexIconOverlay(activeIconTab);
+    if (!overlay) return undefined;
+    return {
+      backgroundImage: overlay,
+      backgroundSize: '56px 96px',
+      backgroundRepeat: 'repeat',
+      backgroundAttachment: 'fixed',
+    };
+  }, [activeIconTab]);
+
   return (
     <>
+      <a href="#main-content" className="ff-skip-link">Skip to content</a>
+
       <TopNav
         onSignIn={() => setShowAuthModal('signin')}
         onSignUp={() => setShowAuthModal('signup')}
         onCreateLeague={() => setShowCreateLeague(true)}
       />
 
-      <a href="#main-content" className="ff-skip-link">Skip to content</a>
-
-      <main id="main-content">
+      <main id="main-content" style={hexIconStyle}>
         <Outlet context={{
           onCreateLeague: () => setShowCreateLeague(true),
           onDeleteLeague: setDeleteConfirmId,
@@ -63,15 +86,13 @@ export default function AppLayout() {
       </main>
 
       <footer className="ff-footer">
-        <div className="ff-footer-brand"><img src="/logo-full.png" alt="HexMetrics" width="96" height="24" style={{ height: 24, width: 96, opacity: 0.7 }} /> <span className="ff-footer-season">2025-26</span></div>
+        <div className="ff-footer-brand"><img src="/logo-full.png" alt="HexMetrics" width="96" height="24" style={{ height: 24, width: 96, opacity: 0.7 }} /> <span className="ff-footer-season">{`${new Date().getFullYear() - 1}-${String(new Date().getFullYear()).slice(2)}`}</span></div>
         <div className="ff-footer-links">
-          {isLeagueView ? (
-            <button className="ff-footer-link" onClick={() => navigate('/hub')}>Home</button>
-          ) : (
-            <span className="ff-footer-link disabled">HexMetrics {new Date().getFullYear()}</span>
-          )}
+          {isLeagueView && <button className="ff-footer-link" onClick={() => navigate('/hub')}>Home</button>}
+          <span className="ff-footer-link disabled">Fantasy Tools</span>
+          <span className="ff-footer-link disabled">Privacy</span>
+          <span className="ff-footer-link disabled">&copy; {new Date().getFullYear()} HexMetrics</span>
         </div>
-        <div className="ff-footer-credit">&copy; 2025 HexMetrics</div>
       </footer>
 
       {showAuthModal && (

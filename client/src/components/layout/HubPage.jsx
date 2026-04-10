@@ -1,13 +1,24 @@
 import { useState } from 'react';
-import { useNavigate, useOutletContext } from 'react-router-dom';
+import { useNavigate, useParams, useOutletContext } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useLeagues } from '../../hooks/useLeagues';
 import NewsFeed from '../dashboard/NewsFeed';
+import PlayerRankings from '../dashboard/PlayerRankings';
+import PlayerCompare from '../league/PlayerCompare';
 import ImportLeague from '../league/ImportLeague';
 import * as leagueApi from '../../api/leagues';
 
+const HUB_TABS = [
+  { id: 'leagues', label: 'My Leagues' },
+  { id: 'players', label: 'Players' },
+  { id: 'compare', label: 'Compare' },
+  { id: 'news', label: 'News' },
+];
+
 export default function HubPage() {
   const { user } = useAuth();
+  const { tab } = useParams();
+  const activeTab = tab || 'leagues';
   const { leagues, leaguesLoading, addLeague } = useLeagues();
   const { onCreateLeague, onDeleteLeague } = useOutletContext();
   const navigate = useNavigate();
@@ -56,76 +67,133 @@ export default function HubPage() {
         </div>
       </div>
 
-      <div className="ff-hub-grid">
-        {/* Leagues card */}
-        <div className="ff-card">
-          <div className="ff-card-top-accent" style={{ background: 'var(--copper)' }} />
-          <div className="ff-card-header">
-            <h2>My Leagues</h2>
-            {leagues.length > 0 && (
-              <div style={{ display: 'flex', gap: 6 }}>
-                <button className="ff-btn ff-btn-secondary ff-btn-sm" onClick={() => setShowImportModal(true)}>Import</button>
-                <button className="ff-btn ff-btn-secondary ff-btn-sm" onClick={() => setShowJoinModal(true)}>Join</button>
-                <button className="ff-btn ff-btn-copper ff-btn-sm" onClick={onCreateLeague}>+ New</button>
-              </div>
-            )}
-          </div>
-          <div className="ff-card-body">
-            {leaguesLoading ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 8 }}>
-                <div className="skeleton" style={{ height: 60, borderRadius: 8 }} />
-                <div className="skeleton" style={{ height: 60, borderRadius: 8 }} />
-              </div>
-            ) : leagues.length === 0 ? (
-              <div className="ff-empty-state">
-                <div className="ff-empty-state-title">No leagues yet</div>
-                <div className="ff-empty-state-desc">Create your first league or join one to get started.</div>
-                <div className="ff-empty-state-actions">
-                  <button className="ff-btn ff-btn-copper" onClick={onCreateLeague}>+ Create a League</button>
-                  <button className="ff-btn ff-btn-secondary" onClick={() => setShowJoinModal(true)}>Join a League</button>
-                  <button className="ff-btn ff-btn-secondary" onClick={() => setShowImportModal(true)}>Import from ESPN/Yahoo</button>
+      {/* Hub Tab Strip */}
+      <div className="ff-hub-tabs">
+        <div className="ff-tabs-container">
+          {HUB_TABS.map(t => (
+            <button
+              key={t.id}
+              className={`ff-league-tab${activeTab === t.id ? ' active' : ''}`}
+              onClick={() => navigate(`/hub/${t.id === 'leagues' ? '' : t.id}`)}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Tab Content */}
+      {activeTab === 'leagues' && (
+        <div className="ff-hub-grid">
+          <div className="ff-card">
+            <div className="ff-card-top-accent" style={{ background: 'var(--copper)' }} />
+            <div className="ff-card-header">
+              <h2>My Leagues</h2>
+              {leagues.length > 0 && (
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <button className="ff-btn ff-btn-secondary ff-btn-sm" onClick={() => setShowImportModal(true)}>Import</button>
+                  <button className="ff-btn ff-btn-secondary ff-btn-sm" onClick={() => setShowJoinModal(true)}>Join</button>
+                  <button className="ff-btn ff-btn-copper ff-btn-sm" onClick={onCreateLeague}>+ New</button>
                 </div>
-              </div>
-            ) : (
-              <div className="ff-league-card-grid">
-                {leagues.map(lg => (
-                  <button key={lg.id}
-                    className="ff-league-card"
-                    onClick={() => navigate(`/league/${lg.id}`)}>
-                    <div className="ff-league-card-row">
-                      <div className="ff-league-card-row-inner">
-                        <div className="ff-league-card-name">{lg.name}</div>
-                        <div className="ff-league-card-meta">{lg.team_name} &middot; {lg.role === 'commissioner' ? 'Commissioner' : 'Member'}</div>
+              )}
+            </div>
+            <div className="ff-card-body">
+              {leaguesLoading ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 8 }}>
+                  <div className="skeleton" style={{ height: 60, borderRadius: 8 }} />
+                  <div className="skeleton" style={{ height: 60, borderRadius: 8 }} />
+                </div>
+              ) : leagues.length === 0 ? (
+                <div className="ff-empty-state">
+                  <div className="ff-empty-state-title">No leagues yet</div>
+                  <div className="ff-empty-state-desc">Create your first league or join one to get started.</div>
+                  <div className="ff-empty-state-actions">
+                    <button className="ff-btn ff-btn-copper" onClick={onCreateLeague}>+ Create a League</button>
+                    <button className="ff-btn ff-btn-secondary" onClick={() => setShowJoinModal(true)}>Join a League</button>
+                    <button className="ff-btn ff-btn-secondary" onClick={() => setShowImportModal(true)}>Import from ESPN/Yahoo</button>
+                  </div>
+                </div>
+              ) : (
+                <div className="ff-league-card-grid">
+                  {leagues.map(lg => (
+                    <button key={lg.id}
+                      className="ff-league-card"
+                      onClick={() => navigate(`/league/${lg.id}`)}>
+                      <div className="ff-league-card-row">
+                        <div className="ff-league-card-row-inner">
+                          <div className="ff-league-card-name">{lg.name}</div>
+                          <div className="ff-league-card-meta">{lg.team_name} &middot; {lg.role === 'commissioner' ? 'Commissioner' : 'Member'}</div>
+                        </div>
+                        {lg.role === 'commissioner' && (
+                          <span
+                            className="ff-league-delete-btn"
+                            role="button"
+                            tabIndex={0}
+                            onClick={e => { e.stopPropagation(); onDeleteLeague(lg.id); }}
+                            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); e.preventDefault(); onDeleteLeague(lg.id); } }}
+                            title="Delete league"
+                            aria-label={`Delete ${lg.name}`}
+                          >{'\u2715'}</span>
+                        )}
                       </div>
-                      {lg.role === 'commissioner' && (
-                        <span
-                          className="ff-league-delete-btn"
-                          role="button"
-                          tabIndex={0}
-                          onClick={e => { e.stopPropagation(); onDeleteLeague(lg.id); }}
-                          onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); e.preventDefault(); onDeleteLeague(lg.id); } }}
-                          title="Delete league"
-                          aria-label={`Delete ${lg.name}`}
-                        >{'\u2715'}</span>
-                      )}
-                    </div>
-                    <div className="ff-league-card-badges">
-                      <span className="ff-league-card-badge">{lg.type}</span>
-                      <span className="ff-league-card-badge">{lg.scoring_preset}</span>
-                      <span className="ff-league-card-badge">{lg.league_size} teams</span>
-                      <span className="ff-league-card-season">{lg.season}</span>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
+                      <div className="ff-league-card-badges">
+                        <span className="ff-league-card-badge">{lg.type}</span>
+                        <span className="ff-league-card-badge">{lg.scoring_preset}</span>
+                        <span className="ff-league-card-badge">{lg.league_size} teams</span>
+                        <span className="ff-league-card-season">{lg.season}</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
+      )}
 
-        <NewsFeed onPlayerClick={leagues.length > 0 ? (playerId) => {
-          navigate(`/league/${leagues[0].id}?player=${playerId}`);
-        } : undefined} />
-      </div>
+      {activeTab === 'players' && (
+        <div className="ff-hub-tabs">
+          <div className="ff-tab-content ff-tab-content-full">
+            <div className="ff-hub-upsell">
+              <p>Exploring the full player pool — nice. Inside a league, HexMetrics cross-references your roster, matchup schedule, and waiver wire to surface the players that actually move your needle. Rankings get personal.</p>
+              <button className="ff-btn ff-btn-copper ff-btn-sm" onClick={() => leagues.length > 0 ? navigate(`/league/${leagues[0].id}/players`) : onCreateLeague()}>
+                {leagues.length > 0 ? `Open in ${leagues[0].name}` : 'Create a League'}
+              </button>
+            </div>
+            <PlayerRankings />
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'compare' && (
+        <div className="ff-hub-tabs">
+          <div className="ff-tab-content ff-tab-content-wide">
+            <div className="ff-hub-upsell">
+              <p>Side-by-side stats are just the start. In a league, Compare layers in your scoring settings, roster context, and trade value so you can see exactly who wins the deal — not just who has better numbers.</p>
+              <button className="ff-btn ff-btn-copper ff-btn-sm" onClick={() => leagues.length > 0 ? navigate(`/league/${leagues[0].id}/compare`) : onCreateLeague()}>
+                {leagues.length > 0 ? `Open in ${leagues[0].name}` : 'Create a League'}
+              </button>
+            </div>
+            <PlayerCompare />
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'news' && (
+        <div className="ff-hub-tabs">
+          <div className="ff-tab-content ff-tab-content-full">
+            <div className="ff-hub-upsell">
+              <p>Staying informed league-wide. Inside a league, news is filtered to your players and opponents, paired with live standings and power rankings so every headline has immediate strategic context.</p>
+              <button className="ff-btn ff-btn-copper ff-btn-sm" onClick={() => leagues.length > 0 ? navigate(`/league/${leagues[0].id}/news`) : onCreateLeague()}>
+                {leagues.length > 0 ? `Open in ${leagues[0].name}` : 'Create a League'}
+              </button>
+            </div>
+            <NewsFeed onPlayerClick={leagues.length > 0 ? (playerId) => {
+              navigate(`/league/${leagues[0].id}?player=${playerId}`);
+            } : undefined} />
+          </div>
+        </div>
+      )}
 
       {/* Join League Modal */}
       {showJoinModal && (
@@ -143,7 +211,7 @@ export default function HubPage() {
                   placeholder="e.g. A3F2B1C8"
                   value={joinForm.inviteCode}
                   onChange={e => setJoinForm(f => ({ ...f, inviteCode: e.target.value.toUpperCase() }))}
-                  style={{ letterSpacing: '0.15em', fontFamily: 'monospace', fontSize: 16, textAlign: 'center' }}
+                  style={{ letterSpacing: '0.15em', fontFamily: 'monospace', fontSize: 18, textAlign: 'center' }}
                   maxLength={12}
                   autoFocus
                 />

@@ -8,9 +8,11 @@ export async function apiFetch(path, options = {}) {
     ...options.headers,
   };
 
+  const { signal, ...restOptions } = options;
   const res = await fetch(`${BASE_URL}${path}`, {
-    ...options,
+    ...restOptions,
     headers,
+    ...(signal ? { signal } : {}),
   });
 
   let data;

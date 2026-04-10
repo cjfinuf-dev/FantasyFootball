@@ -30,11 +30,17 @@ async function getDb() {
   return db;
 }
 
+// WARNING: sql.js holds the database entirely in memory and persists via writeFileSync.
+// Concurrent writes from multiple processes or rapid sequential calls can cause data loss
+// or a torn write (partial file). This architecture is intentional for single-process dev
+// use; do NOT run multiple server instances against the same DB file.
 function saveDb() {
   if (db && dbPath) {
     const data = db.export();
     const buffer = Buffer.from(data);
-    fs.writeFileSync(dbPath, buffer);
+    const tmpPath = dbPath + '.tmp';
+    fs.writeFileSync(tmpPath, buffer);
+    fs.renameSync(tmpPath, dbPath);
   }
 }
 

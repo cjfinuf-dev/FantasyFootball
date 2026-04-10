@@ -12,8 +12,9 @@ router.get('/historical', (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// Auth required — update an entire season's data
+// Admin only — update an entire season's data
 router.put('/season/:year', requireAuth, async (req, res, next) => {
+  if (req.user?.role !== 'admin') return res.status(403).json({ error: 'Admin access required.' });
   try {
     const year = Number(req.params.year);
     if (!year || year < 2000 || year > 2100) {
@@ -24,8 +25,9 @@ router.put('/season/:year', requireAuth, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// Auth required — update a single player's history
+// Admin only — update a single player's history
 router.put('/player/:playerId', requireAuth, async (req, res, next) => {
+  if (req.user?.role !== 'admin') return res.status(403).json({ error: 'Admin access required.' });
   try {
     const { playerId } = req.params;
     const result = await updatePlayer(playerId, req.body);

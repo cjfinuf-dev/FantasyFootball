@@ -44,7 +44,7 @@ function PlayerSearch({ onSelect, excludeIds, placeholder }) {
         onFocus={() => setFocused(true)}
         onBlur={() => setTimeout(() => setFocused(false), 200)}
         placeholder={placeholder}
-        style={{ fontSize: 13, padding: '10px 12px' }}
+        style={{ fontSize: 15, padding: '10px 12px' }}
       />
       {focused && results.length > 0 && (
         <div style={{
@@ -76,7 +76,7 @@ function PlayerSearch({ onSelect, excludeIds, placeholder }) {
 function SidePanel({ label, playerIds, onAdd, onRemove, allIds, scoringPreset }) {
   return (
     <div style={{ flex: 1, minWidth: 0 }}>
-      <div style={{ fontSize: 13, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 10, letterSpacing: '0.05em' }}>
+      <div style={{ fontSize: 15, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 10, letterSpacing: '0.05em' }}>
         {label}
       </div>
       <PlayerSearch
@@ -86,7 +86,7 @@ function SidePanel({ label, playerIds, onAdd, onRemove, allIds, scoringPreset })
       />
       <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 6, minHeight: 80 }}>
         {playerIds.length === 0 && (
-          <div style={{ padding: '20px 0', textAlign: 'center', fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.5 }}>
+          <div style={{ padding: '20px 0', textAlign: 'center', fontSize: 15, color: 'var(--text-muted)', lineHeight: 1.5 }}>
             Search and add players to this side of the trade
           </div>
         )}
@@ -97,7 +97,7 @@ function SidePanel({ label, playerIds, onAdd, onRemove, allIds, scoringPreset })
           return (
             <div key={id} style={{
               display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px',
-              background: 'var(--surface, var(--bg-alt))', borderRadius: 8, fontSize: 13,
+              background: 'var(--surface, var(--bg-alt))', borderRadius: 8, fontSize: 15,
               border: '1px solid var(--border)',
             }}>
               <PlayerHeadshot espnId={getEspnId(p.name)} name={p.name} size="xs" pos={p.pos} team={p.team} />
@@ -106,7 +106,7 @@ function SidePanel({ label, playerIds, onAdd, onRemove, allIds, scoringPreset })
               <span className={hexChipClass(hex)}>{formatHex(hex)}</span>
               <button onClick={() => onRemove(id)} style={{
                 background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)',
-                fontSize: 16, padding: '0 4px', lineHeight: 1,
+                fontSize: 18, padding: '0 4px', lineHeight: 1,
               }}>{'\u2715'}</button>
             </div>
           );
@@ -135,14 +135,14 @@ export default function QuickTradeCalc({ onSignIn, onSignUp }) {
     <div className="ff-card">
       <div className="ff-card-top-accent" style={{ background: 'var(--hex-purple, #8B5CF6)' }} />
       <div className="ff-card-header" style={{ padding: '20px 24px' }}>
-        <h2 style={{ fontSize: 20 }}>Trade Calculator</h2>
+        <h2 style={{ fontSize: 22 }}>Trade Calculator</h2>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {SCORING_OPTIONS.map(opt => (
             <button key={opt.value}
               onClick={() => setScoring(opt.value)}
               style={{
                 padding: '6px 14px', borderRadius: 6, border: 'none', cursor: 'pointer',
-                fontSize: 12, fontWeight: 600,
+                fontSize: 14, fontWeight: 600,
                 background: scoring === opt.value ? 'var(--hex-purple, #8B5CF6)' : 'var(--surface, var(--bg-alt))',
                 color: scoring === opt.value ? '#fff' : 'var(--text-muted)',
                 transition: 'all 0.15s',
@@ -181,14 +181,14 @@ export default function QuickTradeCalc({ onSignIn, onSignUp }) {
           return (
             <div style={{ marginTop: 20, padding: '16px 20px', background: 'var(--surface, var(--bg-alt))', borderRadius: 10, border: '1px solid var(--border)' }}>
               {/* Side labels with values */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 8 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 15, marginBottom: 8 }}>
                 <span style={{ fontWeight: 700 }}>
                   <span style={{ color: 'var(--hex-purple)', marginRight: 4 }}>{'\u25A0'}</span>
                   <span style={{ color: aLabelColor }}>Side A: {tier.sendTotal}</span>
-                  {aWins && <span style={{ color: 'var(--success-green)', marginLeft: 4, fontSize: 10 }}>{'\u2714'}</span>}
+                  {aWins && <span style={{ color: 'var(--success-green)', marginLeft: 4, fontSize: 12 }}>{'\u2714'}</span>}
                 </span>
                 <span style={{ fontWeight: 700 }}>
-                  {bWins && <span style={{ color: 'var(--success-green)', marginRight: 4, fontSize: 10 }}>{'\u2714'}</span>}
+                  {bWins && <span style={{ color: 'var(--success-green)', marginRight: 4, fontSize: 12 }}>{'\u2714'}</span>}
                   <span style={{ color: bLabelColor }}>Side B: {tier.receiveTotal}</span>
                   <span style={{ color: 'var(--text-muted)', marginLeft: 4 }}>{'\u25A0'}</span>
                 </span>
@@ -203,7 +203,7 @@ export default function QuickTradeCalc({ onSignIn, onSignUp }) {
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   minWidth: aPct > 5 ? 36 : 0,
                 }}>
-                  {aPct > 12 && <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--on-accent)' }}>{aPct}%</span>}
+                  {aPct > 12 && <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--on-accent)' }}>{aPct}%</span>}
                 </div>
                 <div style={{
                   width: `${bPct}%`,
@@ -216,21 +216,21 @@ export default function QuickTradeCalc({ onSignIn, onSignUp }) {
                   borderRadius: '0 6px 6px 0',
                   boxSizing: 'border-box',
                 }}>
-                  {bPct > 12 && <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text)' }}>{bPct}%</span>}
+                  {bPct > 12 && <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>{bPct}%</span>}
                 </div>
               </div>
 
               {/* Verdict */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
                 <span style={{
-                  fontSize: 13, fontWeight: 700, padding: '5px 14px', borderRadius: 6,
+                  fontSize: 15, fontWeight: 700, padding: '5px 14px', borderRadius: 6,
                   background: even ? 'var(--accent-10)' : aWins ? 'var(--accent-10)' : 'var(--surface)',
                   color: even ? 'var(--hex-purple)' : aWins ? 'var(--hex-purple)' : 'var(--text)',
                 }}>
                   {even ? 'Even Trade' : aWins ? 'Side A Wins' : 'Side B Wins'}
                 </span>
                 <span style={{
-                  fontSize: 13, fontWeight: 600, color: 'var(--text-muted)',
+                  fontSize: 15, fontWeight: 600, color: 'var(--text-muted)',
                 }}>
                   {tier.label} ({tier.delta >= 0 ? '+' : ''}{tier.delta})
                 </span>
@@ -246,10 +246,10 @@ export default function QuickTradeCalc({ onSignIn, onSignUp }) {
             background: 'var(--hex-purple-light)',
             border: '1px solid var(--accent-20)',
           }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>
+            <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>
               Want roster-aware trade analysis?
             </div>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 10, lineHeight: 1.5 }}>
+            <div style={{ fontSize: 14, color: 'var(--text-muted)', marginBottom: 10, lineHeight: 1.5 }}>
               Sign in and import your league to unlock positional need adjustments, starter impact analysis, and replacement-level valuations.
             </div>
             <div style={{ display: 'flex', gap: 8 }}>

@@ -95,25 +95,25 @@ export default function TeamPage({ teamId, rosters, onBack, onPlayerClick }) {
         }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-              <h1 style={{ fontSize: 22, fontWeight: 800, margin: 0 }}>{team.name}</h1>
-              {isUser && <span style={{ fontSize: 10, background: 'var(--accent)', color: 'var(--on-accent)', padding: '2px 8px', borderRadius: 4, fontWeight: 700 }}>Your Team</span>}
+              <h1 style={{ fontSize: 24, fontWeight: 800, margin: 0 }}>{team.name}</h1>
+              {isUser && <span className="ff-inline-badge" style={{ background: 'var(--accent)', color: 'var(--on-accent)' }}>Your Team</span>}
             </div>
-            <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+            <div style={{ fontSize: 15, color: 'var(--text-muted)' }}>
               {team.owner} &middot; {rosterPlayers.length} players
             </div>
           </div>
           <div style={{ display: 'flex', gap: 24, textAlign: 'center' }}>
             <div>
-              <div style={{ fontSize: 24, fontWeight: 800, lineHeight: 1 }} className="tabular-nums">{totalProj.toFixed(2)}</div>
-              <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginTop: 2 }}>Total Proj</div>
+              <div style={{ fontSize: 26, fontWeight: 800, lineHeight: 1 }} className="tabular-nums">{totalProj.toFixed(2)}</div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginTop: 2 }}>Total Proj</div>
             </div>
             <div>
-              <div style={{ fontSize: 24, fontWeight: 800, lineHeight: 1, color: 'var(--hex-purple)' }} className="tabular-nums">{Math.round(totalHex)}</div>
-              <div style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', marginTop: 2 }}><HexBrand word="Score" icon={false} /></div>
+              <div style={{ fontSize: 26, fontWeight: 800, lineHeight: 1, color: 'var(--hex-purple)' }} className="tabular-nums">{Math.round(totalHex)}</div>
+              <div style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', marginTop: 2 }}><HexBrand word="Score" icon={false} /></div>
             </div>
             <div>
-              <div style={{ fontSize: 24, fontWeight: 800, lineHeight: 1 }} className="tabular-nums">{startersFilled}/{starterSlots.length}</div>
-              <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginTop: 2 }}>Starters</div>
+              <div style={{ fontSize: 26, fontWeight: 800, lineHeight: 1 }} className="tabular-nums">{startersFilled}/{starterSlots.length}</div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginTop: 2 }}>Starters</div>
             </div>
           </div>
         </div>
@@ -123,11 +123,11 @@ export default function TeamPage({ teamId, rosters, onBack, onPlayerClick }) {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 10, marginBottom: 16 }}>
         {posGroups.map(g => (
           <div key={g.pos} className="ff-card" style={{ padding: '14px', textAlign: 'center' }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: POS_COLORS[g.pos], textTransform: 'uppercase', marginBottom: 6 }}>{g.pos}s</div>
-            <div style={{ fontSize: 20, fontWeight: 800, lineHeight: 1, marginBottom: 2 }} className="tabular-nums">{g.totalProj.toFixed(2)}</div>
-            <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 4 }}>proj pts</div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--hex-purple)' }} className="tabular-nums">{Math.round(g.totalHex)} hex</div>
-            <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>{g.players.length} player{g.players.length !== 1 ? 's' : ''}</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: POS_COLORS[g.pos], textTransform: 'uppercase', marginBottom: 6 }}>{g.pos}s</div>
+            <div style={{ fontSize: 22, fontWeight: 800, lineHeight: 1, marginBottom: 2 }} className="tabular-nums">{g.totalProj.toFixed(2)}</div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>proj pts</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--hex-purple)' }} className="tabular-nums">{Math.round(g.totalHex)} hex</div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>{g.players.length} player{g.players.length !== 1 ? 's' : ''}</div>
           </div>
         ))}
       </div>
@@ -135,7 +135,7 @@ export default function TeamPage({ teamId, rosters, onBack, onPlayerClick }) {
       {/* Full Roster by Slot */}
       <div className="ff-card" style={{ marginBottom: 16 }}>
         <div className="ff-card-header">
-          <h2 style={{ fontSize: 16 }}>Roster</h2>
+          <h2 style={{ fontSize: 18 }}>Roster</h2>
         </div>
         <div style={{ padding: 0 }}>
           {rosterSlots.map((slot, idx) => {
@@ -144,7 +144,7 @@ export default function TeamPage({ teamId, rosters, onBack, onPlayerClick }) {
             return (
               <div key={idx}>
                 {isSectionBreak && (
-                  <div style={{ padding: '6px 16px', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', background: 'var(--surface)', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }}>
+                  <div style={{ padding: '6px 16px', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', background: 'var(--surface)', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }}>
                     Bench
                   </div>
                 )}
@@ -153,7 +153,7 @@ export default function TeamPage({ teamId, rosters, onBack, onPlayerClick }) {
                   borderBottom: '1px solid var(--border)',
                   opacity: !isStarter && !slot.pick ? 0.55 : isStarter ? 1 : 0.7,
                 }}>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: POS_COLORS[slot.pos] || 'var(--text-muted)', minWidth: 32, textTransform: 'uppercase' }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: POS_COLORS[slot.pos] || 'var(--text-muted)', minWidth: 38, textTransform: 'uppercase' }}>
                     {slot.label}
                   </span>
                   {slot.pick ? (
@@ -161,12 +161,12 @@ export default function TeamPage({ teamId, rosters, onBack, onPlayerClick }) {
                       <PlayerHeadshot espnId={getEspnId(slot.pick.player.name)} name={slot.pick.player.name} size="xs" pos={slot.pick.player.pos} team={slot.pick.player.team} />
                       <PosBadge pos={slot.pick.player.pos} />
                       <PlayerLink name={slot.pick.player.name} playerId={slot.pick.playerId} onPlayerClick={onPlayerClick} />
-                      <span style={{ color: 'var(--text-muted)', fontSize: 11, marginLeft: 4 }}>{slot.pick.player.team}</span>
-                      <span style={{ marginLeft: 'auto', fontSize: 13, fontWeight: 600 }} className="tabular-nums">{slot.pick.player.proj}</span>
-                      <span style={{ color: 'var(--hex-purple)', fontSize: 12, fontWeight: 700, minWidth: 30, textAlign: 'right' }} className="tabular-nums">{formatHex(getHexScore(slot.pick.playerId))}</span>
+                      <span style={{ color: 'var(--text-muted)', fontSize: 14, marginLeft: 4 }}>{slot.pick.player.team}</span>
+                      <span style={{ marginLeft: 'auto', fontSize: 15, fontWeight: 600 }} className="tabular-nums">{slot.pick.player.proj}</span>
+                      <span style={{ color: 'var(--hex-purple)', fontSize: 14, fontWeight: 700, minWidth: 36, textAlign: 'right' }} className="tabular-nums">{formatHex(getHexScore(slot.pick.playerId))}</span>
                     </>
                   ) : (
-                    <span style={{ color: isStarter ? 'var(--accent)' : 'var(--text-muted)', fontStyle: 'italic', fontSize: 12 }}>
+                    <span style={{ color: isStarter ? 'var(--accent)' : 'var(--text-muted)', fontStyle: 'italic', fontSize: 14 }}>
                       {isStarter ? 'Empty' : '-'}
                     </span>
                   )}

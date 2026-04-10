@@ -143,7 +143,7 @@ function PlayerRow({ entry, section, index, isSelected, isSwapTarget, onSelect, 
               <PosBadge pos={player.pos} />
               <StatusLabel status={player.status} />
             </div>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
+            <div style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 1 }}>
               {player.team}
               {oppDisplay && (
                 <span style={{ marginLeft: 8 }}>
@@ -322,8 +322,8 @@ export default function MyLineup({ rosters, onPlayerClick }) {
       <div className="ff-card">
         <div className="ff-card-top-accent" style={{ background: 'var(--accent)' }} />
         <div className="ff-card-body" style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 40 }}>
-          <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 6 }}>No roster data</div>
-          <div style={{ fontSize: 13 }}>Complete the draft to see your lineup.</div>
+          <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 6 }}>No roster data</div>
+          <div style={{ fontSize: 15 }}>Complete the draft to see your lineup.</div>
         </div>
       </div>
     );
@@ -353,8 +353,8 @@ export default function MyLineup({ rosters, onPlayerClick }) {
         <div className="ff-card-top-accent" style={{ background: 'var(--accent)' }} />
         <div className="ff-card-header">
           <div>
-            <h2 style={{ fontSize: 18, fontWeight: 700 }}>{userTeam?.name || 'My Team'}</h2>
-            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+            <h2 style={{ fontSize: 20, fontWeight: 700 }}>{userTeam?.name || 'My Team'}</h2>
+            <div style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 2 }}>
               {playerIds.length} players &middot; {lineup.starters.filter(s => s.player).length} starters
               {selected && <span style={{ marginLeft: 8, color: 'var(--accent)', fontWeight: 600 }}>Select a player to swap</span>}
             </div>
@@ -363,15 +363,15 @@ export default function MyLineup({ rosters, onPlayerClick }) {
             <button onClick={handleOptimize} style={{
               padding: '8px 14px', borderRadius: 6, border: '1px solid var(--accent)',
               background: 'transparent', color: 'var(--accent)',
-              fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
+              fontSize: 14, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
               transition: 'background 0.15s, color 0.15s',
             }}
               onMouseEnter={e => { e.currentTarget.style.background = 'var(--accent)'; e.currentTarget.style.color = 'var(--on-accent)'; }}
               onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--accent)'; }}
             >Best Lineup</button>
             <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: 24, fontWeight: 800 }} className="tabular-nums">{totalProj.toFixed(2)}</div>
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Projected</div>
+              <div style={{ fontSize: 26, fontWeight: 800 }} className="tabular-nums">{totalProj.toFixed(2)}</div>
+              <div style={{ fontSize: 14, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Projected</div>
             </div>
           </div>
         </div>
@@ -384,8 +384,8 @@ export default function MyLineup({ rosters, onPlayerClick }) {
           padding: '12px 16px', borderBottom: '1px solid var(--border)',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
-          <h3 style={{ fontSize: 14, fontWeight: 700 }}>Starters</h3>
-          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{lineup.starters.filter(s => s.player).length} / {lineup.starters.length}</span>
+          <h3 style={{ fontSize: 16, fontWeight: 700 }}>Starters</h3>
+          <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>{lineup.starters.filter(s => s.player).length} / {lineup.starters.length}</span>
         </div>
         <div>
           {lineup.starters.map((s, i) => (
@@ -412,8 +412,8 @@ export default function MyLineup({ rosters, onPlayerClick }) {
           padding: '12px 16px', borderBottom: '1px solid var(--border)',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
-          <h3 style={{ fontSize: 14, fontWeight: 700 }}>Bench</h3>
-          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{lineup.bench.length} players</span>
+          <h3 style={{ fontSize: 16, fontWeight: 700 }}>Bench</h3>
+          <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>{lineup.bench.length} players</span>
         </div>
         <div>
           {lineup.bench.length > 0 ? lineup.bench.map((s, i) => (
@@ -430,7 +430,7 @@ export default function MyLineup({ rosters, onPlayerClick }) {
               onPlayerClick={onPlayerClick}
             />
           )) : (
-            <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>No bench players</div>
+            <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-muted)', fontSize: 15 }}>No bench players</div>
           )}
         </div>
       </div>
@@ -442,8 +442,8 @@ export default function MyLineup({ rosters, onPlayerClick }) {
           padding: '12px 16px', borderBottom: '1px solid var(--border)',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
-          <h3 style={{ fontSize: 14, fontWeight: 700 }}>Injured Reserve</h3>
-          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{lineup.ir.filter(s => s.player).length} / {lineup.ir.length}</span>
+          <h3 style={{ fontSize: 16, fontWeight: 700 }}>Injured Reserve</h3>
+          <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>{lineup.ir.filter(s => s.player).length} / {lineup.ir.length}</span>
         </div>
         <div>
           {lineup.ir.map((s, i) => (

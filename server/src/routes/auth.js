@@ -1,11 +1,28 @@
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 const authService = require('../services/auth.service');
 const { requireAuth } = require('../middleware/auth');
 const { validateSignup, validateSignin } = require('../middleware/validate');
 
 const router = express.Router();
 
-router.post('/signup', validateSignup, async (req, res, next) => {
+const signinLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many login attempts. Try again in 15 minutes.' },
+});
+
+const signupLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many signup attempts. Try again in an hour.' },
+});
+
+router.post('/signup', signupLimiter, validateSignup, async (req, res, next) => {
   try {
     const { name, email, password } = req.body;
     const result = await authService.signup({ name, email, password });
@@ -15,7 +32,7 @@ router.post('/signup', validateSignup, async (req, res, next) => {
   }
 });
 
-router.post('/signin', validateSignin, async (req, res, next) => {
+router.post('/signin', signinLimiter, validateSignin, async (req, res, next) => {
   try {
     const { email, password } = req.body;
     const result = await authService.signin({ email, password });

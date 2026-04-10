@@ -6,7 +6,7 @@ import TradeProposal from './TradeProposal';
 import TradeInbox from './TradeInbox';
 import TradeHistory from './TradeHistory';
 
-export default function TradeCenter({ rosters, onRostersChange, scoringPreset = 'standard' }) {
+export default function TradeCenter({ rosters, onRostersChange, scoringPreset = 'standard', onOpenCompare }) {
   const [subTab, setSubTab] = useState('propose');
   const [trades, setTrades] = useState(() => deepClone(TRADES_SEED));
   const [history, setHistory] = useState(() => deepClone(TRADE_HISTORY_SEED));
@@ -93,7 +93,7 @@ export default function TradeCenter({ rosters, onRostersChange, scoringPreset = 
 
       <div className="ff-tm-body">
         {subTab === 'propose' && (
-          <TradeProposal rosters={rosters} onPropose={handlePropose} scoringPreset={scoringPreset} />
+          <TradeProposal rosters={rosters} onPropose={handlePropose} scoringPreset={scoringPreset} onOpenCompare={onOpenCompare} />
         )}
         {subTab === 'inbox' && (
           <TradeInbox

@@ -1,3 +1,6 @@
+// SEASON: Update DATA_SEASON each year — used to detect stale static data at runtime
+export const DATA_SEASON = 2024;
+
 export const PLAYERS = [
   // ===== QBS (32) =====
   { id:'p1', name:'Josh Allen', team:'BUF', pos:'QB', pts:22.7, proj:22.8, avg:22.3, status:'healthy', gp:16, cmp:319, att:460, passYds:3668, passTd:25, int:10, sacks:40, passEpa:71.33, cpoe:3.51, carries:112, rushYds:579, rushTd:14, rushEpa:38.77 },

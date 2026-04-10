@@ -4,6 +4,7 @@ import { PLAYERS } from '../../data/players';
 import { ROSTER_PRESETS } from '../../data/scoring';
 import { getEspnId } from '../../data/espnIds';
 import { getHexScore, getHexData, formatHex } from '../../utils/hexScore';
+import { getMatchupWinProb } from '../../utils/winProb';
 import PosBadge from '../ui/PosBadge';
 import HexBrand from '../ui/HexBrand';
 import PlayerHeadshot from '../ui/PlayerHeadshot';
@@ -143,15 +144,15 @@ function DualHexRadar({ dimsA, dimsB, teamA, teamB }) {
     <div className="ff-hex-radar-layout">
       {/* Left: Explanation panel */}
       <div className="ff-hex-radar-panel">
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 9999, padding: '4px 14px', marginBottom: 14 }}>Breakdown</div>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 9999, padding: '4px 14px', marginBottom: 14 }}>Breakdown</div>
 
         {/* Legend */}
         <div style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14 }}>
             <div style={{ width: 16, height: 3, background: 'var(--hex-purple)', borderRadius: 2 }} />
             <span style={{ fontWeight: 600 }}>{teamA.name}</span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14 }}>
             <div style={{ width: 16, height: 3, background: 'var(--accent-secondary-text)', borderRadius: 2, opacity: 0.6 }} />
             <span style={{ fontWeight: 600 }}>{teamB.name}</span>
           </div>
@@ -162,34 +163,34 @@ function DualHexRadar({ dimsA, dimsB, teamA, teamB }) {
             <div style={{
               padding: '18px 20px', borderRadius: 12, width: '100%',
               background: 'var(--surface)', border: '1px solid var(--border)',
-              fontSize: 13, lineHeight: 1.6,
+              fontSize: 15, lineHeight: 1.6,
             }}>
-              <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', marginBottom: 10 }}>
+              <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', marginBottom: 10 }}>
                 {tipDim.label}
               </div>
               <div style={{ display: 'flex', gap: 16, marginBottom: 12 }}>
                 <div style={{ flex: 1, textAlign: 'center', padding: '10px', borderRadius: 8, background: aWins ? 'var(--accent-10)' : 'transparent' }}>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--hex-purple)', marginBottom: 4 }}>{teamA.name}</div>
-                  <div style={{ fontSize: 28, fontWeight: 800 }} className="tabular-nums">{(dimsA[hoveredIdx] * 100).toFixed(1)}</div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--hex-purple)', marginBottom: 4 }}>{teamA.name}</div>
+                  <div style={{ fontSize: 30, fontWeight: 800 }} className="tabular-nums">{(dimsA[hoveredIdx] * 100).toFixed(1)}</div>
                 </div>
                 <div style={{ flex: 1, textAlign: 'center', padding: '10px', borderRadius: 8, background: !aWins ? 'var(--accent-10)' : 'transparent' }}>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent-secondary-text)', marginBottom: 4 }}>{teamB.name}</div>
-                  <div style={{ fontSize: 28, fontWeight: 800 }} className="tabular-nums">{(dimsB[hoveredIdx] * 100).toFixed(1)}</div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--accent-secondary-text)', marginBottom: 4 }}>{teamB.name}</div>
+                  <div style={{ fontSize: 30, fontWeight: 800 }} className="tabular-nums">{(dimsB[hoveredIdx] * 100).toFixed(1)}</div>
                 </div>
               </div>
               {diff > 0 && (
-                <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                <div style={{ fontSize: 15, color: 'var(--text-muted)' }}>
                   <strong style={{ color: 'var(--success-green)' }}>{aWins ? teamA.abbr : teamB.abbr}</strong> leads by <strong>{diff}</strong> points in {tipDim.label.toLowerCase()}. {tipDim.desc}.
                 </div>
               )}
               {diff === 0 && (
-                <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                <div style={{ fontSize: 15, color: 'var(--text-muted)' }}>
                   Dead even in {tipDim.label.toLowerCase()}. {tipDim.desc}.
                 </div>
               )}
             </div>
           ) : (
-            <div style={{ width: '100%', textAlign: 'center', color: 'var(--text-muted)', fontSize: 11, opacity: 0.4 }}>
+            <div style={{ width: '100%', textAlign: 'center', color: 'var(--text-muted)', fontSize: 14, opacity: 0.4 }}>
               Hover a dimension
             </div>
           )}
@@ -201,7 +202,7 @@ function DualHexRadar({ dimsA, dimsB, teamA, teamB }) {
 
       {/* Right: Chart */}
       <div className="ff-hex-radar-chart">
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 9999, padding: '4px 14px', marginBottom: 14, alignSelf: 'flex-start' }}>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 9999, padding: '4px 14px', marginBottom: 14, alignSelf: 'flex-start' }}>
 <HexBrand word="Analysis" size="sm" />
         </div>
         <svg width={svgSize} height={svgSize} viewBox={`0 0 ${svgSize} ${svgSize}`} style={{ display: 'block', maxWidth: '100%' }} role="img" aria-label={`HexAnalysis comparison: ${teamA.name} vs ${teamB.name}`}>
@@ -256,10 +257,10 @@ function DualHexRadar({ dimsA, dimsB, teamA, teamB }) {
           })}
 
           {/* Team A polygon */}
-          <path d={pathA} fill="var(--hex-purple)" fillOpacity="0.2" stroke="var(--hex-purple)" strokeWidth="2.5" strokeLinejoin="round" />
+          <path d={pathA} fill="#2563EB" fillOpacity="0.2" stroke="#2563EB" strokeWidth="2.5" strokeLinejoin="round" />
 
           {/* Team B polygon */}
-          <path d={pathB} fill="var(--accent-secondary)" fillOpacity="0.12" stroke="var(--accent-secondary-text)" strokeWidth="2.5" strokeLinejoin="round" strokeDasharray="8,4" />
+          <path d={pathB} fill="#10B981" fillOpacity="0.12" stroke="#10B981" strokeWidth="2.5" strokeLinejoin="round" strokeDasharray="8,4" />
 
           {/* Score tooltips on hover — show both teams' decimal values */}
           {hoveredIdx !== null && (() => {
@@ -272,11 +273,11 @@ function DualHexRadar({ dimsA, dimsB, teamA, teamB }) {
             return (
               <g>
                 {/* Team A value */}
-                <rect x={ax + (aDx/aDist)*24 - 22} y={ay + (aDy/aDist)*24 - 11} width="44" height="20" rx="5" fill="var(--hex-purple)" fillOpacity="0.9" />
-                <text x={ax + (aDx/aDist)*24} y={ay + (aDy/aDist)*24 + 4} textAnchor="middle" fontSize="11" fontWeight="800" fill="#fff">{aVal}</text>
+                <rect x={ax + (aDx/aDist)*24 - 22} y={ay + (aDy/aDist)*24 - 11} width="44" height="20" rx="5" fill="#2563EB" fillOpacity="0.9" />
+                <text x={ax + (aDx/aDist)*24} y={ay + (aDy/aDist)*24 + 4} textAnchor="middle" fontSize="13" fontWeight="800" fill="#fff">{aVal}</text>
                 {/* Team B value */}
-                <rect x={bx + (bDx/bDist)*24 - 22} y={by + (bDy/bDist)*24 - 11} width="44" height="20" rx="5" fill="var(--accent-secondary-text)" fillOpacity="0.8" />
-                <text x={bx + (bDx/bDist)*24} y={by + (bDy/bDist)*24 + 4} textAnchor="middle" fontSize="11" fontWeight="800" fill="#fff">{bVal}</text>
+                <rect x={bx + (bDx/bDist)*24 - 22} y={by + (bDy/bDist)*24 - 11} width="44" height="20" rx="5" fill="#10B981" fillOpacity="0.8" />
+                <text x={bx + (bDx/bDist)*24} y={by + (bDy/bDist)*24 + 4} textAnchor="middle" fontSize="13" fontWeight="800" fill="#fff">{bVal}</text>
               </g>
             );
           })()}
@@ -293,7 +294,7 @@ function DualHexRadar({ dimsA, dimsB, teamA, teamB }) {
               <g key={i} style={{ cursor: 'pointer' }} onMouseEnter={() => setHoveredIdx(i)} onMouseLeave={() => setHoveredIdx(null)}>
                 <circle cx={lx} cy={ly} r={42} fill="transparent" />
                 <rect x={lx - mPillW/2} y={ly - mPillH/2} width={mPillW} height={mPillH} rx="10" fill="var(--hex-purple)" fillOpacity={isHovered ? 0.3 : 0.12} stroke="var(--hex-purple)" strokeWidth="1.5" strokeOpacity={isHovered ? 0.7 : 0.3} />
-                <text x={lx} y={ly + 5} textAnchor="middle" fontSize="13" fontWeight="700" fill={isHovered ? '#fff' : 'var(--hex-purple)'} style={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <text x={lx} y={ly + 5} textAnchor="middle" fontSize="15" fontWeight="700" fill={isHovered ? '#fff' : 'var(--hex-purple)'} style={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   {dim.label}
                 </text>
               </g>
@@ -326,9 +327,13 @@ export default function MatchupDetail({ matchup, rosters, onBack, onPlayerClick 
     return rosters[matchup.away.teamId].reduce((s, pid) => s + (PLAYER_MAP[pid]?.proj || 0), 0);
   }, [rosters, matchup]);
 
-  const homeWinProb = 1 / (1 + Math.exp(-(homeProj - awayProj) / 7));
-  const homePct = Math.round(homeWinProb * 100);
-  const awayPct = 100 - homePct;
+  const homeRoster = rosters?.[matchup.home.teamId] || [];
+  const awayRoster = rosters?.[matchup.away.teamId] || [];
+  const homeWinProb = homeRoster.length && awayRoster.length
+    ? getMatchupWinProb(homeRoster, awayRoster, PLAYER_MAP)
+    : (homeProj + awayProj > 0 ? homeProj / (homeProj + awayProj) : 0.5);
+  const homePct = (homeWinProb * 100).toFixed(2);
+  const awayPct = (100 - homeWinProb * 100).toFixed(2);
 
   // Team dimensions for radar
   const homeDims = useMemo(() => calcTeamDims(matchup.home.teamId, rosters), [rosters, matchup]);
@@ -354,38 +359,38 @@ export default function MatchupDetail({ matchup, rosters, onBack, onPlayerClick 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
             {/* Home */}
             <div style={{ textAlign: 'center', flex: 1 }}>
-              <div style={{ fontSize: 18, fontWeight: 800 }}>{homeTeam.name}</div>
-              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{homeTeam.wins}-{homeTeam.losses} &middot; {homeTeam.streak}</div>
-              <div style={{ fontSize: 36, fontWeight: 900, marginTop: 8, color: homeProj >= awayProj ? 'var(--success-green)' : 'var(--text)' }} className="tabular-nums">
+              <div style={{ fontSize: 20, fontWeight: 800 }}>{homeTeam.name}</div>
+              <div style={{ fontSize: 14, color: 'var(--text-muted)' }}>{homeTeam.wins}-{homeTeam.losses} &middot; {homeTeam.streak}</div>
+              <div style={{ fontSize: 38, fontWeight: 900, marginTop: 8, color: homeProj >= awayProj ? 'var(--success-green)' : 'var(--text)' }} className="tabular-nums">
                 <AnimatedNumber value={homeProj} decimals={2} duration={600} />
               </div>
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Projected</div>
+              <div style={{ fontSize: 14, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Projected</div>
             </div>
 
             {/* VS */}
             <div style={{ padding: '0 20px', textAlign: 'center' }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.06em' }}>VS</div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.06em' }}>VS</div>
             </div>
 
             {/* Away */}
             <div style={{ textAlign: 'center', flex: 1 }}>
-              <div style={{ fontSize: 18, fontWeight: 800 }}>{awayTeam.name}</div>
-              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{awayTeam.wins}-{awayTeam.losses} &middot; {awayTeam.streak}</div>
-              <div style={{ fontSize: 36, fontWeight: 900, marginTop: 8, color: awayProj >= homeProj ? 'var(--success-green)' : 'var(--text)' }} className="tabular-nums">
+              <div style={{ fontSize: 20, fontWeight: 800 }}>{awayTeam.name}</div>
+              <div style={{ fontSize: 14, color: 'var(--text-muted)' }}>{awayTeam.wins}-{awayTeam.losses} &middot; {awayTeam.streak}</div>
+              <div style={{ fontSize: 38, fontWeight: 900, marginTop: 8, color: awayProj >= homeProj ? 'var(--success-green)' : 'var(--text)' }} className="tabular-nums">
                 <AnimatedNumber value={awayProj} decimals={2} duration={600} />
               </div>
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Projected</div>
+              <div style={{ fontSize: 14, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Projected</div>
             </div>
           </div>
 
           {/* Win Probability Bar */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--hex-purple)', minWidth: 36 }} className="tabular-nums">{homePct}%</span>
+            <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--hex-purple)', minWidth: 42 }} className="tabular-nums">{homePct}%</span>
             <div style={{ flex: 1, display: 'flex', height: 8, borderRadius: 4, overflow: 'hidden', background: 'var(--surface2)' }}>
               <div style={{ width: `${homePct}%`, background: 'var(--hex-purple)', borderRadius: '4px 0 0 4px' }} />
               <div style={{ width: `${awayPct}%`, background: 'var(--accent-secondary)', borderRadius: '0 4px 4px 0' }} />
             </div>
-            <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent-secondary-text)', minWidth: 36, textAlign: 'right' }} className="tabular-nums">{awayPct}%</span>
+            <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--accent-secondary-text)', minWidth: 42, textAlign: 'right' }} className="tabular-nums">{awayPct}%</span>
           </div>
         </div>
       </div>
@@ -399,21 +404,21 @@ export default function MatchupDetail({ matchup, rosters, onBack, onPlayerClick 
       {advantages.length > 0 && (
         <div className="ff-card" style={{ marginBottom: 16 }}>
           <div className="ff-card-header">
-            <h2 style={{ fontSize: 16 }}>Key Advantages</h2>
+            <h2 style={{ fontSize: 18 }}>Key Advantages</h2>
           </div>
           <div className="ff-card-body" style={{ padding: '12px 20px' }}>
             {advantages.map((a, i) => (
               <div key={i} style={{
                 display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0',
                 borderBottom: i < advantages.length - 1 ? '1px solid var(--border)' : 'none',
-                fontSize: 13,
+                fontSize: 15,
               }}>
-                <span style={{ fontWeight: 700, color: a.winner.id === matchup.home.teamId ? 'var(--hex-purple)' : 'var(--accent-secondary-text)', minWidth: 40 }}>
+                <span style={{ fontWeight: 700, color: a.winner.id === matchup.home.teamId ? 'var(--hex-purple)' : 'var(--accent-secondary-text)', minWidth: 46 }}>
                   {a.winner.name}
                 </span>
-                <span style={{ color: 'var(--success-green)', fontSize: 11, fontWeight: 700 }}>+{a.margin}</span>
+                <span style={{ color: 'var(--success-green)', fontSize: 14, fontWeight: 700 }}>+{a.margin}</span>
                 <span style={{ color: 'var(--text-muted)', flex: 1 }}>{a.dim}</span>
-                <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>vs {a.loser.name}</span>
+                <span style={{ color: 'var(--text-muted)', fontSize: 14 }}>vs {a.loser.name}</span>
               </div>
             ))}
           </div>
@@ -462,7 +467,7 @@ export default function MatchupDetail({ matchup, rosters, onBack, onPlayerClick 
                     if (row.separator) {
                       return (
                         <tr key="sep" style={{ background: 'var(--surface)' }}>
-                          <td colSpan={10} style={{ padding: '3px 10px', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)' }}>
+                          <td colSpan={10} style={{ padding: '4px 10px', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)' }}>
                             Bench
                           </td>
                         </tr>
@@ -488,19 +493,19 @@ export default function MatchupDetail({ matchup, rosters, onBack, onPlayerClick 
                               <PosBadge pos={hp.player.pos} />
                               <PlayerLink name={hp.player.name} playerId={hp.pid} onPlayerClick={onPlayerClick} />
                             </div>
-                          ) : <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>-</span>}
+                          ) : <span style={{ color: 'var(--text-muted)', fontSize: 14 }}>-</span>}
                         </td>
                         <td className="player-team">{hp?.player?.team || ''}</td>
                         <td style={{ textAlign: 'right', fontWeight: 600 }} className="tabular-nums">{hp ? hProj : ''}</td>
                         <td style={{ textAlign: 'right', fontWeight: 600, color: 'var(--hex-purple)' }} className="tabular-nums">{hp ? formatHex(hHex) : ''}</td>
 
                         {/* Slot */}
-                        <td style={{ textAlign: 'center', fontWeight: 700, fontSize: 10, color: POS_COLORS[row.home?.pos] || 'var(--text-muted)' }}>
+                        <td style={{ textAlign: 'center', fontWeight: 700, fontSize: 12, color: POS_COLORS[row.home?.pos] || 'var(--text-muted)' }}>
                           {row.home?.label || 'BN'}
                         </td>
 
                         {/* Variance */}
-                        <td style={{ textAlign: 'center', fontWeight: 700, fontSize: 11,
+                        <td style={{ textAlign: 'center', fontWeight: 700, fontSize: 14,
                           color: homeWins ? 'var(--success-green)' : awayWins ? 'var(--red)' : 'var(--text-muted)',
                         }} className="tabular-nums">
                           {(hp || ap) ? (homeWins ? '+' : '') + diff.toFixed(2) : ''}
@@ -517,7 +522,7 @@ export default function MatchupDetail({ matchup, rosters, onBack, onPlayerClick 
                               <PosBadge pos={ap.player.pos} />
                               <PlayerHeadshot espnId={getEspnId(ap.player.name)} name={ap.player.name} size="tiny" pos={ap.player.pos} team={ap.player.team} />
                             </div>
-                          ) : <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>-</span>}
+                          ) : <span style={{ color: 'var(--text-muted)', fontSize: 14 }}>-</span>}
                         </td>
                       </tr>
                     );
@@ -529,7 +534,7 @@ export default function MatchupDetail({ matchup, rosters, onBack, onPlayerClick 
                     <td style={{ textAlign: 'right', fontWeight: 800 }} className="tabular-nums">{homeTotalProj.toFixed(2)}</td>
                     <td></td>
                     <td></td>
-                    <td style={{ textAlign: 'center', fontWeight: 900, fontSize: 12,
+                    <td style={{ textAlign: 'center', fontWeight: 900, fontSize: 14,
                       color: homeTotalProj > awayTotalProj ? 'var(--success-green)' : homeTotalProj < awayTotalProj ? 'var(--red)' : 'var(--text-muted)',
                     }} className="tabular-nums">
                       {homeTotalProj > awayTotalProj ? '+' : ''}{(homeTotalProj - awayTotalProj).toFixed(2)}

@@ -64,7 +64,7 @@ export default function TeamPicker({ value, onChange }) {
           }} onClick={e => e.stopPropagation()}>
             {chiefsConfirm === 'ask' ? (
               <>
-                <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: 'var(--text)' }}>Are you sure?</div>
+                <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 8, color: 'var(--text)' }}>Are you sure?</div>
                 <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 16 }}>
                   <button className="ff-btn ff-btn-primary" onClick={() => setChiefsConfirm('mistake')}>Yes</button>
                   <button className="ff-btn ff-btn-secondary" onClick={() => setChiefsConfirm(null)}>No</button>
@@ -72,7 +72,7 @@ export default function TeamPicker({ value, onChange }) {
               </>
             ) : (
               <>
-                <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 16, color: 'var(--text)' }}>Everybody makes mistakes</div>
+                <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 16, color: 'var(--text)' }}>Everybody makes mistakes</div>
                 <button className="ff-btn ff-btn-primary" onClick={() => { onChange('kc'); setChiefsConfirm(null); }}>OK</button>
               </>
             )}

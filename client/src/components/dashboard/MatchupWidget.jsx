@@ -53,7 +53,7 @@ function WinProbBar({ homeProb }) {
 
 function TeamRecord({ team }) {
   return (
-    <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 500 }}>
+    <span style={{ fontSize: 14, color: 'var(--text-muted)', fontWeight: 500 }}>
       {team.wins}-{team.losses}{team.ties > 0 ? `-${team.ties}` : ''}
     </span>
   );
@@ -63,7 +63,7 @@ function StreakBadge({ streak }) {
   if (!streak) return null;
   const isWin = streak.startsWith('W');
   return (
-    <span className={`ff-streak ${isWin ? 'hot' : 'cold'}`} style={{ fontSize: 10 }}>
+    <span className={`ff-streak ${isWin ? 'hot' : 'cold'}`} style={{ fontSize: 12 }}>
       {streak}
     </span>
   );
@@ -78,7 +78,7 @@ function PlayerRow({ player, onPlayerClick }) {
         <PosBadge pos={player.pos} size="xs" />
         <PlayerLink name={player.name} playerId={player.id} onPlayerClick={onPlayerClick} />
         {injuryStatus && (
-          <span style={{ fontSize: 9, fontWeight: 800, color: injuryStatus === 'out' ? 'var(--injury-out)' : 'var(--injury-questionable)', lineHeight: 1 }}>
+          <span style={{ fontSize: 11, fontWeight: 800, color: injuryStatus === 'out' ? 'var(--injury-out)' : 'var(--injury-questionable)', lineHeight: 1 }}>
             {injuryStatus === 'out' ? 'O' : 'Q'}
           </span>
         )}
@@ -121,24 +121,32 @@ function MatchupCard({ matchup, expanded, rosters, onPlayerClick, onToggle, onMa
       <div className="ff-card-top-accent" style={{ background: isUserMatchup ? 'var(--accent)' : 'var(--border-strong)' }} />
 
       {isUserMatchup && (
-        <div className="ff-your-matchup-label">Your Matchup</div>
+        <div className="ff-your-matchup-label" style={{
+          position: 'absolute', top: 0, left: 16,
+          transform: 'translateY(-50%)',
+          padding: '3px 10px', borderRadius: 'var(--radius-sm)',
+          background: 'var(--accent)', color: 'var(--on-accent)',
+          fontSize: 11, fontWeight: 700, textTransform: 'uppercase',
+          letterSpacing: '0.06em', lineHeight: '18px',
+          zIndex: 2,
+        }}>Your Matchup</div>
       )}
       {expanded && (
         <div className="ff-card-header">
           <h2>{isUserMatchup ? 'Matchup Details' : 'Matchup Preview'}</h2>
-          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Week 12</span>
+          <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>Week 12</span>
         </div>
       )}
 
       <div className={expanded ? 'ff-matchup' : 'ff-matchup ff-matchup-compact'}>
         {/* Home Team */}
         <div className="ff-matchup-team">
-          <div className="ff-matchup-team-name" style={!expanded ? { fontSize: 13 } : undefined}>{homeTeam.name}</div>
+          <div className="ff-matchup-team-name" style={!expanded ? { fontSize: 15 } : undefined}>{homeTeam.name}</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
             <TeamRecord team={homeTeam} />
             <StreakBadge streak={homeTeam.streak} />
           </div>
-          <div className="ff-matchup-score tabular-nums" style={!expanded ? { fontSize: 24 } : undefined}>
+          <div className="ff-matchup-score tabular-nums" style={!expanded ? { fontSize: 26 } : undefined}>
             {matchup.home.projected.toFixed(1)}
           </div>
           <div className="ff-matchup-projected tabular-nums">Projected</div>
@@ -156,12 +164,12 @@ function MatchupCard({ matchup, expanded, rosters, onPlayerClick, onToggle, onMa
 
         {/* Away Team */}
         <div className="ff-matchup-team">
-          <div className="ff-matchup-team-name" style={!expanded ? { fontSize: 13 } : undefined}>{awayTeam.name}</div>
+          <div className="ff-matchup-team-name" style={!expanded ? { fontSize: 15 } : undefined}>{awayTeam.name}</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
             <TeamRecord team={awayTeam} />
             <StreakBadge streak={awayTeam.streak} />
           </div>
-          <div className="ff-matchup-score tabular-nums" style={!expanded ? { fontSize: 24 } : undefined}>
+          <div className="ff-matchup-score tabular-nums" style={!expanded ? { fontSize: 26 } : undefined}>
             {matchup.away.projected.toFixed(1)}
           </div>
           <div className="ff-matchup-projected tabular-nums">Projected</div>
@@ -176,7 +184,7 @@ function MatchupCard({ matchup, expanded, rosters, onPlayerClick, onToggle, onMa
       </div>
 
       {/* Win Probability */}
-      <div style={{ padding: expanded ? '0 20px 16px' : '0 12px 12px' }}>
+      <div style={{ padding: expanded ? '0 20px 16px' : '0 0 12px' }}>
         <WinProbBar homeProb={homeProb} />
       </div>
 
@@ -184,7 +192,7 @@ function MatchupCard({ matchup, expanded, rosters, onPlayerClick, onToggle, onMa
       {expanded && onMatchupClick && (
         <div style={{ padding: '8px 16px', borderTop: '1px solid var(--border)', textAlign: 'center' }}>
           <button className="ff-btn ff-btn-secondary ff-btn-sm" onClick={(e) => { e.stopPropagation(); onMatchupClick(matchup.id); }}
-            style={{ fontSize: 12 }}>
+            style={{ fontSize: 14 }}>
             View Full <HexBrand word="Analysis" icon={false} />
           </button>
         </div>
@@ -193,7 +201,7 @@ function MatchupCard({ matchup, expanded, rosters, onPlayerClick, onToggle, onMa
       {/* Expand hint for compact cards */}
       {!expanded && onToggle && (
         <div style={{
-          padding: '5px 12px', textAlign: 'center', fontSize: 11,
+          padding: '5px 12px', textAlign: 'center', fontSize: 13,
           color: 'var(--accent-text)', borderTop: '1px solid var(--border)',
           fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
         }}>
@@ -244,13 +252,15 @@ export default function MatchupWidget({ mode = 'featured', rosters, onPlayerClic
         <MatchupCard matchup={userMatchup} expanded rosters={rosters} onPlayerClick={onPlayerClick} onMatchupClick={onMatchupClick} />
       </div>
 
-      {/* Section header */}
+      {/* Section label */}
       <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '0 4px',
+        display: 'flex', alignItems: 'center', gap: 8,
+        padding: '0 4px', fontSize: 13, fontWeight: 600,
+        color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em',
       }}>
-        <h3 style={{ fontSize: 14, fontWeight: 700 }}>Other Matchups</h3>
-        <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{otherMatchups.length} matchups</span>
+        <span>Other Matchups</span>
+        <span style={{ fontWeight: 400 }}>&middot;</span>
+        <span style={{ fontWeight: 400 }}>{otherMatchups.length}</span>
       </div>
 
       {/* Matchup grid */}

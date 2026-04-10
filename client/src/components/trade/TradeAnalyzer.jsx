@@ -53,7 +53,9 @@ export default function TradeAnalyzer({ sendIds, receiveIds, userRoster, partner
   if (sendIds.length === 0 && receiveIds.length === 0) return null;
 
   const { sendTotal, receiveTotal, delta, ratio, label, css } = computeTradeTier(sendIds, receiveIds, userRoster, partnerRoster, scoringPreset);
-  const totalValue = sendTotal + receiveTotal || 1;
+  const combinedValue = sendTotal + receiveTotal;
+  const noValueData = combinedValue < 5;
+  const totalValue = combinedValue || 1;
   const sendPct = Math.round((sendTotal / totalValue) * 100);
   const receivePct = 100 - sendPct;
 
@@ -77,10 +79,16 @@ export default function TradeAnalyzer({ sendIds, receiveIds, userRoster, partner
       </div>
 
       {/* Tug-of-war bar */}
-      <div className="ff-tm-analyzer-bar">
-        <div className="ff-tm-analyzer-fill-left" style={{ width: `${sendPct}%` }} />
-        <div className="ff-tm-analyzer-fill-right" style={{ width: `${receivePct}%` }} />
-      </div>
+      {noValueData ? (
+        <div style={{ textAlign: 'center', fontSize: 14, color: 'var(--text-muted)', padding: '8px 0' }}>
+          No HexScore data available for these players
+        </div>
+      ) : (
+        <div className="ff-tm-analyzer-bar">
+          <div className="ff-tm-analyzer-fill-left" style={{ width: `${sendPct}%` }} />
+          <div className="ff-tm-analyzer-fill-right" style={{ width: `${receivePct}%` }} />
+        </div>
+      )}
 
       {/* Verdict */}
       <div className="ff-tm-verdict-row">
@@ -97,20 +105,20 @@ export default function TradeAnalyzer({ sendIds, receiveIds, userRoster, partner
         <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 4 }}>
           {posImpact.warnings.map((w, i) => (
             <div key={`w${i}`} style={{
-              fontSize: 11, padding: '6px 10px', borderRadius: 6,
+              fontSize: 14, padding: '6px 10px', borderRadius: 6,
               background: 'var(--red-light)', color: 'var(--red)',
               display: 'flex', alignItems: 'center', gap: 6,
             }}>
-              <span style={{ fontSize: 13 }}>{'\u26A0'}</span> {w}
+              <span style={{ fontSize: 15 }}>{'\u26A0'}</span> {w}
             </div>
           ))}
           {posImpact.gains.map((g, i) => (
             <div key={`g${i}`} style={{
-              fontSize: 11, padding: '6px 10px', borderRadius: 6,
+              fontSize: 14, padding: '6px 10px', borderRadius: 6,
               background: 'rgba(22,163,74,0.08)', color: 'var(--success-green)',
               display: 'flex', alignItems: 'center', gap: 6,
             }}>
-              <span style={{ fontSize: 13 }}>{'\u2714'}</span> {g}
+              <span style={{ fontSize: 15 }}>{'\u2714'}</span> {g}
             </div>
           ))}
         </div>
@@ -140,7 +148,7 @@ export default function TradeAnalyzer({ sendIds, receiveIds, userRoster, partner
 
       {/* Player-level impact */}
       {(sendIds.length > 0 || receiveIds.length > 0) && (
-        <div style={{ marginTop: 12, fontSize: 11 }}>
+        <div style={{ marginTop: 12, fontSize: 14 }}>
           {sendIds.map(id => {
             const p = PLAYER_MAP[id];
             return p ? <div key={id} className="ff-tm-impact-row removed">- {p.name} ({p.pos})</div> : null;

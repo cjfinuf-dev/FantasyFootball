@@ -15,7 +15,16 @@ async function signup({ name, email, password }) {
   }
 
   const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
-  db.run('INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)', [name, email, passwordHash]);
+  try {
+    db.run('INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)', [name, email, passwordHash]);
+  } catch (e) {
+    if (e.message && e.message.includes('UNIQUE constraint failed')) {
+      const err = new Error('Signup failed. Please check your details.');
+      err.status = 409;
+      throw err;
+    }
+    throw e;
+  }
   saveDb();
 
   const result = db.exec('SELECT id, name, email, created_at FROM users WHERE email = ?', [email]);

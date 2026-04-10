@@ -8,7 +8,7 @@ import TradeAnalyzer from './TradeAnalyzer';
 const PLAYER_MAP = {};
 PLAYERS.forEach(p => { PLAYER_MAP[p.id] = p; });
 
-export default function TradeProposal({ rosters, onPropose, scoringPreset }) {
+export default function TradeProposal({ rosters, onPropose, scoringPreset, onOpenCompare }) {
   const [selectedTeamId, setSelectedTeamId] = useState(null);
   const [sendIds, setSendIds] = useState([]);
   const [receiveIds, setReceiveIds] = useState([]);
@@ -110,8 +110,8 @@ export default function TradeProposal({ rosters, onPropose, scoringPreset }) {
             ) : (
               sendIds.map(id => (
                 <div key={id} className="ff-tm-zone-player">
-                  <span style={{ fontSize: 12, fontWeight: 600 }}>{PLAYER_MAP[id]?.name}</span>
-                  <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{PLAYER_MAP[id]?.pos}</span>
+                  <span style={{ fontSize: 14, fontWeight: 600 }}>{PLAYER_MAP[id]?.name}</span>
+                  <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{PLAYER_MAP[id]?.pos}</span>
                   <span className={hexChipClass(getHexScore(id, scoringPreset))} style={{ marginLeft: 'auto', marginRight: 4 }}>{formatHex(getHexScore(id, scoringPreset))}</span>
                   <button className="remove-btn" onClick={() => toggleSend(id)}>{'\u2715'}</button>
                 </div>
@@ -125,14 +125,30 @@ export default function TradeProposal({ rosters, onPropose, scoringPreset }) {
             ) : (
               receiveIds.map(id => (
                 <div key={id} className="ff-tm-zone-player">
-                  <span style={{ fontSize: 12, fontWeight: 600 }}>{PLAYER_MAP[id]?.name}</span>
-                  <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{PLAYER_MAP[id]?.pos}</span>
+                  <span style={{ fontSize: 14, fontWeight: 600 }}>{PLAYER_MAP[id]?.name}</span>
+                  <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{PLAYER_MAP[id]?.pos}</span>
                   <span className={hexChipClass(getHexScore(id, scoringPreset))} style={{ marginLeft: 'auto', marginRight: 4 }}>{formatHex(getHexScore(id, scoringPreset))}</span>
                   <button className="remove-btn" onClick={() => toggleReceive(id)}>{'\u2715'}</button>
                 </div>
               ))
             )}
           </div>
+        </div>
+      )}
+
+      {/* Compare link */}
+      {onOpenCompare && sendIds.length > 0 && receiveIds.length > 0 && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '4px 0' }}>
+          <button
+            onClick={() => onOpenCompare([...sendIds, ...receiveIds])}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              color: 'var(--hex-purple)', fontSize: 14, fontWeight: 600,
+              textDecoration: 'underline', textUnderlineOffset: 2,
+            }}
+          >
+            Compare in HexCompare
+          </button>
         </div>
       )}
 
@@ -164,7 +180,7 @@ export default function TradeProposal({ rosters, onPropose, scoringPreset }) {
               />
             ))}
             {filterPlayers(userRoster).length === 0 && (
-              <div style={{ padding: 20, textAlign: 'center', fontSize: 12, color: 'var(--text-muted)' }}>No players at this position</div>
+              <div style={{ padding: 20, textAlign: 'center', fontSize: 14, color: 'var(--text-muted)' }}>No players at this position</div>
             )}
           </div>
         </div>
@@ -185,7 +201,7 @@ export default function TradeProposal({ rosters, onPropose, scoringPreset }) {
               />
             ))}
             {filterPlayers(partnerRoster).length === 0 && (
-              <div style={{ padding: 20, textAlign: 'center', fontSize: 12, color: 'var(--text-muted)' }}>No players at this position</div>
+              <div style={{ padding: 20, textAlign: 'center', fontSize: 14, color: 'var(--text-muted)' }}>No players at this position</div>
             )}
           </div>
         </div>

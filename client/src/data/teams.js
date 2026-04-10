@@ -1,3 +1,6 @@
+// SEASON: Update DATA_SEASON each year — used to detect stale static data at runtime
+export const DATA_SEASON = 2024;
+
 export const LEAGUE_NAME = 'VIAM Killas';
 
 export const TEAMS = [

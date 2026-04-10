@@ -64,7 +64,7 @@ function hexToRgba(hex, alpha) {
 // Choose black or white text for readability on a colored background
 function textOnBg(bgHex) {
   const lum = luminance(hexToRgb(bgHex));
-  return lum > 0.4 ? '#111111' : '#FFFFFF';
+  return lum > 0.35 ? '#111111' : '#FFFFFF';
 }
 
 export function ThemeProvider({ children }) {

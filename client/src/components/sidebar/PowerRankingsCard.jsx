@@ -133,7 +133,7 @@ export default function PowerRankingsCard({ expanded = false, rosters, scoringPr
     <div className={`ff-sidebar-card${expanded ? ' expanded' : ''}`}>
       <div className="ff-sidebar-card-header">
         <h3>Power Rankings</h3>
-        <span style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: "'DM Mono', monospace" }}>
+        <span style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: "'DM Mono', monospace" }}>
           {hasDraftData ? 'HexScore' : 'Pre-Draft'}
         </span>
       </div>
@@ -151,10 +151,14 @@ export default function PowerRankingsCard({ expanded = false, rosters, scoringPr
 
               return (
                 <div className={`ff-power-row${isUser ? ' user-row' : ''}`} key={team.id}>
-                  <span className="ff-power-rank">{team.rank}</span>
+                  <span className="ff-power-rank" style={{ fontSize: 15, fontWeight: 800, color: isUser ? 'var(--accent-text)' : 'var(--text)' }}>
+                    {team.rank}<span style={{ fontSize: 11, fontWeight: 600, verticalAlign: 'super' }}>
+                      {team.rank === 1 ? 'st' : team.rank === 2 ? 'nd' : team.rank === 3 ? 'rd' : 'th'}
+                    </span>
+                  </span>
                   {/* Movement indicator */}
                   <span style={{
-                    width: 16, fontSize: 10, fontWeight: 700, textAlign: 'center',
+                    width: 16, fontSize: 12, fontWeight: 700, textAlign: 'center',
                     color: team.movement > 0 ? 'var(--success-green)' : team.movement < 0 ? 'var(--red)' : 'var(--text-muted)',
                   }}>
                     {team.movement > 0 ? `\u25B2` : team.movement < 0 ? `\u25BC` : '\u2022'}
@@ -162,32 +166,32 @@ export default function PowerRankingsCard({ expanded = false, rosters, scoringPr
                   <span className="ff-power-name" style={{ fontWeight: isUser ? 700 : 500 }}>
                     {expanded ? team.name : team.abbr}
                   </span>
-                  <Sparkline data={team.trend} width={36} height={12} />
+                  <Sparkline data={team.trend} width={44} height={16} />
                   <div className="ff-power-bar-bg">
                     <div className={`ff-power-bar-fill ${isUser ? 'user' : ''}`} style={{ width: `${(team.power / maxPower) * 100}%` }} />
                     <div className="ff-power-bar-avg" style={{ left: `${(avgPower / maxPower) * 100}%` }} title={`Avg: ${Math.round(avgPower)}`} />
                   </div>
-                  <span className="ff-power-score tabular-nums" style={{ fontFamily: "'DM Mono', monospace" }}>{team.power}</span>
+                  <span className="ff-power-score tabular-nums" style={{ fontFamily: "'DM Mono', monospace", color: 'var(--text-muted)', fontSize: 13 }}>{team.power}</span>
                 </div>
               );
             })}
 
             {/* User position grades */}
             {userGrades && (
-              <div style={{ padding: '12px 14px', borderTop: '1px solid var(--border)' }}>
-                <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 8, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              <div style={{ padding: '12px 14px', borderTop: '1px solid var(--border)', background: 'var(--surface)', borderRadius: '0 0 var(--radius-lg) var(--radius-lg)' }}>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                   Your Position Grades
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
                   {Object.entries(userGrades).map(([pos, data]) => (
                     <div key={pos} style={{
-                      textAlign: 'center', padding: '8px 4px',
+                      textAlign: 'center', padding: '10px 6px',
                       background: 'var(--surface)', borderRadius: 6,
                       border: '1px solid var(--border)',
                     }}>
-                      <div style={{ fontSize: 10, fontWeight: 600, color: `var(--pos-${pos.toLowerCase()})`, marginBottom: 4 }}>{pos}</div>
-                      <div style={{ fontSize: 18, fontWeight: 800, color: GRADE_COLORS[data.grade], lineHeight: 1 }}>{data.grade}</div>
-                      <div style={{ fontSize: 9, color: 'var(--text-muted)', marginTop: 2, fontFamily: "'DM Mono', monospace" }}>{data.count} players</div>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: `var(--pos-${pos.toLowerCase()})`, marginBottom: 6 }}>{pos}</div>
+                      <div style={{ fontSize: 20, fontWeight: 800, color: GRADE_COLORS[data.grade], lineHeight: 1 }}>{data.grade}</div>
+                      <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2, fontFamily: "'DM Mono', monospace" }}>{data.count} players</div>
                     </div>
                   ))}
                 </div>

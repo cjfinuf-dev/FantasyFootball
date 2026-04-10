@@ -99,26 +99,29 @@ export default function WaiverWireCard({ expanded = false, rosters, onPlayerClic
 
       {/* FAAB & Waiver Status */}
       {hasDraftData && (
-        <div style={{ padding: '0 14px 10px', display: 'flex', gap: 12, alignItems: 'center', fontSize: 11 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <span style={{ color: 'var(--text-muted)' }}>FAAB:</span>
-            <span style={{ fontFamily: "'DM Mono', monospace", fontWeight: 600, color: faabRemaining > 30 ? 'var(--success-green)' : faabRemaining > 10 ? 'var(--warning-amber)' : 'var(--red)' }}>
-              ${faabRemaining}
-            </span>
+        <div style={{ padding: '0 14px 10px' }}>
+          <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: 4 }}>Budget Status</div>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center', fontSize: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <span style={{ color: 'var(--text-muted)' }}>FAAB:</span>
+              <span style={{ fontFamily: "'DM Mono', monospace", fontWeight: 600, color: faabRemaining > 30 ? 'var(--success-green)' : faabRemaining > 10 ? 'var(--warning-amber)' : 'var(--red)' }}>
+                ${faabRemaining}
+              </span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <span style={{ color: 'var(--text-muted)' }}>Priority:</span>
+              <span style={{ fontFamily: "'DM Mono', monospace", fontWeight: 600 }}>#{USER_WAIVER_POS}</span>
+            </div>
+            {expanded && (
+              <button
+                className={`ff-tm-filter-pill${showTransactions ? ' active' : ''}`}
+                style={{ marginLeft: 'auto', fontSize: 12 }}
+                onClick={() => setShowTransactions(!showTransactions)}
+              >
+                Recent
+              </button>
+            )}
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <span style={{ color: 'var(--text-muted)' }}>Priority:</span>
-            <span style={{ fontFamily: "'DM Mono', monospace", fontWeight: 600 }}>#{USER_WAIVER_POS}</span>
-          </div>
-          {expanded && (
-            <button
-              className={`ff-tm-filter-pill${showTransactions ? ' active' : ''}`}
-              style={{ marginLeft: 'auto', fontSize: 10 }}
-              onClick={() => setShowTransactions(!showTransactions)}
-            >
-              Recent
-            </button>
-          )}
         </div>
       )}
 
@@ -138,24 +141,24 @@ export default function WaiverWireCard({ expanded = false, rosters, onPlayerClic
       {/* Recent Transactions */}
       {showTransactions && expanded && (
         <div style={{ padding: '0 14px 12px' }}>
-          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: 6 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: 6 }}>
             Recent Transactions
           </div>
           {RECENT_TRANSACTIONS.map((tx, i) => {
             const team = TEAMS.find(t => t.id === tx.team);
             const hoursAgo = Math.round((Date.now() - tx.ts) / 3600000);
             return (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', fontSize: 11, borderBottom: i < RECENT_TRANSACTIONS.length - 1 ? '1px solid var(--border)' : 'none' }}>
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', fontSize: 14, borderBottom: i < RECENT_TRANSACTIONS.length - 1 ? '1px solid var(--border)' : 'none' }}>
                 <span style={{ color: tx.type === 'claim' ? 'var(--success-green)' : 'var(--red)', fontWeight: 700, width: 10 }}>
                   {tx.type === 'claim' ? '+' : '-'}
                 </span>
                 <span style={{ fontWeight: 600 }}>{tx.player}</span>
                 <PosBadge pos={tx.pos} size="xs" />
-                <span style={{ color: 'var(--text-muted)', marginLeft: 'auto', fontSize: 10 }}>
+                <span style={{ color: 'var(--text-muted)', marginLeft: 'auto', fontSize: 12 }}>
                   {team?.abbr}
                   {tx.bid !== undefined && <span style={{ marginLeft: 4, fontFamily: "'DM Mono', monospace" }}>${tx.bid}</span>}
                 </span>
-                <span style={{ color: 'var(--text-muted)', fontSize: 10, fontFamily: "'DM Mono', monospace" }}>{hoursAgo}h</span>
+                <span style={{ color: 'var(--text-muted)', fontSize: 12, fontFamily: "'DM Mono', monospace" }}>{hoursAgo}h</span>
               </div>
             );
           })}
@@ -164,7 +167,7 @@ export default function WaiverWireCard({ expanded = false, rosters, onPlayerClic
 
       <div className="ff-sidebar-card-body" style={{ padding: 0 }}>
         {waiverPlayers.length === 0 && (
-          <div style={{ padding: '20px 14px', textAlign: 'center', fontSize: 12, color: 'var(--text-muted)' }}>
+          <div style={{ padding: '20px 14px', textAlign: 'center', fontSize: 14, color: 'var(--text-muted)' }}>
             No players available{posFilter !== 'ALL' ? ` at ${posFilter}` : ''}.
           </div>
         )}
@@ -173,7 +176,7 @@ export default function WaiverWireCard({ expanded = false, rosters, onPlayerClic
             <PlayerHeadshot espnId={getEspnId(w.name)} name={w.name} size="xs" pos={w.pos} team={w.team} />
             <div className="ff-waiver-info">
               <div className="ff-waiver-name">
-                <PlayerLink name={w.name} playerId={w.playerId} onPlayerClick={onPlayerClick} /> <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{w.team}</span>
+                <PlayerLink name={w.name} playerId={w.playerId} onPlayerClick={onPlayerClick} /> <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>{w.team}</span>
                 <PosBadge pos={w.pos} size="xs" />
                 <span className={`ff-trend ${w.trend}`}>{w.trend === 'up' ? '\u25B2' : '\u25BC'} {w.trendPct}%</span>
               </div>
@@ -192,8 +195,8 @@ export default function WaiverWireCard({ expanded = false, rosters, onPlayerClic
                   placeholder="$"
                   onChange={e => setBidAmounts(prev => ({ ...prev, [w.playerId]: Number(e.target.value) }))}
                   style={{
-                    width: 44, padding: '4px 4px', border: '1px solid var(--border)', borderRadius: 4,
-                    fontSize: 11, textAlign: 'center', fontFamily: "'DM Mono', monospace",
+                    width: 52, padding: '4px 6px', border: '1px solid var(--border)', borderRadius: 4,
+                    fontSize: 14, textAlign: 'center', fontFamily: "'DM Mono', monospace",
                     background: 'var(--bg-white)', color: 'var(--text)',
                   }}
                 />

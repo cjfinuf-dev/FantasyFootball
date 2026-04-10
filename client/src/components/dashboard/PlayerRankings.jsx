@@ -31,37 +31,37 @@ const EMPTY_RANGE = { min: '', max: '' };
 // Position-specific stat columns (shown when a position filter is active)
 const POS_STAT_COLUMNS = {
   QB: [
-    { key: 'gp', label: 'GP', w: 36 },
-    { key: 'cmp', label: 'CMP', w: 44 },
-    { key: 'att', label: 'ATT', w: 44 },
+    { key: 'gp', label: 'GP', w: 40 },
+    { key: 'cmp', label: 'CMP', w: 48 },
+    { key: 'att', label: 'ATT', w: 48 },
     { key: 'passYds', label: 'YDS', w: 52 },
-    { key: 'passTd', label: 'TD', w: 36 },
-    { key: 'int', label: 'INT', w: 36 },
-    { key: 'sacks', label: 'SCK', w: 36 },
+    { key: 'passTd', label: 'TD', w: 40 },
+    { key: 'int', label: 'INT', w: 40 },
+    { key: 'sacks', label: 'SCK', w: 40 },
     { key: 'passEpa', label: 'EPA', w: 52 },
     { key: 'cpoe', label: 'CPOE', w: 52 },
     { key: 'rushYds', label: 'RYDS', w: 52 },
-    { key: 'rushTd', label: 'RTD', w: 36 },
+    { key: 'rushTd', label: 'RTD', w: 40 },
   ],
   RB: [
-    { key: 'gp', label: 'GP', w: 36 },
-    { key: 'carries', label: 'CAR', w: 44 },
+    { key: 'gp', label: 'GP', w: 40 },
+    { key: 'carries', label: 'CAR', w: 48 },
     { key: 'rushYds', label: 'RYDS', w: 52 },
-    { key: 'rushTd', label: 'RTD', w: 36 },
+    { key: 'rushTd', label: 'RTD', w: 40 },
     { key: 'rushEpa', label: 'REPA', w: 52 },
-    { key: 'rec', label: 'REC', w: 40 },
-    { key: 'tgt', label: 'TGT', w: 40 },
-    { key: 'recYds', label: 'RCYD', w: 52 },
-    { key: 'recTd', label: 'RCTD', w: 40 },
-    { key: 'tgtShare', label: 'TGT%', w: 48, fmt: v => v ? (v * 100).toFixed(1) + '%' : '—' },
-    { key: 'fumLost', label: 'FL', w: 32 },
-  ],
-  WR: [
-    { key: 'gp', label: 'GP', w: 36 },
     { key: 'rec', label: 'REC', w: 44 },
     { key: 'tgt', label: 'TGT', w: 44 },
+    { key: 'recYds', label: 'RCYD', w: 52 },
+    { key: 'recTd', label: 'RCTD', w: 44 },
+    { key: 'tgtShare', label: 'TGT%', w: 48, fmt: v => v ? (v * 100).toFixed(1) + '%' : '—' },
+    { key: 'fumLost', label: 'FL', w: 36 },
+  ],
+  WR: [
+    { key: 'gp', label: 'GP', w: 40 },
+    { key: 'rec', label: 'REC', w: 48 },
+    { key: 'tgt', label: 'TGT', w: 48 },
     { key: 'recYds', label: 'YDS', w: 52 },
-    { key: 'recTd', label: 'TD', w: 36 },
+    { key: 'recTd', label: 'TD', w: 40 },
     { key: 'recEpa', label: 'EPA', w: 52 },
     { key: 'tgtShare', label: 'TGT%', w: 48, fmt: v => v ? (v * 100).toFixed(1) + '%' : '—' },
     { key: 'airShare', label: 'AIR%', w: 48, fmt: v => v ? (v * 100).toFixed(1) + '%' : '—' },
@@ -70,25 +70,25 @@ const POS_STAT_COLUMNS = {
     { key: 'yac', label: 'YAC', w: 48 },
   ],
   TE: [
-    { key: 'gp', label: 'GP', w: 36 },
-    { key: 'rec', label: 'REC', w: 44 },
-    { key: 'tgt', label: 'TGT', w: 44 },
+    { key: 'gp', label: 'GP', w: 40 },
+    { key: 'rec', label: 'REC', w: 48 },
+    { key: 'tgt', label: 'TGT', w: 48 },
     { key: 'recYds', label: 'YDS', w: 52 },
-    { key: 'recTd', label: 'TD', w: 36 },
+    { key: 'recTd', label: 'TD', w: 40 },
     { key: 'recEpa', label: 'EPA', w: 52 },
     { key: 'tgtShare', label: 'TGT%', w: 48, fmt: v => v ? (v * 100).toFixed(1) + '%' : '—' },
     { key: 'racr', label: 'RACR', w: 52 },
     { key: 'yac', label: 'YAC', w: 48 },
   ],
   K: [
-    { key: 'gp', label: 'GP', w: 36 },
-    { key: 'fgm', label: 'FGM', w: 40 },
-    { key: 'fga', label: 'FGA', w: 40 },
+    { key: 'gp', label: 'GP', w: 40 },
+    { key: 'fgm', label: 'FGM', w: 44 },
+    { key: 'fga', label: 'FGA', w: 44 },
     { key: 'fgPct', label: 'FG%', w: 48, fmt: v => v ? (v * 100).toFixed(0) + '%' : '—' },
-    { key: 'fgLong', label: 'LNG', w: 40 },
-    { key: 'fg50', label: '50+', w: 40 },
-    { key: 'patm', label: 'PAT', w: 40 },
-    { key: 'pata', label: 'PATA', w: 40 },
+    { key: 'fgLong', label: 'LNG', w: 44 },
+    { key: 'fg50', label: '50+', w: 44 },
+    { key: 'patm', label: 'PAT', w: 44 },
+    { key: 'pata', label: 'PATA', w: 44 },
     { key: 'patPct', label: 'PAT%', w: 48, fmt: v => v ? (v * 100).toFixed(0) + '%' : '—' },
   ],
 };
@@ -103,11 +103,13 @@ export default function PlayerRankings({ onPlayerClick }) {
   const [rowLimit, setRowLimit] = useState(50);
   const [detailView, setDetailView] = useState(false);
   const [tableScrolled, setTableScrolled] = useState(false);
+  const [scrolledEnd, setScrolledEnd] = useState(false);
   const [csvToast, setCsvToast] = useState(false);
   const tableWrapRef = useRef(null);
 
   const handleTableScroll = useCallback((e) => {
     setTableScrolled(e.target.scrollLeft > 8);
+    setScrolledEnd(e.target.scrollLeft + e.target.clientWidth >= e.target.scrollWidth - 4);
   }, []);
 
   // Detail view forces history on and max rows
@@ -204,7 +206,7 @@ export default function PlayerRankings({ onPlayerClick }) {
 
   // Color scale instead of opacity — maintains WCAG contrast at all tiers
   const hexChipStyle = (score) => {
-    const color = score >= 85 ? 'var(--hex-purple-hot)' : score >= 75 ? 'var(--hex-purple-vivid)' : score >= 60 ? 'var(--hex-purple)' : score >= 45 ? 'rgba(139,92,246,0.7)' : 'rgba(139,92,246,0.55)';
+    const color = score >= 85 ? 'var(--hex-purple-hot)' : score >= 75 ? 'var(--hex-purple-vivid)' : score >= 60 ? 'var(--hex-purple)' : score >= 45 ? 'rgba(139,92,246,0.7)' : 'var(--text-muted)';
     const shadow = score >= 85 ? 'var(--hex-purple-glow)' : score >= 75 ? '0 0 4px rgba(139,92,246,0.25)' : 'none';
     return { fontWeight: 700, color, textShadow: shadow, fontFamily: 'monospace' };
   };
@@ -252,7 +254,7 @@ export default function PlayerRankings({ onPlayerClick }) {
           <div style={{ display: 'flex', borderRadius: 'var(--radius-sm)', overflow: 'hidden', border: '1px solid var(--border)' }}>
             <button onClick={() => setDetailView(false)}
               style={{
-                padding: '4px 12px', fontSize: 11, fontWeight: 600, border: 'none', cursor: 'pointer',
+                padding: '4px 12px', fontSize: 14, fontWeight: 600, border: 'none', cursor: 'pointer',
                 background: !detailView ? 'var(--accent)' : 'var(--surface)',
                 color: !detailView ? 'var(--on-accent)' : 'var(--text-muted)',
               }}>
@@ -260,7 +262,7 @@ export default function PlayerRankings({ onPlayerClick }) {
             </button>
             <button onClick={() => setDetailView(true)}
               style={{
-                padding: '4px 12px', fontSize: 11, fontWeight: 600, border: 'none', cursor: 'pointer',
+                padding: '4px 12px', fontSize: 14, fontWeight: 600, border: 'none', cursor: 'pointer',
                 borderLeft: '1px solid var(--border)',
                 background: detailView ? 'var(--accent)' : 'var(--surface)',
                 color: detailView ? 'var(--on-accent)' : 'var(--text-muted)',
@@ -268,7 +270,7 @@ export default function PlayerRankings({ onPlayerClick }) {
               Detail
             </button>
           </div>
-          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+          <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>
             {Math.min(filtered.length, effectiveRowLimit)} of {filtered.length}
           </span>
         </div>
@@ -292,7 +294,7 @@ export default function PlayerRankings({ onPlayerClick }) {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           {!detailView && (
-            <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--text-muted)', cursor: 'pointer' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 14, color: 'var(--text-muted)', cursor: 'pointer' }}>
               <input type="checkbox" checked={showHistory} onChange={e => setShowHistory(e.target.checked)}
                 style={{ width: 12, height: 12, accentColor: 'var(--hex-purple)' }} />
               History
@@ -316,30 +318,49 @@ export default function PlayerRankings({ onPlayerClick }) {
             </svg>
             CSV
           </button>
-          <input className="ff-search-input" type="text" placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)}
-            style={{ width: 160, fontSize: 11, padding: '4px 8px', transition: 'width var(--duration-fast) ease' }}
-            onFocus={e => { e.target.style.width = '240px'; }}
-            onBlur={e => { if (!e.target.value) e.target.style.width = '160px'; }} />
+          <input className="ff-search-input ff-search-input-expand" type="text" placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)}
+            style={{ fontSize: 14, padding: '4px 8px' }} />
         </div>
       </div>
+      {/* HexScore tier legend */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 12,
+        padding: '4px 20px', borderBottom: '1px solid var(--border)',
+        background: 'var(--surface)', fontSize: 12, color: 'var(--text-muted)',
+        flexWrap: 'wrap',
+        position: 'sticky', top: 0, zIndex: 1,
+      }}>
+        <span style={{ fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase' }}>HEX</span>
+        {[
+          { label: '85+ Elite', color: 'var(--hex-purple-hot)' },
+          { label: '75+ Great', color: 'var(--hex-purple-vivid)' },
+          { label: '60+ Good', color: 'var(--hex-purple)' },
+          { label: '45+ Avg', color: 'rgba(139,92,246,0.7)' },
+          { label: 'Below', color: 'var(--text-muted)' },
+        ].map(({ label, color }) => (
+          <span key={label} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: color, flexShrink: 0 }} />
+            {label}
+          </span>
+        ))}
+      </div>
       <div className="ff-card-body" style={{ padding: detailView ? '4px 0 0' : '12px 0 0' }}>
-        <div className={detailView ? '' : `ff-table-fade${tableScrolled ? ' scrolled-right' : ''}`} style={detailView ? { fontSize: 12 } : { position: 'relative' }}>
-        {/* 280px = navbar(48) + hero(~80) + card header(52) + controls(60) + breathing(40) */}
-        <div className="ff-table-wrap" ref={tableWrapRef} onScroll={handleTableScroll} style={{ maxHeight: detailView ? 2400 : `min(calc(100vh - 280px), ${effectiveRowLimit > 50 ? 800 : (effectiveShowHistory ? 600 : 440)}px)` }}>
-          <table className="ff-table" style={detailView ? { fontSize: 11 } : undefined}>
+        <div className={detailView ? '' : `ff-table-fade${tableScrolled ? ' scrolled-right' : ''}${scrolledEnd ? ' scrolled-end' : ''}`} style={detailView ? { fontSize: 14 } : { position: 'relative' }}>
+        <div className="ff-table-wrap" ref={tableWrapRef} onScroll={handleTableScroll} style={{ maxHeight: detailView ? 'none' : `min(calc(100vh - var(--player-table-offset)), ${effectiveRowLimit > 50 ? 800 : (effectiveShowHistory ? 600 : 440)}px)` }}>
+          <table className="ff-table" style={detailView ? { fontSize: 14 } : undefined}>
             <thead>
               {/* Grouping header — shown when stat columns or history are on */}
               {(statColumns.length > 0 || effectiveShowHistory) && (
                 <tr>
                   <th colSpan={4} style={{
-                    textAlign: 'left', fontSize: 10, fontWeight: 700, letterSpacing: '0.06em',
+                    textAlign: 'left', fontSize: 12, fontWeight: 700, letterSpacing: '0.06em',
                     textTransform: 'uppercase', color: 'var(--text-muted)',
                     background: 'var(--surface)', borderBottom: '2px solid var(--border)',
                   }}>
                     Player
                   </th>
                   <th colSpan={4} style={{
-                    textAlign: 'center', fontSize: 10, fontWeight: 700, letterSpacing: '0.06em',
+                    textAlign: 'center', fontSize: 12, fontWeight: 700, letterSpacing: '0.06em',
                     textTransform: 'uppercase', color: 'var(--text-muted)',
                     background: 'var(--surface)', borderBottom: '2px solid var(--border)',
                     borderLeft: '2px solid var(--border-strong)',
@@ -348,7 +369,7 @@ export default function PlayerRankings({ onPlayerClick }) {
                   </th>
                   {statColumns.length > 0 && (
                     <th colSpan={statColumns.length} style={{
-                      textAlign: 'center', fontSize: 10, fontWeight: 700, letterSpacing: '0.06em',
+                      textAlign: 'center', fontSize: 12, fontWeight: 700, letterSpacing: '0.06em',
                       textTransform: 'uppercase', color: 'var(--accent-text)',
                       background: 'var(--accent-10)', borderBottom: '2px solid var(--accent)',
                       borderLeft: '2px solid var(--border-strong)',
@@ -358,7 +379,7 @@ export default function PlayerRankings({ onPlayerClick }) {
                   )}
                   {effectiveShowHistory && seasons.map((yr, i) => (
                     <th key={`grp_${yr}`} colSpan={3} style={{
-                      textAlign: 'center', fontSize: 11, fontWeight: i === 0 ? 700 : 600, letterSpacing: '0.04em',
+                      textAlign: 'center', fontSize: 14, fontWeight: i === 0 ? 700 : 600, letterSpacing: '0.04em',
                       color: i === 0 ? 'var(--accent-text)' : 'var(--text-muted)',
                       background: i === 0 ? 'var(--accent-10)' : 'var(--surface)',
                       borderLeft: '2px solid var(--border-strong)',
@@ -371,16 +392,16 @@ export default function PlayerRankings({ onPlayerClick }) {
               )}
               {/* Sort headers */}
               <tr>
-                <th style={{ width: 36 }}>#</th>
+                <th style={{ width: 44 }}>#</th>
                 <th onClick={() => handleSort('name')} className={sortField === 'name' ? 'sort-active' : ''}>Player <SortArrow field="name" /></th>
-                <th style={{ width: 44 }}>POS</th>
-                <th style={{ width: 36 }} onClick={() => handleSort('status')} className={sortField === 'status' ? 'sort-active' : ''}>STS <SortArrow field="status" /></th>
-                <th style={{ width: 56, borderLeft: (statColumns.length > 0 || effectiveShowHistory) ? '2px solid var(--border-strong)' : undefined }} onClick={() => handleSort('hex')} className={sortField === 'hex' ? 'sort-active' : ''}>
+                <th style={{ width: 48 }}>POS</th>
+                <th style={{ width: 48 }} onClick={() => handleSort('status')} className={sortField === 'status' ? 'sort-active' : ''}>STS <SortArrow field="status" /></th>
+                <th style={{ width: 60, borderLeft: (statColumns.length > 0 || effectiveShowHistory) ? '2px solid var(--border-strong)' : undefined }} onClick={() => handleSort('hex')} className={sortField === 'hex' ? 'sort-active' : ''}>
                   <span style={{ color: 'var(--hex-purple, #8B5CF6)' }}>HEX</span> <SortArrow field="hex" />
                 </th>
-                <th style={{ width: 56 }} onClick={() => handleSort('pts')} className={sortField === 'pts' ? 'sort-active' : ''}>PTS <SortArrow field="pts" /></th>
-                <th style={{ width: 56 }} onClick={() => handleSort('proj')} className={sortField === 'proj' ? 'sort-active' : ''}>PROJ <SortArrow field="proj" /></th>
-                <th style={{ width: 56 }} onClick={() => handleSort('avg')} className={sortField === 'avg' ? 'sort-active' : ''}>AVG <SortArrow field="avg" /></th>
+                <th style={{ width: 60 }} onClick={() => handleSort('pts')} className={sortField === 'pts' ? 'sort-active' : ''}>PTS <SortArrow field="pts" /></th>
+                <th style={{ width: 60 }} onClick={() => handleSort('proj')} className={sortField === 'proj' ? 'sort-active' : ''}>PROJ <SortArrow field="proj" /></th>
+                <th style={{ width: 60 }} onClick={() => handleSort('avg')} className={sortField === 'avg' ? 'sort-active' : ''}>AVG <SortArrow field="avg" /></th>
                 {statColumns.map((col, ci) => (
                   <th key={col.key} style={{ width: col.w, textAlign: 'right', cursor: 'pointer', borderLeft: ci === 0 ? '2px solid var(--border-strong)' : undefined }}
                     onClick={() => handleSort(col.key)}
@@ -388,12 +409,12 @@ export default function PlayerRankings({ onPlayerClick }) {
                     {col.label} <SortArrow field={col.key} />
                   </th>
                 ))}
-                {!detailView && statColumns.length === 0 && !effectiveShowHistory && <th style={{ width: 56 }}>Trend</th>}
+                {!detailView && statColumns.length === 0 && !effectiveShowHistory && <th style={{ width: 60 }}>Trend</th>}
                 {effectiveShowHistory && seasons.map((yr, i) => {
                   const yrColor = sortField === `yr_${yr}` ? '#fff' : 'var(--text-muted)';
                   const borderLeft = '2px solid var(--border-strong)';
                   return [
-                    <th key={`${yr}_gp`} style={{ width: 36, textAlign: 'center', color: yrColor, borderLeft }}>GP</th>,
+                    <th key={`${yr}_gp`} style={{ width: 40, textAlign: 'center', color: yrColor, borderLeft }}>GP</th>,
                     <th key={`${yr}_tot`} style={{ width: 52, textAlign: 'right', color: yrColor }}>Total</th>,
                     <th key={`${yr}_ppg`} style={{ width: 52, textAlign: 'right', cursor: 'pointer', color: yrColor }}
                       onClick={() => handleSort(`yr_${yr}`)}
@@ -429,10 +450,10 @@ export default function PlayerRankings({ onPlayerClick }) {
                 <tr style={{ background: 'var(--surface, var(--bg-alt))' }}>
                   <th colSpan={8 + statColumns.length + (effectiveShowHistory ? seasons.length * 3 : 0)} style={{ textAlign: 'left', padding: '4px 12px' }}>
                     <button onClick={clearFilters}
-                      style={{ background: 'none', border: 'none', color: 'var(--red, #ef4444)', fontSize: 10, fontWeight: 600, cursor: 'pointer', padding: 0 }}>
+                      style={{ background: 'none', border: 'none', color: 'var(--red, #ef4444)', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: '2px 4px' }}>
                       Clear all filters
                     </button>
-                    <span style={{ marginLeft: 8, fontSize: 10, color: 'var(--text-muted)' }}>
+                    <span style={{ marginLeft: 8, fontSize: 12, color: 'var(--text-muted)' }}>
                       Showing {filtered.length} of {PLAYERS.filter(p => posFilter === 'ALL' || p.pos === posFilter).length}
                     </span>
                   </th>
@@ -514,7 +535,7 @@ export default function PlayerRankings({ onPlayerClick }) {
         </div>
         </div>
         {effectiveShowHistory && historicalData?.meta && (
-          <div style={{ padding: '8px 16px', fontSize: 10, color: 'var(--text-muted)', borderTop: '1px solid var(--border)' }}>
+          <div style={{ padding: '8px 16px', fontSize: 12, color: 'var(--text-muted)', borderTop: '1px solid var(--border)' }}>
             {historicalData.meta.scoringFormat.toUpperCase()} scoring &middot; {Object.keys(historicalData.players || {}).length} players &middot; Updated {new Date(historicalData.meta.lastUpdated).toLocaleDateString()}
           </div>
         )}

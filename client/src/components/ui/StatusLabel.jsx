@@ -12,10 +12,9 @@ export default function StatusLabel({ status }) {
   return (
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: 4,
-      padding: '1px 6px', borderRadius: 4,
+      padding: '5px 8px', borderRadius: 4,
       background: c.bg, color: c.color,
-      fontSize: 10, fontWeight: 700, letterSpacing: '0.02em',
-      lineHeight: '16px',
+      fontSize: 12, fontWeight: 700, letterSpacing: '0.02em',
     }}>
       <span className={`injury-dot ${c.dotClass}`} style={{ width: 6, height: 6 }} />
       {c.label}

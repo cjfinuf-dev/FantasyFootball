@@ -180,31 +180,31 @@ function HexRadar({ dimensions, hexData, player }) {
     <div className="ff-hex-radar-layout">
       {/* Left: Explanation panel */}
       <div className="ff-hex-radar-panel">
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 9999, padding: '4px 14px', marginBottom: 14 }}>Breakdown</div>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 9999, padding: '4px 14px', marginBottom: 14 }}>Breakdown</div>
         <div style={{ flex: 1, display: 'flex', alignItems: 'center' }}>
           {tipDim ? (
             <div style={{
               padding: '18px 20px', borderRadius: 12, width: '100%',
               background: 'var(--surface)', border: '1px solid var(--border)',
-              fontSize: 13, lineHeight: 1.6,
+              fontSize: 15, lineHeight: 1.6,
             }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                <span style={{ fontWeight: 700, color: tipGrade.color, fontSize: 16 }}>
+                <span style={{ fontWeight: 700, color: tipGrade.color, fontSize: 18 }}>
                   {tipDim.label}
                 </span>
-                <span style={{ fontWeight: 800, color: tipGrade.color, fontSize: 20 }}>
+                <span style={{ fontWeight: 800, color: tipGrade.color, fontSize: 22 }}>
                   {tipGrade.letter}
                 </span>
               </div>
-              <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--text)', marginBottom: 10 }} className="tabular-nums">
-                {(tipDim.val * 100).toFixed(1)}<span style={{ fontSize: 14, color: 'var(--text-muted)', fontWeight: 500 }}>/100</span>
+              <div style={{ fontSize: 30, fontWeight: 800, color: 'var(--text)', marginBottom: 10 }} className="tabular-nums">
+                {(tipDim.val * 100).toFixed(1)}<span style={{ fontSize: 16, color: 'var(--text-muted)', fontWeight: 500 }}>/100</span>
               </div>
-              <div style={{ color: 'var(--text-muted)', fontSize: 13, lineHeight: 1.6 }}>
+              <div style={{ color: 'var(--text-muted)', fontSize: 15, lineHeight: 1.6 }}>
                 {getDimReason(tipDim.key, tipDim.val, player)}
               </div>
             </div>
           ) : (
-            <div style={{ width: '100%', textAlign: 'center', color: 'var(--text-muted)', fontSize: 11, opacity: 0.4 }}>
+            <div style={{ width: '100%', textAlign: 'center', color: 'var(--text-muted)', fontSize: 14, opacity: 0.4 }}>
               Hover a dimension
             </div>
           )}
@@ -213,7 +213,7 @@ function HexRadar({ dimensions, hexData, player }) {
         {/* Most similar player suggestion */}
         {similar && !comparePlayer && (
           <div style={{ marginTop: 12 }}>
-            <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: 6 }}>Similar {player.pos}</div>
+            <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: 6 }}>Similar {player.pos}</div>
             <button
               onClick={() => { setComparePlayer(similar.player); setCompareQuery(''); }}
               style={{
@@ -228,14 +228,14 @@ function HexRadar({ dimensions, hexData, player }) {
             >
               <PlayerHeadshot espnId={getEspnId(similar.player.name)} name={similar.player.name} size="xs" pos={similar.player.pos} team={similar.player.team} />
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{similar.player.name}</div>
-                <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+                <div style={{ fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{similar.player.name}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
                   <PosBadge pos={similar.player.pos} /> {similar.player.team} &middot; {formatHex(similar.hexScore)} Hex
                 </div>
               </div>
               <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--hex-purple)' }} className="tabular-nums">{similar.similarity}%</div>
-                <div style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 600 }}>match</div>
+                <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--hex-purple)' }} className="tabular-nums">{similar.similarity}%</div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600 }}>match</div>
               </div>
             </button>
           </div>
@@ -249,23 +249,23 @@ function HexRadar({ dimensions, hexData, player }) {
             placeholder={comparePlayer ? `vs ${comparePlayer.name}` : 'Compare player...'}
             value={compareQuery}
             onChange={e => { setCompareQuery(e.target.value); if (!e.target.value) setComparePlayer(null); }}
-            style={{ fontSize: 11, padding: '6px 10px', width: '100%' }}
+            style={{ fontSize: 14, padding: '6px 10px', width: '100%' }}
           />
           {compareResults.length > 0 && (
             <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, background: 'var(--bg-white)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-lg)', marginTop: 2 }}>
               {compareResults.map(p => (
-                <div key={p.id} className="ff-tm-player-row" style={{ padding: '6px 10px', cursor: 'pointer', fontSize: 12 }}
+                <div key={p.id} className="ff-tm-player-row" style={{ padding: '6px 10px', cursor: 'pointer', fontSize: 14 }}
                   onMouseDown={() => { setComparePlayer(p); setCompareQuery(''); }}>
                   <PosBadge pos={p.pos} />
                   <span style={{ fontWeight: 600 }}>{p.name}</span>
-                  <span style={{ color: 'var(--text-muted)', marginLeft: 4, fontSize: 10 }}>{p.team}</span>
+                  <span style={{ color: 'var(--text-muted)', marginLeft: 4, fontSize: 12 }}>{p.team}</span>
                 </div>
               ))}
             </div>
           )}
           {comparePlayer && (
             <button onClick={() => { setComparePlayer(null); setCompareQuery(''); }}
-              style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 14 }}>
+              style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 16 }}>
               {'\u2715'}
             </button>
           )}
@@ -277,7 +277,7 @@ function HexRadar({ dimensions, hexData, player }) {
 
       {/* Right: Chart */}
       <div className="ff-hex-radar-chart">
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 9999, padding: '4px 14px', marginBottom: 14, alignSelf: 'flex-start' }}><HexBrand word="Chart" size="sm" /></div>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 9999, padding: '4px 14px', marginBottom: 14, alignSelf: 'flex-start' }}><HexBrand word="Chart" size="sm" /></div>
       <svg width={svgSize} height={svgSize} viewBox={`0 0 ${svgSize} ${svgSize}`} style={{ display: 'block', maxWidth: '100%' }} role="img" aria-label={`HexChart for ${player.name} — ${dimensions.map(d => `${d.label}: ${Math.round(getDimensionValue(hexData.dimensions, d.key) * 100)}`).join(', ')}`}>
         {/* Grade bands — one per 10% ring, simple color ramp */}
         {[
@@ -333,11 +333,11 @@ function HexRadar({ dimensions, hexData, player }) {
         {compareHexData && (() => {
           const compPoints = dimensions.map((dim, i) => getPoint(i, getDimensionValue(compareHexData.dimensions, dim.key) * maxR * animProgress));
           const compPath = compPoints.map((p, i) => (i === 0 ? 'M' : 'L') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ') + ' Z';
-          return <path d={compPath} fill="var(--accent-secondary)" fillOpacity="0.1" stroke="var(--accent-secondary-text)" strokeWidth="2" strokeLinejoin="round" strokeDasharray="8,4" />;
+          return <path d={compPath} fill="#10B981" fillOpacity="0.1" stroke="#10B981" strokeWidth="2" strokeLinejoin="round" strokeDasharray="8,4" />;
         })()}
 
         {/* Data polygon */}
-        <path d={dataPath} fill="var(--hex-purple)" fillOpacity="0.15" stroke="var(--hex-purple)" strokeWidth="2.5" strokeLinejoin="round" />
+        <path d={dataPath} fill="#2563EB" fillOpacity="0.15" stroke="#2563EB" strokeWidth="2.5" strokeLinejoin="round" />
 
         {/* Data points — mini hexagons */}
         {dataPoints.map(([x, y], i) => {
@@ -350,7 +350,7 @@ function HexRadar({ dimensions, hexData, player }) {
           }).join(' ');
           return (
             <polygon key={i} points={hexPts}
-              fill={isHovered ? grade.color : 'var(--hex-purple)'}
+              fill={isHovered ? grade.color : '#2563EB'}
               stroke={isHovered ? 'var(--bg-white)' : 'var(--border-strong)'}
               strokeWidth={isHovered ? 2 : 1.5}
               strokeLinejoin="round"
@@ -378,7 +378,7 @@ function HexRadar({ dimensions, hexData, player }) {
           return (
             <g>
               <rect x={px + offsetX - 24} y={py + offsetY - 12} width="48" height="22" rx="6" fill="var(--bg-white)" stroke={grade.color} strokeWidth="1.5" />
-              <text x={px + offsetX} y={py + offsetY + 4} textAnchor="middle" fontSize="12" fontWeight="800" fill={grade.color}>{val}</text>
+              <text x={px + offsetX} y={py + offsetY + 4} textAnchor="middle" fontSize="14" fontWeight="800" fill={grade.color}>{val}</text>
             </g>
           );
         })()}
@@ -405,7 +405,7 @@ function HexRadar({ dimensions, hexData, player }) {
                 border: `1.5px solid ${isHovered ? 'var(--accent)' : 'var(--accent-30)'}`,
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
               }}>
-                <span style={{ fontSize: 13, fontWeight: 700, color: isHovered ? 'var(--on-accent)' : 'var(--hex-purple)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <span style={{ fontSize: 15, fontWeight: 700, color: isHovered ? 'var(--on-accent)' : 'var(--hex-purple)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   {d.label}
                 </span>
                 <span className="hex-grade-badge" style={{ background: grade.color }}>{grade.letter}</span>
@@ -520,7 +520,7 @@ export default function PlayerStats({ playerId, onBack }) {
             </h1>
 
             {/* Team + Position + Age line */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text-muted)', marginBottom: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 15, color: 'var(--text-muted)', marginBottom: 8 }}>
               <PosBadge pos={player.pos} />
               <span style={{ fontWeight: 600 }}>{player.team}</span>
               {nflTeam && <span>&middot; {nflTeam.name}</span>}
@@ -530,17 +530,17 @@ export default function PlayerStats({ playerId, onBack }) {
 
             {/* Badges row */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: teamColor, color: '#fff' }}>
+              <span className="ff-inline-badge" style={{ background: teamColor, color: '#fff' }}>
                 {player.pos}{hexPosRank}
               </span>
               <ArchetypeBadge playerId={player.id} pos={player.pos} size="sm" />
               {byeWeek && (
-                <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 4, background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>
+                <span className="ff-inline-badge" style={{ fontWeight: 600, background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>
                   BYE {byeWeek}
                 </span>
               )}
               {opp && (
-                <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
                   Next: <strong style={{ color: 'var(--text)' }}>{opp.location === 'away' ? '@' : 'vs'} {opp.opp}</strong>
                   <span style={{ marginLeft: 4 }}>{opp.gameTime}</span>
                 </span>
@@ -552,20 +552,20 @@ export default function PlayerStats({ playerId, onBack }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 0, borderLeft: '1px solid var(--border)', flexShrink: 0 }}>
             {/* Projection — hero number */}
             <div style={{ textAlign: 'center', padding: '16px 20px' }}>
-              <div style={{ fontSize: 32, fontWeight: 900, lineHeight: 1 }} className="tabular-nums"><AnimatedNumber value={player.proj} /></div>
-              <div style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginTop: 3 }}>Proj</div>
+              <div style={{ fontSize: 34, fontWeight: 900, lineHeight: 1 }} className="tabular-nums"><AnimatedNumber value={player.proj} /></div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginTop: 3 }}>Proj</div>
             </div>
             {/* Avg + Last — secondary stats */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '16px 20px 16px 0' }}>
               <div>
-                <div style={{ fontSize: 16, fontWeight: 700, lineHeight: 1, color: player.proj > player.avg ? 'var(--success-green)' : player.proj < player.avg ? 'var(--red)' : 'var(--text)' }} className="tabular-nums">
+                <div style={{ fontSize: 18, fontWeight: 700, lineHeight: 1, color: player.proj > player.avg ? 'var(--success-green)' : player.proj < player.avg ? 'var(--red)' : 'var(--text)' }} className="tabular-nums">
                   {player.avg} {player.proj > player.avg ? '\u2191' : player.proj < player.avg ? '\u2193' : ''}
                 </div>
-                <div style={{ fontSize: 8, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginTop: 1 }}>Season Avg</div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginTop: 1 }}>Season Avg</div>
               </div>
               <div>
-                <div style={{ fontSize: 16, fontWeight: 700, lineHeight: 1 }} className="tabular-nums">{player.pts}</div>
-                <div style={{ fontSize: 8, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginTop: 1 }}>Last Week</div>
+                <div style={{ fontSize: 18, fontWeight: 700, lineHeight: 1 }} className="tabular-nums">{player.pts}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginTop: 1 }}>Last Week</div>
               </div>
             </div>
           </div>
@@ -575,7 +575,7 @@ export default function PlayerStats({ playerId, onBack }) {
       {/* Player Bio — compact, directly below header */}
       {getPlayerBio(player.id) && (
         <div style={{ marginBottom: 16, padding: '0 4px' }}>
-          <p style={{ fontSize: 13, lineHeight: 1.6, color: 'var(--text-muted)', margin: 0 }}>
+          <p style={{ fontSize: 15, lineHeight: 1.6, color: 'var(--text-muted)', margin: 0 }}>
             {getPlayerBio(player.id)}
           </p>
         </div>
@@ -599,24 +599,24 @@ export default function PlayerStats({ playerId, onBack }) {
                   <polygon points="44,2 84,24 84,72 44,94 4,72 4,24" fill="var(--accent-10)" stroke="currentColor" strokeWidth="2" className={intensityClass} opacity="0.5" />
                   <polygon points="44,8 78,27 78,69 44,88 10,69 10,27" fill="none" stroke="currentColor" strokeWidth="1" className={intensityClass} opacity="0.2" />
                 </svg>
-                <div className={`tabular-nums ${intensityClass}`} style={{ fontSize: 36, fontWeight: 900, lineHeight: 1, position: 'relative', zIndex: 1 }}>
+                <div className={`tabular-nums ${intensityClass}`} style={{ fontSize: 38, fontWeight: 900, lineHeight: 1, position: 'relative', zIndex: 1 }}>
                   <AnimatedNumber value={score} duration={600} decimals={0} />
                 </div>
               </div>
               <div style={{
                 marginTop: 6, padding: '3px 12px', borderRadius: 'var(--radius-full)',
-                fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em',
+                fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em',
                 background: 'var(--accent-15)', color: 'var(--accent-text)',
               }}>
                 {tier.tier}
               </div>
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}><HexBrand word="Score" size="md" filled /></div>
-              <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: 8 }}>
+              <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}><HexBrand word="Score" size="md" filled /></div>
+              <div style={{ fontSize: 14, color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: 8 }}>
                 {TIER_DESCRIPTIONS[tier.tier]}
               </div>
-              <div style={{ display: 'flex', gap: 12, fontSize: 11, color: 'var(--text-muted)', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: 12, fontSize: 14, color: 'var(--text-muted)', flexWrap: 'wrap' }}>
                 {percentile !== null && (
                   <span>Top <strong style={{ color: 'var(--text)' }}>{100 - percentile}%</strong> overall</span>
                 )}
@@ -632,7 +632,7 @@ export default function PlayerStats({ playerId, onBack }) {
 
           {/* Dimension Breakdown */}
           <div style={{ padding: '16px 24px' }}>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 9999, padding: '4px 14px', marginBottom: 12 }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 9999, padding: '4px 14px', marginBottom: 12 }}>
               <HexBrand word="Stats" size="sm" /> Breakdown
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -644,11 +644,11 @@ export default function PlayerStats({ playerId, onBack }) {
                   <div key={dim.key}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--hex-purple)', background: 'var(--accent-10)', border: '1px solid var(--accent-20)', borderRadius: 9999, padding: '3px 12px' }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--hex-purple)', background: 'var(--accent-10)', border: '1px solid var(--accent-20)', borderRadius: 9999, padding: '3px 12px' }}>
                           {dim.label}
                         </span>
                         <span className="hex-grade-badge" style={{ background: grade.color }}>{grade.letter}</span>
-                        <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{dim.desc}</span>
+                        <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{dim.desc}</span>
                       </div>
                     </div>
                     <div style={{
@@ -670,7 +670,7 @@ export default function PlayerStats({ playerId, onBack }) {
           {/* Score Context Footer */}
           <div style={{
             padding: '12px 24px', borderTop: '1px solid var(--border)',
-            fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5,
+            fontSize: 14, color: 'var(--text-muted)', lineHeight: 1.5,
             background: 'var(--surface)',
           }}>
             <HexBrand word="Score" icon={false} /> is a composite rating from 0-100 that evaluates fantasy value across production history, positional scarcity, team situation, health, and career trajectory. Higher scores indicate greater expected fantasy impact.
@@ -683,8 +683,8 @@ export default function PlayerStats({ playerId, onBack }) {
         <div className="ff-card" style={{ marginBottom: 16, overflow: 'hidden' }}>
           <div style={{ height: 4, background: playerEvents[0].impact > 0 ? 'var(--success-green)' : 'var(--red)' }} />
           <div className="ff-card-header">
-            <h2 style={{ fontSize: 16, fontWeight: 700 }}>News Impact</h2>
-            <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{playerEvents.length} active event{playerEvents.length > 1 ? 's' : ''}</span>
+            <h2 style={{ fontSize: 18, fontWeight: 700 }}>News Impact</h2>
+            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{playerEvents.length} active event{playerEvents.length > 1 ? 's' : ''}</span>
           </div>
           <div className="ff-card-body" style={{ padding: 0 }}>
             {playerEvents.map((event, i) => (
@@ -693,14 +693,14 @@ export default function PlayerStats({ playerId, onBack }) {
                 borderBottom: i < playerEvents.length - 1 ? '1px solid var(--border)' : 'none',
               }}>
                 <span style={{
-                  fontSize: 13, fontWeight: 800, minWidth: 48, textAlign: 'center',
+                  fontSize: 15, fontWeight: 800, minWidth: 48, textAlign: 'center',
                   color: event.impact > 0 ? 'var(--success-green)' : 'var(--red)',
                 }} className="tabular-nums">
                   {event.impact > 0 ? '+' : ''}{(event.impact * 100).toFixed(0)}%
                 </span>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600 }}>{event.note}</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                  <div style={{ fontSize: 15, fontWeight: 600 }}>{event.note}</div>
+                  <div style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 2 }}>
                     {event.eventType?.replace(/_/g, ' ')} — {Math.round(event.confidence * 100)}% confidence
                   </div>
                 </div>

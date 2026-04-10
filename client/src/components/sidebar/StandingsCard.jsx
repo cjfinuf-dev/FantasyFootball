@@ -56,8 +56,8 @@ export default function StandingsCard({ expanded = false, rosters, leagueName = 
     <div className={`ff-sidebar-card${expanded ? ' expanded' : ''}`}>
       <div className="ff-sidebar-card-header">
         <h3>{leagueName} Standings</h3>
-        <span style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: "'DM Mono', monospace" }}>
-          W{TEAMS[0].wins + TEAMS[0].losses}
+        <span style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: "'DM Mono', monospace" }}>
+          Wk {TEAMS[0].wins + TEAMS[0].losses}
         </span>
       </div>
       <div className="ff-sidebar-card-body" style={{ padding: 0 }}>
@@ -66,7 +66,7 @@ export default function StandingsCard({ expanded = false, rosters, leagueName = 
             <caption className="ff-skip-link">{leagueName} Standings</caption>
             <thead>
               <tr>
-                <th style={{ width: 28 }}>#</th>
+                <th style={{ width: 36 }}>#</th>
                 <th>Team</th>
                 <th style={{ textAlign: 'center' }}>Record</th>
                 {expanded && <th style={{ textAlign: 'right' }}>PF</th>}
@@ -78,10 +78,10 @@ export default function StandingsCard({ expanded = false, rosters, leagueName = 
             <tbody>
               {standings.map((team, i) => {
                 const isUser = team.id === USER_TEAM_ID;
-                const zoneClass = i < PLAYOFF_SPOTS ? 'playoff-zone' : i >= 10 ? 'danger-zone' : '';
+                const zoneClass = i < PLAYOFF_SPOTS ? 'playoff-zone' : i >= 10 ? 'danger-zone' : 'below-cutline';
                 return (
                   <tr key={team.id} className={`${zoneClass} ${isUser ? 'user-team' : ''}`}>
-                    <td style={{ fontWeight: 600, color: 'var(--text-muted)', fontSize: 11 }}>{i + 1}</td>
+                    <td style={{ fontWeight: 600, color: 'var(--text-muted)', fontSize: 14 }}>{i + 1}</td>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         <button
@@ -91,22 +91,22 @@ export default function StandingsCard({ expanded = false, rosters, leagueName = 
                         >
                           {expanded ? team.name : team.abbr}
                         </button>
-                        {team.clinched && <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--success-green)', letterSpacing: '0.03em' }}>x</span>}
-                        {team.eliminated && <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--red)', letterSpacing: '0.03em' }}>e</span>}
+                        {team.clinched && <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--success-green)', letterSpacing: '0.03em' }}>x</span>}
+                        {team.eliminated && <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--red)', letterSpacing: '0.03em' }}>e</span>}
                         {!expanded && (
-                          <span style={{ fontSize: 10, color: team.streak.startsWith('W') ? 'var(--success-green)' : 'var(--red)', fontFamily: "'DM Mono', monospace" }}>
+                          <span style={{ fontSize: 12, color: team.streak.startsWith('W') ? 'var(--success-green)' : 'var(--red)', fontFamily: "'DM Mono', monospace" }}>
                             {team.streak}
                           </span>
                         )}
                       </div>
                     </td>
-                    <td style={{ textAlign: 'center', fontFamily: "'DM Mono', monospace", fontSize: 12, fontWeight: 500 }}>
+                    <td style={{ textAlign: 'center', fontFamily: "'DM Mono', monospace", fontSize: 14, fontWeight: 500 }}>
                       <span style={{ color: 'var(--success-green)' }}>{team.wins}</span>
                       <span style={{ color: 'var(--text-muted)', margin: '0 2px' }}>-</span>
                       <span style={{ color: 'var(--red)' }}>{team.losses}</span>
                       {expanded && team.streak && (
                         <span style={{
-                          marginLeft: 6, fontSize: 10, fontWeight: 600,
+                          marginLeft: 6, fontSize: 12, fontWeight: 600,
                           color: team.streak.startsWith('W') ? 'var(--success-green)' : 'var(--red)',
                         }}>
                           {team.streak}
@@ -114,22 +114,22 @@ export default function StandingsCard({ expanded = false, rosters, leagueName = 
                       )}
                     </td>
                     {expanded && (
-                      <td className="tabular-nums" style={{ textAlign: 'right', fontSize: 12 }}>
+                      <td className="tabular-nums" style={{ textAlign: 'right', fontSize: 14 }}>
                         {team.pf.toFixed(1)}
                       </td>
                     )}
                     {expanded && (
-                      <td className="tabular-nums" style={{ textAlign: 'right', fontSize: 12, color: 'var(--text-muted)' }}>
+                      <td className="tabular-nums" style={{ textAlign: 'right', fontSize: 14, color: 'var(--text-muted)' }}>
                         {team.pa.toFixed(1)}
                       </td>
                     )}
                     <td style={{ textAlign: 'center' }}>
-                      <Sparkline data={team.trend} width={40} height={14} />
+                      <Sparkline data={team.trend} width={52} height={18} />
                     </td>
                     {expanded && (
                       <td style={{ textAlign: 'right' }}>
                         <span style={{
-                          fontFamily: "'DM Mono', monospace", fontSize: 11, fontWeight: 600,
+                          fontFamily: "'DM Mono', monospace", fontSize: 14, fontWeight: 600,
                           color: team.playoffPct >= 70 ? 'var(--success-green)' : team.playoffPct <= 20 ? 'var(--red)' : 'var(--text-muted)',
                         }}>
                           {team.playoffPct}%
@@ -144,7 +144,7 @@ export default function StandingsCard({ expanded = false, rosters, leagueName = 
         </div>
         {/* Legend */}
         {expanded && (
-          <div style={{ padding: '10px 14px', display: 'flex', gap: 16, fontSize: 10, color: 'var(--text-muted)' }}>
+          <div style={{ padding: '10px 14px', display: 'flex', gap: 16, fontSize: 12, color: 'var(--text-muted)' }}>
             <span><strong style={{ color: 'var(--success-green)' }}>x</strong> = clinched</span>
             <span><strong style={{ color: 'var(--red)' }}>e</strong> = eliminated</span>
             <span>Top {PLAYOFF_SPOTS} make playoffs</span>

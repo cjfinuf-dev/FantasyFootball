@@ -33,7 +33,7 @@ export default function TradeHistory({ history }) {
       </div>
 
       {filtered.length === 0 ? (
-        <div style={{ padding: 24, textAlign: 'center', fontSize: 12, color: 'var(--text-muted)' }}>
+        <div style={{ padding: 24, textAlign: 'center', fontSize: 14, color: 'var(--text-muted)' }}>
           No {filter} trades
         </div>
       ) : (

@@ -6,6 +6,7 @@ import NewsFeed from '../dashboard/NewsFeed';
 import StandingsCard from '../sidebar/StandingsCard';
 import WaiverWireCard from '../sidebar/WaiverWireCard';
 import PowerRankingsCard from '../sidebar/PowerRankingsCard';
+import CommandCenter from '../sidebar/CommandCenter';
 import DraftBoard from './DraftBoard';
 import MyLineup from './MyLineup';
 import PlayerStats from './PlayerStats';
@@ -16,7 +17,7 @@ import PlayerCompare from './PlayerCompare';
 import LeagueSettings from './LeagueSettings';
 import LeagueChat from './LeagueChat';
 import PlayoffMachine from './PlayoffMachine';
-import Breadcrumb from '../ui/Breadcrumb';
+import DetailViewLayout from './DetailViewLayout';
 import * as leagueApi from '../../api/leagues';
 
 import { TEAMS, USER_TEAM_ID } from '../../data/teams';
@@ -36,8 +37,15 @@ const TAB_ICONS = {
   waivers: <svg viewBox="0 0 14 15.5" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d={HEX}/><line x1="7" y1="5.5" x2="7" y2="10"/><line x1="4.5" y1="7.75" x2="9.5" y2="7.75"/></svg>,
   chat: <svg viewBox="0 0 14 15.5" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d={HEX}/><path d="M5 6h4M5 8.5h2.5"/></svg>,
   playoffs: <svg viewBox="0 0 14 15.5" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d={HEX}/><path d="M5 5.5v2h4v-2M7 7.5v3"/><circle cx="7" cy="5" r="0.5" fill="currentColor"/></svg>,
+  news: <svg viewBox="0 0 14 15.5" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d={HEX}/><path d="M5 5.5l2 2 2-2M5 8.5h4"/></svg>,
   locked: <svg viewBox="0 0 14 15.5" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d={HEX}/><rect x="5" y="7.5" width="4" height="3" rx="0.5"/><path d="M5.8 7.5V6.5a1.2 1.2 0 012.4 0v1"/></svg>,
 };
+
+const INDEPENDENT_TABS = [
+  { id: 'players', label: 'Players' },
+  { id: 'compare', label: 'Compare' },
+  { id: 'news', label: 'News' },
+];
 
 // Tabs that require a completed draft before they become clickable
 const DRAFT_REQUIRED_TABS = new Set(['overview', 'lineup', 'matchups', 'standings', 'playoffs', 'waivers', 'trades', 'chat']);
@@ -56,14 +64,45 @@ export default function LeagueDashboard() {
   const [savedDraft, setSavedDraft] = useState(null);
   const [draftLoading, setDraftLoading] = useState(true);
   const members = league?.members || [];
+  const [compareInitIds, setCompareInitIds] = useState(null);
   const [viewingPlayerId, setViewingPlayerId] = useState(() => searchParams.get('player') || null);
   const [viewingTeamId, setViewingTeamId] = useState(() => searchParams.get('team') || null);
   const [viewingMatchupId, setViewingMatchupId] = useState(() => searchParams.get('matchup') || null);
   const savedScrollRef = useRef(0);
   const tabScrollRef = useRef({});
 
+  const saveScroll = () => { savedScrollRef.current = window.scrollY; };
+  const restoreScroll = (top) => { requestAnimationFrame(() => window.scrollTo({ top: top ?? savedScrollRef.current, behavior: 'smooth' })); };
+
+  const clearDetailParam = (...keys) => {
+    const params = new URLSearchParams(searchParams);
+    keys.forEach(k => params.delete(k));
+    return params;
+  };
+
+  const closePlayer = () => {
+    setViewingPlayerId(null);
+    const params = clearDetailParam('player');
+    setSearchParams(params, { replace: true });
+    restoreScroll();
+  };
+
+  const closeTeam = () => {
+    setViewingTeamId(null);
+    const params = clearDetailParam('team');
+    setSearchParams(params, { replace: true });
+    restoreScroll();
+  };
+
+  const closeMatchup = () => {
+    setViewingMatchupId(null);
+    const params = clearDetailParam('matchup');
+    setSearchParams(params, { replace: true });
+    restoreScroll();
+  };
+
   const handlePlayerClick = (playerId) => {
-    savedScrollRef.current = window.scrollY;
+    saveScroll();
     setViewingTeamId(null);
     setViewingPlayerId(playerId);
     const params = new URLSearchParams(searchParams);
@@ -72,33 +111,30 @@ export default function LeagueDashboard() {
   };
 
   const handleTeamClick = (teamId) => {
-    savedScrollRef.current = window.scrollY;
+    saveScroll();
     setViewingPlayerId(null);
     setViewingTeamId(teamId);
     setViewingMatchupId(null);
-    const params = new URLSearchParams(searchParams);
-    params.delete('player');
-    params.delete('matchup');
+    const params = clearDetailParam('player', 'matchup');
     params.set('team', teamId);
     setSearchParams(params, { replace: true });
-    requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'smooth' }));
+    restoreScroll(0);
   };
 
   const handleMatchupClick = (matchupId) => {
-    savedScrollRef.current = window.scrollY;
+    saveScroll();
     setViewingPlayerId(null);
     setViewingTeamId(null);
     setViewingMatchupId(matchupId);
-    const params = new URLSearchParams(searchParams);
-    params.delete('player');
-    params.delete('team');
+    const params = clearDetailParam('player', 'team');
     params.set('matchup', matchupId);
     setSearchParams(params, { replace: true });
-    requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'smooth' }));
+    restoreScroll(0);
   };
 
   const setActiveTab = (tabId) => {
     tabScrollRef.current[activeTab] = window.scrollY;
+    if (activeTab === 'compare' && tabId !== 'compare') setCompareInitIds(null);
     navigate(`/league/${leagueId}/${tabId}`, { replace: true });
     const saved = tabScrollRef.current[tabId];
     window.scrollTo({ top: saved || 0, behavior: 'smooth' });
@@ -167,6 +203,7 @@ export default function LeagueDashboard() {
   };
 
   const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [lockToast, setLockToast] = useState(false);
   const moreMenuRef = useRef(null);
 
   // Close more-tabs menu on outside click
@@ -183,25 +220,9 @@ export default function LeagueDashboard() {
   useEffect(() => {
     const onKeyDown = (e) => {
       if (e.key !== 'Escape') return;
-      if (viewingPlayerId) {
-        setViewingPlayerId(null);
-        const params = new URLSearchParams(searchParams);
-        params.delete('player');
-        setSearchParams(params, { replace: true });
-        requestAnimationFrame(() => window.scrollTo({ top: savedScrollRef.current, behavior: 'smooth' }));
-      } else if (viewingTeamId) {
-        setViewingTeamId(null);
-        const params = new URLSearchParams(searchParams);
-        params.delete('team');
-        setSearchParams(params, { replace: true });
-        requestAnimationFrame(() => window.scrollTo({ top: savedScrollRef.current, behavior: 'smooth' }));
-      } else if (viewingMatchupId) {
-        setViewingMatchupId(null);
-        const params = new URLSearchParams(searchParams);
-        params.delete('matchup');
-        setSearchParams(params, { replace: true });
-        requestAnimationFrame(() => window.scrollTo({ top: savedScrollRef.current, behavior: 'smooth' }));
-      }
+      if (viewingPlayerId) closePlayer();
+      else if (viewingTeamId) closeTeam();
+      else if (viewingMatchupId) closeMatchup();
     };
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
@@ -216,8 +237,6 @@ export default function LeagueDashboard() {
         { id: 'matchups', label: 'Matchups' },
         { id: 'standings', label: 'League Standings' },
         { id: 'playoffs', label: 'Playoffs' },
-        { id: 'players', label: 'Players' },
-        { id: 'compare', label: 'Compare' },
         { id: 'waivers', label: 'Waivers' },
         { id: 'trades', label: 'Trades' },
         { id: 'chat', label: 'League Chat' },
@@ -226,8 +245,6 @@ export default function LeagueDashboard() {
     : [
         { id: 'draft', label: 'Draft' },
         { id: 'overview', label: 'League Overview' },
-        { id: 'players', label: 'Players' },
-        { id: 'compare', label: 'Compare' },
         { id: 'lineup', label: 'My Lineup' },
         { id: 'matchups', label: 'Matchups' },
         { id: 'standings', label: 'League Standings' },
@@ -240,13 +257,13 @@ export default function LeagueDashboard() {
 
   if (leagueLoading || !league) {
     return (
-      <div style={{ padding: 'calc(var(--navbar-height) + var(--hero-compact-height, 90px) + 20px) clamp(16px, 4vw, 32px) 20px', maxWidth: 1400, margin: '0 auto' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr minmax(300px, 360px)', gap: 20 }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div className="ff-overview-layout" style={{ paddingTop: 'calc(var(--navbar-height) + var(--hero-compact-height, 90px) + 20px)' }}>
+        <div className="ff-overview-grid">
+          <div className="ff-left">
             <div className="skeleton" style={{ height: 420, borderRadius: 8 }} />
             <div className="skeleton" style={{ height: 280, borderRadius: 8 }} />
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div className="ff-right" style={{ position: 'static', maxHeight: 'none' }}>
             <div className="skeleton" style={{ height: 300, borderRadius: 8 }} />
             <div className="skeleton" style={{ height: 200, borderRadius: 8 }} />
             <div className="skeleton" style={{ height: 200, borderRadius: 8 }} />
@@ -261,26 +278,36 @@ export default function LeagueDashboard() {
       {/* League Header */}
       <header className="ff-hero ff-hero-compact">
         <div style={{ width: '100%' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6, flexWrap: 'wrap' }}>
+          <div className="ff-hero-compact-inner">
             <Link to="/hub" className="ff-back-btn">{'\u2190'} My Leagues</Link>
-            <h1 style={{ fontFamily: "'Playfair Display', serif", color: 'var(--text)', margin: 0 }}>
-              {league.name}
-            </h1>
-            <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>
-              {league.type} &middot; {league.scoring_preset?.toUpperCase() || 'PPR'} &middot; {league.league_size}-Team &middot; <strong style={{ color: 'var(--accent-text)', fontWeight: 600 }}>{league.team_name}</strong>{league.role === 'commissioner' ? ' · Commissioner' : ''}
+            <h1>{league.name}</h1>
+            <span className="ff-hero-meta">
+              {league.type} &middot; {league.scoring_preset?.toUpperCase() || 'PPR'} &middot; {league.league_size}-Team &middot; <strong>{league.team_name}</strong>{league.role === 'commissioner' ? ' · Commissioner' : ''}
             </span>
           </div>
 
           {/* League Nav Tabs */}
           <span id="tab-lock-desc" hidden>Complete the draft first</span>
           <div className="ff-tabs-container">
-          <div style={{ position: 'relative' }} ref={moreMenuRef}>
+          {/* Independent tabs — always enabled */}
+          {INDEPENDENT_TABS.map(t => (
             <button
-              className="ff-league-dropdown-trigger"
+              key={t.id}
+              className={`ff-league-tab${activeTab === t.id ? ' active' : ''}`}
+              onClick={() => { setActiveTab(t.id); setShowMoreMenu(false); }}>
+              {TAB_ICONS[t.id]}{t.label}
+            </button>
+          ))}
+          {/* Separator */}
+          <div className="ff-tabs-separator" />
+          {/* League-dependent dropdown */}
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', marginRight: '8px' }} ref={moreMenuRef}>
+            <button
+              className={`ff-league-dropdown-trigger${allTabs.some(t => t.id === activeTab) || activeTab === 'settings' ? ' has-active-tab' : ''}`}
               onClick={() => setShowMoreMenu(prev => !prev)}
               aria-haspopup="listbox"
               aria-expanded={showMoreMenu}>
-              Hex Fantasy League <span className="chevron">▾</span>
+              {allTabs.find(t => t.id === activeTab)?.label || (activeTab === 'settings' ? 'Settings' : 'League')} <span className="chevron">▾</span>
             </button>
             {showMoreMenu && (
               <div className="ff-more-tabs-menu">
@@ -293,9 +320,16 @@ export default function LeagueDashboard() {
                       title={locked ? 'Complete the draft first' : undefined}
                       onClick={(e) => {
                         if (locked) {
-                          e.currentTarget.classList.remove('shake');
-                          void e.currentTarget.offsetWidth;
-                          e.currentTarget.classList.add('shake');
+                          e.currentTarget.animate([
+                            { transform: 'translateX(0)' },
+                            { transform: 'translateX(-3px)' },
+                            { transform: 'translateX(3px)' },
+                            { transform: 'translateX(-2px)' },
+                            { transform: 'translateX(2px)' },
+                            { transform: 'translateX(0)' },
+                          ], { duration: 300, easing: 'ease-in-out' });
+                          setLockToast(true);
+                          setTimeout(() => setLockToast(false), 2000);
                           return;
                         }
                         setActiveTab(t.id); setShowMoreMenu(false);
@@ -324,99 +358,43 @@ export default function LeagueDashboard() {
 
       {/* Player / Team / Matchup detail views — keep sidebar visible */}
       {viewingPlayerId ? (
-        <div className="ff-overview-layout">
-          <div className="ff-overview-grid">
-            <div className="ff-left ff-detail-view">
-              <Breadcrumb
-                onBack={() => {
-                  setViewingPlayerId(null);
-                  const params = new URLSearchParams(searchParams);
-                  params.delete('player');
-                  setSearchParams(params, { replace: true });
-                  requestAnimationFrame(() => window.scrollTo({ top: savedScrollRef.current, behavior: 'smooth' }));
-                }}
-                backLabel={activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
-                currentLabel="Player Details"
-              />
-              <PlayerStats playerId={viewingPlayerId} onBack={() => {
-                setViewingPlayerId(null);
-                const params = new URLSearchParams(searchParams);
-                params.delete('player');
-                setSearchParams(params, { replace: true });
-                window.scrollTo({ top: savedScrollRef.current, behavior: 'smooth' });
-              }} />
-            </div>
-            <div className="ff-right">
-              <StandingsCard rosters={draftedRosters} leagueName={league.name} onTeamClick={handleTeamClick} />
-              <PowerRankingsCard rosters={draftedRosters} />
-            </div>
-          </div>
-        </div>
+        <DetailViewLayout
+          onBack={closePlayer}
+          backLabel={activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
+          currentLabel="Player Details"
+          rosters={draftedRosters} leagueName={league.name} onTeamClick={handleTeamClick}
+        >
+          <PlayerStats playerId={viewingPlayerId} onBack={closePlayer} />
+        </DetailViewLayout>
       ) : viewingTeamId ? (
-        <div className="ff-overview-layout">
-          <div className="ff-overview-grid">
-            <div className="ff-left ff-detail-view">
-              <Breadcrumb
-                onBack={() => {
-                  setViewingTeamId(null);
-                  const params = new URLSearchParams(searchParams);
-                  params.delete('team');
-                  setSearchParams(params, { replace: true });
-                  requestAnimationFrame(() => window.scrollTo({ top: savedScrollRef.current, behavior: 'smooth' }));
-                }}
-                backLabel={activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
-                currentLabel="Team Details"
-              />
-              <TeamPage teamId={viewingTeamId} rosters={draftedRosters} onBack={() => {
-                setViewingTeamId(null);
-                const params = new URLSearchParams(searchParams);
-                params.delete('team');
-                setSearchParams(params, { replace: true });
-                window.scrollTo({ top: savedScrollRef.current, behavior: 'smooth' });
-              }} onPlayerClick={handlePlayerClick} />
-            </div>
-            <div className="ff-right">
-              <StandingsCard rosters={draftedRosters} leagueName={league.name} onTeamClick={handleTeamClick} />
-              <PowerRankingsCard rosters={draftedRosters} />
-            </div>
-          </div>
-        </div>
+        <DetailViewLayout
+          onBack={closeTeam}
+          backLabel={activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
+          currentLabel="Team Details"
+          rosters={draftedRosters} leagueName={league.name} onTeamClick={handleTeamClick}
+        >
+          <TeamPage teamId={viewingTeamId} rosters={draftedRosters} onBack={closeTeam} onPlayerClick={handlePlayerClick} />
+        </DetailViewLayout>
       ) : viewingMatchupId ? (
-        <div className="ff-overview-layout">
-          <div className="ff-overview-grid">
-            <div className="ff-left ff-detail-view">
-              <Breadcrumb
-                onBack={() => {
-                  setViewingMatchupId(null);
-                  const params = new URLSearchParams(searchParams);
-                  params.delete('matchup');
-                  setSearchParams(params, { replace: true });
-                  requestAnimationFrame(() => window.scrollTo({ top: savedScrollRef.current, behavior: 'smooth' }));
-                }}
-                backLabel="Matchups"
-                currentLabel="Matchup Detail"
-              />
-              <MatchupDetail matchup={MATCHUPS.find(m => m.id === viewingMatchupId) || MATCHUPS[0]} rosters={draftedRosters} onBack={() => {
-                setViewingMatchupId(null);
-                const params = new URLSearchParams(searchParams);
-                params.delete('matchup');
-                setSearchParams(params, { replace: true });
-                window.scrollTo({ top: savedScrollRef.current, behavior: 'smooth' });
-              }} onPlayerClick={handlePlayerClick} />
-            </div>
-            <div className="ff-right">
-              <StandingsCard rosters={draftedRosters} leagueName={league.name} onTeamClick={handleTeamClick} />
-              <PowerRankingsCard rosters={draftedRosters} />
-            </div>
-          </div>
-        </div>
+        <DetailViewLayout
+          onBack={closeMatchup}
+          backLabel="Matchups"
+          currentLabel="Matchup Detail"
+          rosters={draftedRosters} leagueName={league.name} onTeamClick={handleTeamClick}
+        >
+          <MatchupDetail matchup={MATCHUPS.find(m => m.id === viewingMatchupId) || MATCHUPS[0]} rosters={draftedRosters} onBack={closeMatchup} onPlayerClick={handlePlayerClick} />
+        </DetailViewLayout>
       ) : <>
 
       {/* Tab Content */}
       {activeTab === 'draft' && (
         <div className="ff-tab-content" style={{ padding: 0, maxWidth: 'none' }}>
           {draftLoading ? (
-            <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)', fontSize: 13 }}>Loading draft...</div>
+            <div className="ff-draft-loading">
+              <div className="skeleton" />
+              <div className="skeleton" />
+              <div className="skeleton" />
+            </div>
           ) : (
             <DraftBoard
               onDraftComplete={handleDraftComplete}
@@ -450,16 +428,14 @@ export default function LeagueDashboard() {
                   <NewsFeed onPlayerClick={handlePlayerClick} />
                 </div>
                 <div className="ff-right">
-                  <StandingsCard rosters={draftedRosters} leagueName={league.name} onTeamClick={handleTeamClick} />
-                  <PowerRankingsCard rosters={draftedRosters} />
-                  <WaiverWireCard rosters={draftedRosters} onPlayerClick={handlePlayerClick} onClaimPlayer={(playerId) => {
-                    if (!window.confirm('Add this player to your roster?')) return;
-                    setDraftedRosters(prev => {
-                      const next = { ...prev };
-                      next[USER_TEAM_ID] = [...(next[USER_TEAM_ID] || []), playerId];
-                      return next;
-                    });
-                  }} />
+                  <CommandCenter
+                    rosters={draftedRosters}
+                    scoringPreset={league.scoring_preset || 'ppr'}
+                    leagueName={league.name}
+                    onPlayerClick={handlePlayerClick}
+                    onMatchupClick={handleMatchupClick}
+                    onTabSwitch={setActiveTab}
+                  />
                 </div>
               </div>
             </div>
@@ -513,7 +489,7 @@ export default function LeagueDashboard() {
       {activeTab === 'trades' && (
         <div className="ff-tab-content ff-tab-content-wide">
           {draftComplete ? (
-            <TradeCenter rosters={draftedRosters} onRostersChange={setDraftedRosters} scoringPreset={league.scoring_preset} />
+            <TradeCenter rosters={draftedRosters} onRostersChange={setDraftedRosters} scoringPreset={league.scoring_preset} onOpenCompare={(ids) => { setCompareInitIds(ids); setActiveTab('compare'); }} />
           ) : (
             <div className="ff-card">
               <div className="ff-card-top-accent" style={{ background: 'var(--accent-secondary)' }} />
@@ -537,7 +513,15 @@ export default function LeagueDashboard() {
 
       {activeTab === 'compare' && (
         <div className="ff-tab-content ff-tab-content-wide">
-          <PlayerCompare />
+          <PlayerCompare
+            rosters={draftedRosters}
+            scoringPreset={league.scoring_preset}
+            leagueId={leagueId}
+            onOpenTrade={draftComplete ? (sendIds, receiveIds) => {
+              setActiveTab('trades');
+            } : undefined}
+            initialPlayerIds={compareInitIds}
+          />
         </div>
       )}
 
@@ -558,7 +542,31 @@ export default function LeagueDashboard() {
           <LeagueChat league={league} leagueId={leagueId} />
         </div>
       )}
+
+      {activeTab === 'news' && (
+        <div className="ff-tab-content">
+          <div className="ff-overview-layout">
+            <div className="ff-overview-grid">
+              <div className="ff-left">
+                <NewsFeed onPlayerClick={handlePlayerClick} />
+              </div>
+              <div className="ff-right">
+                <StandingsCard rosters={draftedRosters} leagueName={league.name} onTeamClick={handleTeamClick} />
+                <PowerRankingsCard rosters={draftedRosters} />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       </>}
+      {lockToast && (
+        <div className="ff-draft-toast" style={{ animation: 'toastUp 0.3s ease-out' }}>
+          <svg viewBox="0 0 14 15.5" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+            <path d={HEX}/><rect x="5" y="7.5" width="4" height="3" rx="0.5"/><path d="M5.8 7.5V6.5a1.2 1.2 0 012.4 0v1"/>
+          </svg>
+          Complete the draft first
+        </div>
+      )}
     </div>
   );
 }

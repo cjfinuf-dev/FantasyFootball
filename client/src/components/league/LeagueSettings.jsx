@@ -88,35 +88,35 @@ export default function LeagueSettings({ league, members, onRemoveMember }) {
         <div className="ff-card-body">
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
-              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: 6 }}>Waivers</div>
+              <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: 6 }}>Waivers</div>
               {editing ? (
                 <select className="ff-tm-expiry-select" value={settings.waiverType} onChange={e => setSettings(s => ({ ...s, waiverType: e.target.value }))}>
                   {WAIVER_TYPES.map(w => <option key={w} value={w}>{w}</option>)}
                 </select>
               ) : (
-                <div style={{ fontSize: 13, fontWeight: 600 }}>{settings.waiverType}</div>
+                <div style={{ fontSize: 15, fontWeight: 600 }}>{settings.waiverType}</div>
               )}
               {settings.waiverType === 'FAAB' && (
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+                <div style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 4 }}>
                   Budget: {editing ? (
                     <input type="number" value={settings.faabBudget} onChange={e => setSettings(s => ({ ...s, faabBudget: Number(e.target.value) }))}
-                      style={{ width: 60, padding: '2px 6px', border: '1px solid var(--border)', borderRadius: 4, fontSize: 11, background: 'var(--bg-white)', color: 'var(--text)' }} />
+                      style={{ width: 60, padding: '4px 6px', border: '1px solid var(--border)', borderRadius: 4, fontSize: 14, background: 'var(--bg-white)', color: 'var(--text)' }} />
                   ) : <span style={{ fontFamily: "'DM Mono', monospace" }}>${settings.faabBudget}</span>}
                 </div>
               )}
             </div>
             <div>
-              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: 6 }}>Trade Deadline</div>
+              <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: 6 }}>Trade Deadline</div>
               {editing ? (
                 <select className="ff-tm-expiry-select" value={settings.tradeDeadline} onChange={e => setSettings(s => ({ ...s, tradeDeadline: e.target.value }))}>
                   {TRADE_DEADLINES.map(d => <option key={d} value={d}>{d}</option>)}
                 </select>
               ) : (
-                <div style={{ fontSize: 13, fontWeight: 600 }}>{settings.tradeDeadline}</div>
+                <div style={{ fontSize: 15, fontWeight: 600 }}>{settings.tradeDeadline}</div>
               )}
             </div>
             <div>
-              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: 6 }}>Trade Review</div>
+              <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: 6 }}>Trade Review</div>
               {editing ? (
                 <select className="ff-tm-expiry-select" value={settings.tradeReview} onChange={e => setSettings(s => ({ ...s, tradeReview: e.target.value }))}>
                   <option value="commissioner">Commissioner</option>
@@ -124,37 +124,37 @@ export default function LeagueSettings({ league, members, onRemoveMember }) {
                   <option value="none">None (auto-accept)</option>
                 </select>
               ) : (
-                <div style={{ fontSize: 13, fontWeight: 600 }}>{settings.tradeReview === 'commissioner' ? 'Commissioner Review' : settings.tradeReview === 'league_vote' ? 'League Vote' : 'Auto-Accept'}</div>
+                <div style={{ fontSize: 15, fontWeight: 600 }}>{settings.tradeReview === 'commissioner' ? 'Commissioner Review' : settings.tradeReview === 'league_vote' ? 'League Vote' : 'Auto-Accept'}</div>
               )}
             </div>
             <div>
-              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: 6 }}>Playoff Teams</div>
+              <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: 6 }}>Playoff Teams</div>
               {editing ? (
                 <select className="ff-tm-expiry-select" value={settings.playoffTeams} onChange={e => setSettings(s => ({ ...s, playoffTeams: Number(e.target.value) }))}>
                   {[4, 6, 8].map(n => <option key={n} value={n}>{n} teams</option>)}
                 </select>
               ) : (
-                <div style={{ fontSize: 13, fontWeight: 600 }}>{settings.playoffTeams} teams</div>
+                <div style={{ fontSize: 15, fontWeight: 600 }}>{settings.playoffTeams} teams</div>
               )}
             </div>
           </div>
 
           {/* Roster Config */}
           <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
-            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: 8 }}>Roster Configuration</div>
-            <div style={{ display: 'flex', gap: 16, fontSize: 12 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: 8 }}>Roster Configuration</div>
+            <div style={{ display: 'flex', gap: 16, fontSize: 14 }}>
               <div>
                 <span style={{ color: 'var(--text-muted)' }}>Bench: </span>
                 {editing ? (
                   <input type="number" value={settings.maxBenchSize} min={3} max={10} onChange={e => setSettings(s => ({ ...s, maxBenchSize: Number(e.target.value) }))}
-                    style={{ width: 40, padding: '2px 4px', border: '1px solid var(--border)', borderRadius: 4, fontSize: 11, background: 'var(--bg-white)', color: 'var(--text)' }} />
+                    style={{ width: 40, padding: '4px 4px', border: '1px solid var(--border)', borderRadius: 4, fontSize: 14, background: 'var(--bg-white)', color: 'var(--text)' }} />
                 ) : <strong>{settings.maxBenchSize}</strong>}
               </div>
               <div>
                 <span style={{ color: 'var(--text-muted)' }}>IR: </span>
                 {editing ? (
                   <input type="number" value={settings.irSlots} min={0} max={3} onChange={e => setSettings(s => ({ ...s, irSlots: Number(e.target.value) }))}
-                    style={{ width: 40, padding: '2px 4px', border: '1px solid var(--border)', borderRadius: 4, fontSize: 11, background: 'var(--bg-white)', color: 'var(--text)' }} />
+                    style={{ width: 40, padding: '4px 4px', border: '1px solid var(--border)', borderRadius: 4, fontSize: 14, background: 'var(--bg-white)', color: 'var(--text)' }} />
                 ) : <strong>{settings.irSlots}</strong>}
               </div>
             </div>
@@ -171,15 +171,15 @@ export default function LeagueSettings({ league, members, onRemoveMember }) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div>
-                  <div style={{ fontSize: 13, fontWeight: 600 }}>Lock Rosters</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Prevent all roster changes league-wide</div>
+                  <div style={{ fontSize: 15, fontWeight: 600 }}>Lock Rosters</div>
+                  <div style={{ fontSize: 14, color: 'var(--text-muted)' }}>Prevent all roster changes league-wide</div>
                 </div>
                 <button className={`ff-toggle${settings.rosterLocked ? ' on' : ''}`} onClick={() => setSettings(s => ({ ...s, rosterLocked: !s.rosterLocked }))} />
               </div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div>
-                  <div style={{ fontSize: 13, fontWeight: 600 }}>Pause Trading</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Temporarily halt all trade proposals</div>
+                  <div style={{ fontSize: 15, fontWeight: 600 }}>Pause Trading</div>
+                  <div style={{ fontSize: 14, color: 'var(--text-muted)' }}>Temporarily halt all trade proposals</div>
                 </div>
                 <button className={`ff-toggle${settings.tradingPaused ? ' on' : ''}`} onClick={() => setSettings(s => ({ ...s, tradingPaused: !s.tradingPaused }))} />
               </div>
@@ -193,7 +193,7 @@ export default function LeagueSettings({ league, members, onRemoveMember }) {
         <div className="ff-card-top-accent" style={{ background: 'var(--accent)' }} />
         <div className="ff-card-header">
           <h2>Members</h2>
-          <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: "'DM Mono', monospace" }}>{members.length} / {league.league_size}</span>
+          <span style={{ fontSize: 14, color: 'var(--text-muted)', fontFamily: "'DM Mono', monospace" }}>{members.length} / {league.league_size}</span>
         </div>
         <div className="ff-card-body">
           {members.length === 0 ? (
@@ -209,14 +209,14 @@ export default function LeagueSettings({ league, members, onRemoveMember }) {
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 600 }}>{member.user_name || 'Unknown'}</div>
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                    <div style={{ fontSize: 14, color: 'var(--text-muted)' }}>
                       {member.team_name} &middot; {member.role === 'commissioner' ? 'Commissioner' : 'Member'}
                     </div>
                   </div>
                   {isCommissioner && member.role !== 'commissioner' && (
                     removeConfirmId === member.id ? (
                       <div className="ff-flex ff-gap-2">
-                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Remove?</span>
+                        <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>Remove?</span>
                         <button className="ff-btn ff-btn-danger ff-btn-sm" onClick={() => handleRemove(member.id)} disabled={removingMemberId === member.id}>
                           {removingMemberId === member.id ? '...' : 'Yes'}
                         </button>

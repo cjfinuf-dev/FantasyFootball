@@ -33,6 +33,10 @@ export function AuthProvider({ children }) {
 
   const handleSignout = useCallback(async () => {
     try { await authApi.signout(); } catch {}
+    // NOTE: JWTs are stateless — there is no server-side revocation here.
+    // A stolen token remains valid until it expires (7d). If revocation is needed,
+    // implement a server-side token denylist or switch to short-lived access tokens
+    // with refresh token rotation.
     localStorage.removeItem('ff-token');
     setUser(null);
   }, []);

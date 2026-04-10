@@ -22,8 +22,8 @@ function getOwnerTeam(playerId, rosters) {
   return null;
 }
 
-const COLORS = ['#8B5CF6', '#06B6D4', '#F59E0B', '#EC4899', '#10B981', '#EF4444'];
-const COLOR_NAMES = ['Purple', 'Cyan', 'Orange', 'Pink', 'Emerald', 'Red'];
+const COLORS = ['#2563EB', '#DC2626', '#10B981', '#8B5CF6', '#F59E0B', '#EC4899'];
+const COLOR_NAMES = ['Blue', 'Red', 'Emerald', 'Purple', 'Amber', 'Pink'];
 
 const DIMS = [
   { key: 'production', label: 'Production' },
@@ -216,8 +216,8 @@ function PlayerSlot({ player, color, onSelect, onRemove, excludeIds, scoringPres
         <div style={{ width: 4, height: 36, borderRadius: 2, background: color, flexShrink: 0 }} />
         <PlayerHeadshot espnId={getEspnId(player.name)} name={player.name} size="xs" pos={player.pos} team={player.team} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{player.name}</div>
-          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+          <div style={{ fontSize: 15, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{player.name}</div>
+          <div style={{ fontSize: 14, color: 'var(--text-muted)' }}>
             <PosBadge pos={player.pos} /> {player.team} &middot; {formatHex(hex)} Hex
           </div>
           {rosters && (
@@ -226,7 +226,7 @@ function PlayerSlot({ player, color, onSelect, onRemove, excludeIds, scoringPres
             </span>
           )}
         </div>
-        <button onClick={onRemove} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 16 }}>{'\u2715'}</button>
+        <button onClick={onRemove} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 18 }}>{'\u2715'}</button>
       </div>
     );
   }
@@ -245,7 +245,7 @@ function PlayerSlot({ player, color, onSelect, onRemove, excludeIds, scoringPres
           onChange={e => setQuery(e.target.value)}
           onFocus={() => setFocused(true)}
           onBlur={() => setTimeout(() => setFocused(false), 200)}
-          style={{ fontSize: 12, padding: '5px 8px', border: 'none', background: 'transparent', flex: 1, outline: 'none' }}
+          style={{ fontSize: 14, padding: '5px 8px', border: 'none', background: 'transparent', flex: 1, outline: 'none' }}
         />
       </div>
       {focused && results.length > 0 && (
@@ -255,11 +255,11 @@ function PlayerSlot({ player, color, onSelect, onRemove, excludeIds, scoringPres
           boxShadow: 'var(--shadow-lg)', marginTop: 2, maxHeight: 200, overflowY: 'auto',
         }}>
           {results.map(p => (
-            <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', cursor: 'pointer', fontSize: 12 }}
+            <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', cursor: 'pointer', fontSize: 14 }}
               onMouseDown={() => { onSelect(p); setQuery(''); }}>
               <PosBadge pos={p.pos} />
               <span style={{ fontWeight: 600 }}>{p.name}</span>
-              <span style={{ color: 'var(--text-muted)', fontSize: 10 }}>{p.team}</span>
+              <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>{p.team}</span>
             </div>
           ))}
         </div>
@@ -460,7 +460,7 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
               border: `1.5px solid ${isHovered ? 'var(--accent)' : 'var(--accent-30)'}`,
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
             }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: isHovered ? 'var(--on-accent)' : 'var(--hex-purple)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              <span style={{ fontSize: 15, fontWeight: 700, color: isHovered ? 'var(--on-accent)' : 'var(--hex-purple)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 {dim.label}
               </span>
               {filledCount > 0 && (
@@ -476,7 +476,7 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
         <foreignObject x={cx - 100} y={cy - 30} width="200" height={filledCount * 24 + 20} style={{ overflow: 'visible' }}>
           <div style={{
             background: 'var(--bg-white)', border: '1px solid var(--border)', borderRadius: 10,
-            padding: '8px 12px', boxShadow: 'var(--shadow-lg)', fontSize: 12,
+            padding: '8px 12px', boxShadow: 'var(--shadow-lg)', fontSize: 14,
           }}>
             <div style={{ fontWeight: 700, marginBottom: 4, color: 'var(--text)', textAlign: 'center' }}>{DIMS[hoveredDim].label}</div>
             {playerData.map((pd, idx) => {
@@ -505,12 +505,12 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
     }}>
       {/* Verdict */}
       <div>
-        <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: 4 }}>Verdict</div>
-        <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', lineHeight: 1.3 }}>{analysis.verdict}</div>
+        <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: 4 }}>Verdict</div>
+        <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--text)', lineHeight: 1.3 }}>{analysis.verdict}</div>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
           {analysis.scores.map((s, i) => (
-            <span key={i} style={{
-              fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 6,
+            <span key={i} className="ff-inline-badge" style={{
+              fontWeight: 600, borderRadius: 6,
               background: 'var(--accent-10)', color: 'var(--hex-purple)',
             }}>
               {s.name}: {formatHex(s.hex)} ({s.tier})
@@ -521,7 +521,7 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
 
       {/* Dimension breakdown */}
       <div>
-        <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: 6 }}>Dimension Breakdown</div>
+        <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: 6 }}>Dimension Breakdown</div>
         {analysis.dimBreakdown.map(d => {
           const winnerIdx = playerData.findIndex(pd => pd && pd.player.name === d.winner);
           const dotColor = d.isTie ? 'var(--text-muted)' : (winnerIdx >= 0 ? COLORS[winnerIdx] : 'var(--text-muted)');
@@ -529,8 +529,8 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
             <div key={d.key} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', borderBottom: '1px solid var(--border)' }}>
               <div style={{ width: 8, height: 8, borderRadius: '50%', background: dotColor, flexShrink: 0 }} />
               <div style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ fontSize: 12, fontWeight: 700 }}>{d.dim}</span>
-                <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 6 }}>{d.label}</span>
+                <span style={{ fontSize: 14, fontWeight: 700 }}>{d.dim}</span>
+                <span style={{ fontSize: 14, color: 'var(--text-muted)', marginLeft: 6 }}>{d.label}</span>
               </div>
               <span className="hex-grade-badge" style={{ background: d.grade.color, transform: 'scale(0.75)', transformOrigin: 'right center' }}>{d.grade.letter}</span>
             </div>
@@ -541,11 +541,11 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
       {/* Key advantages */}
       {analysis.advantages.length > 0 && (
         <div>
-          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: 6 }}>Key Advantages</div>
+          <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: 6 }}>Key Advantages</div>
           {analysis.advantages.map((a, i) => {
             const pIdx = playerData.findIndex(pd => pd && pd.player.name === a.name);
             return (
-              <div key={i} style={{ fontSize: 12, padding: '3px 0', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div key={i} style={{ fontSize: 14, padding: '4px 0', display: 'flex', alignItems: 'center', gap: 6 }}>
                 <div style={{ width: 6, height: 6, borderRadius: '50%', background: pIdx >= 0 ? COLORS[pIdx] : 'var(--text-muted)', flexShrink: 0 }} />
                 <span><strong>{a.name}</strong>'s biggest edge is <strong>{a.dim}</strong> ({a.grade.letter})</span>
               </div>
@@ -556,9 +556,9 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
 
       {/* Archetype context */}
       <div>
-        <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: 6 }}>Player Profiles</div>
+        <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: 6 }}>Player Profiles</div>
         {analysis.archetypeLines.map((a, i) => (
-          <div key={i} style={{ fontSize: 12, padding: '2px 0', color: 'var(--text)' }}>
+          <div key={i} style={{ fontSize: 14, padding: '4px 0', color: 'var(--text)' }}>
             <strong>{a.name}</strong> — <span style={{ color: 'var(--hex-purple)', fontWeight: 600 }}>{a.desc}</span>
           </div>
         ))}
@@ -567,9 +567,9 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
       {/* Roster Context — League + Trade modes */}
       {rosterContext && compareMode === 'league' && (
         <div>
-          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: 6 }}>Roster Context</div>
+          <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: 6 }}>Roster Context</div>
           {rosterContext.players.map((rc, i) => (
-            <div key={i} style={{ fontSize: 12, padding: '3px 0', borderBottom: '1px solid var(--border)' }}>
+            <div key={i} style={{ fontSize: 14, padding: '4px 0', borderBottom: '1px solid var(--border)' }}>
               <strong>{rc.name}</strong>
               {rc.isFreeAgent ? (
                 <span style={{ color: '#3b82f6', marginLeft: 6 }}>Free Agent</span>
@@ -581,7 +581,7 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
             </div>
           ))}
           {rosterContext.teamComparison && (
-            <div style={{ fontSize: 12, marginTop: 6, padding: '6px 8px', background: 'var(--surface)', borderRadius: 6 }}>
+            <div style={{ fontSize: 14, marginTop: 6, padding: '6px 8px', background: 'var(--surface)', borderRadius: 6 }}>
               <strong>{rosterContext.teamComparison.teams[0].name}</strong> roster avg {formatHex(rosterContext.teamComparison.teams[0].avg)}
               {' vs '}
               <strong>{rosterContext.teamComparison.teams[1].name}</strong> avg {formatHex(rosterContext.teamComparison.teams[1].avg)}
@@ -596,13 +596,13 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
       {/* Trade Analysis — Trade mode */}
       {compareMode === 'trade' && tradePartition && (
         <div>
-          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: 6 }}>Trade Analysis</div>
+          <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: 6 }}>Trade Analysis</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-            <span style={{ fontSize: 14, fontWeight: 800, color: tradePartition.tier.css === 'fair' ? 'var(--success-green)' : tradePartition.tier.css === 'uneven' ? '#d97706' : '#dc2626' }}>
+            <span style={{ fontSize: 16, fontWeight: 800, color: tradePartition.tier.css === 'fair' ? 'var(--success-green)' : tradePartition.tier.css === 'uneven' ? '#d97706' : '#dc2626' }}>
               {tradePartition.tier.label}
             </span>
           </div>
-          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>
+          <div style={{ fontSize: 14, color: 'var(--text-muted)', marginBottom: 4 }}>
             Sending: {formatHex(tradePartition.tier.sendTotal)} Hex → Receiving: {formatHex(tradePartition.tier.receiveTotal)} Hex ({tradePartition.tier.delta >= 0 ? '+' : ''}{formatHex(tradePartition.tier.delta)})
           </div>
           <div style={{ height: 4, width: '100%', background: 'var(--border)', borderRadius: 2, overflow: 'hidden', marginBottom: 8 }}>
@@ -613,7 +613,7 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
             }} />
           </div>
           {rosterContext && rosterContext.players.filter(rc => !rc.isFreeAgent).map((rc, i) => (
-            <div key={i} style={{ fontSize: 11, padding: '2px 0', color: 'var(--text-muted)' }}>
+            <div key={i} style={{ fontSize: 13, padding: '4px 0', color: 'var(--text-muted)' }}>
               {rc.name}: {rc.pos}{rc.posRank} on {rc.isYours ? 'your roster' : rc.teamName}
             </div>
           ))}
@@ -622,7 +622,7 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
               onClick={() => onOpenTrade(tradePartition.sendIds, tradePartition.receiveIds)}
               style={{
                 marginTop: 10, width: '100%', background: 'var(--hex-purple)', color: '#fff', border: 'none', borderRadius: 8,
-                padding: '8px 20px', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                padding: '8px 20px', fontSize: 15, fontWeight: 700, cursor: 'pointer',
               }}
             >
               Open in Trade Center →
@@ -633,7 +633,7 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
 
       {/* Trade mode — invalid sides guidance */}
       {compareMode === 'trade' && !tradePartition && (
-        <div style={{ padding: '10px 12px', background: 'var(--surface)', borderRadius: 8, fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5 }}>
+        <div style={{ padding: '10px 12px', background: 'var(--surface)', borderRadius: 8, fontSize: 14, color: 'var(--text-muted)', lineHeight: 1.5 }}>
           Select players from your team and one opponent's team to analyze this trade.
         </div>
       )}
@@ -644,8 +644,8 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
           marginTop: 'auto', background: 'var(--accent-10)', borderRadius: 8,
           padding: '10px 12px', borderLeft: '3px solid var(--hex-purple)',
         }}>
-          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--hex-purple)', marginBottom: 4 }}>Bottom Line</div>
-          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', lineHeight: 1.4 }}>{analysis.bottomLine}</div>
+          <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--hex-purple)', marginBottom: 4 }}>Bottom Line</div>
+          <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)', lineHeight: 1.4 }}>{analysis.bottomLine}</div>
         </div>
       )}
     </div>
@@ -659,7 +659,7 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
     };
     const SortArrow = ({ field }) => {
       if (field !== sortDim) return null;
-      return <span style={{ fontSize: 10, marginLeft: 3 }}>{sortDir === 'asc' ? '\u25B2' : '\u25BC'}</span>;
+      return <span style={{ fontSize: 12, marginLeft: 3 }}>{sortDir === 'asc' ? '\u25B2' : '\u25BC'}</span>;
     };
 
     const filled = playerData.map((pd, idx) => pd ? { pd, idx } : null).filter(Boolean);
@@ -686,7 +686,7 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
     return (
       <div className="ff-card" style={{ marginBottom: 16 }}>
         <div className="ff-card-header">
-          <h2 style={{ fontSize: 16 }}>Dimension Comparison</h2>
+          <h2 style={{ fontSize: 18 }}>Dimension Comparison</h2>
         </div>
         <div className="ff-table-wrap">
           <table className="ff-table">
@@ -720,8 +720,8 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
                         <div style={{ width: 8, height: 8, borderRadius: '50%', background: COLORS[idx], flexShrink: 0 }} />
                         <PlayerHeadshot espnId={getEspnId(pd.player.name)} name={pd.player.name} size="tiny" pos={pd.player.pos} team={pd.player.team} />
                         <div>
-                          <div style={{ fontWeight: 700, fontSize: 13 }}>{pd.player.name}</div>
-                          <div style={{ fontSize: 10, color: 'var(--text-muted)' }}><PosBadge pos={pd.player.pos} /> {pd.player.team}</div>
+                          <div style={{ fontWeight: 700, fontSize: 15 }}>{pd.player.name}</div>
+                          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}><PosBadge pos={pd.player.pos} /> {pd.player.team}</div>
                         </div>
                       </div>
                     </td>
@@ -754,7 +754,7 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
     <div>
       <div className="ff-card" style={{ marginBottom: 16, overflow: 'visible' }}>
         <div className="ff-card-header">
-          <h2 style={{ fontSize: 18 }}>
+          <h2 style={{ fontSize: 20 }}>
             <HexBrand word="Compare" size="lg" filled />
           </h2>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -774,7 +774,7 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
                 <option value="trade">Trade Context</option>
               </select>
             )}
-            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Compare up to 6 players</span>
+            <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>Compare up to 6 players</span>
           </div>
         </div>
 
@@ -794,7 +794,7 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
                 <button onClick={filledCount >= 2 ? handleCompare : undefined} disabled={filledCount < 2} style={{
                   background: filledCount >= 2 ? 'var(--hex-purple)' : 'var(--text-muted)',
                   color: '#fff', border: 'none', borderRadius: 10,
-                  padding: '12px 40px', fontSize: 15, fontWeight: 800,
+                  padding: '12px 40px', fontSize: 17, fontWeight: 800,
                   cursor: filledCount >= 2 ? 'pointer' : 'not-allowed',
                   letterSpacing: '0.04em',
                   boxShadow: filledCount >= 2 ? '0 2px 12px rgba(139,92,246,0.3)' : 'none',
@@ -829,10 +829,10 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
                     }}>
                       <div style={{ width: 3, height: 20, borderRadius: 2, background: COLORS[idx], flexShrink: 0 }} />
                       <PlayerHeadshot espnId={getEspnId(p.name)} name={p.name} size="tiny" pos={p.pos} team={p.team} />
-                      <span style={{ fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}>{p.name}</span>
+                      <span style={{ fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap' }}>{p.name}</span>
                     </div>
                     {compareMode === 'trade' && tradePartition && (
-                      <span style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em',
+                      <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em',
                         color: tradePartition.sendIds.includes(p.id) ? '#dc2626' : tradePartition.receiveIds.includes(p.id) ? 'var(--success-green)' : 'var(--text-muted)' }}>
                         {tradePartition.sendIds.includes(p.id) ? 'Sending' : tradePartition.receiveIds.includes(p.id) ? 'Receiving' : ''}
                       </span>
@@ -841,7 +841,7 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
                 ))}
                 <button onClick={handleEdit} style={{
                   marginLeft: 'auto', background: 'none', border: '1.5px solid var(--border)',
-                  borderRadius: 8, padding: '6px 14px', fontSize: 12, fontWeight: 700,
+                  borderRadius: 8, padding: '6px 14px', fontSize: 14, fontWeight: 700,
                   cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4,
                 }}>
                   Edit {'\u2715'}
@@ -859,7 +859,7 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
               {/* Legend */}
               <div style={{ display: 'flex', gap: 16, justifyContent: 'center', marginTop: 16, position: 'relative', zIndex: 0 }}>
                 {playerData.map((pd, idx) => pd && (
-                  <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
+                  <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14 }}>
                     <div style={{ width: 16, height: 3, background: COLORS[idx], borderRadius: 2, ...(idx > 0 ? { backgroundImage: 'repeating-linear-gradient(90deg, transparent, transparent 4px, var(--bg-white) 4px, var(--bg-white) 6px)' } : {}) }} />
                     <span style={{ fontWeight: 600 }}>{pd.player.name}</span>
                   </div>

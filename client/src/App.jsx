@@ -25,7 +25,7 @@ export default function App() {
       <Route element={<AppLayout />}>
         <Route path="/" element={<LandingPage />} />
         <Route element={<ProtectedRoute />}>
-          <Route path="/hub" element={<HubPage />} />
+          <Route path="/hub/:tab?" element={<HubPage />} />
           <Route path="/league/:leagueId/:tab?" element={<LeagueDashboard />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
