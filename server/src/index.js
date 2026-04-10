@@ -17,8 +17,24 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Middleware
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", 'data:', 'https:'],
+      connectSrc: ["'self'"],
+      fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+      objectSrc: ["'none'"],
+      upgradeInsecureRequests: [],
+    },
+  },
+}));
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173').split(',');
+if (process.env.NODE_ENV === 'production' && ALLOWED_ORIGINS.includes('http://localhost:5173')) {
+  console.warn('[Server] WARNING: ALLOWED_ORIGINS is using localhost defaults in production — set the ALLOWED_ORIGINS environment variable.');
+}
 app.use(cors({
   origin: (origin, cb) => {
     if (!origin || ALLOWED_ORIGINS.includes(origin)) cb(null, true);
@@ -38,12 +54,20 @@ const apiLimiter = rateLimit({
 });
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 20,
+  max: 10,
+  skipSuccessfulRequests: true,
+  message: { error: 'Too many attempts. Please try again later.' },
+});
+// Signin limiter counts all attempts including successful ones — prevents credential stuffing
+const signinLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
   message: { error: 'Too many attempts. Please try again later.' },
 });
 app.use('/api/', apiLimiter);
 app.use('/api/auth/signup', authLimiter);
-app.use('/api/auth/signin', authLimiter);
+app.use('/api/auth/signin', signinLimiter);
+app.use('/api/auth/me', authLimiter);
 
 // Routes
 app.use('/api/auth', authRoutes);

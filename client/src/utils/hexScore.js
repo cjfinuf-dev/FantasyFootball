@@ -7,7 +7,7 @@
  *   3. Consistency (0.09) — inverse coefficient of variation
  *   4. Situation (0.17) — team scheme, QB quality, offensive context, situation changes
  *   5. Health (0.08) — current status-based discount
- *   6. Durability (0.11) — 3-year injury history: availability, frequency, severity
+ *   6. Durability (0.14) — 3-year injury history: availability, frequency, severity
  *   7. Roster Context (0.07) — team need multiplier (optional)
  *   8. Age Factor (0.08) — position-specific career arc depreciation
  *
@@ -129,7 +129,7 @@ function getWeightedProduction(playerId) {
     }
   }
 
-  // Recent production weighted heavily, but only from qualifying seasons.
+  // Recent production weighted heavily (65%/20%/10%/5%), but only from qualifying seasons.
   if (avgs.length >= 4) return avgs[0] * 0.65 + avgs[1] * 0.20 + avgs[2] * 0.10 + avgs[3] * 0.05;
   if (avgs.length === 3) return avgs[0] * 0.65 + avgs[1] * 0.25 + avgs[2] * 0.10;
   if (avgs.length === 2) return avgs[0] * 0.70 + avgs[1] * 0.30;
@@ -999,6 +999,12 @@ export function computeAllHexScores(players = PLAYERS, rosterContext = null, sco
     // Hard cap for K/DEF — no kicker or defense above 60
     const posCap = POSITION_HEXSCORE_CAP[p.pos];
     if (posCap && hexScore > posCap) hexScore = posCap;
+
+    // Sanity check: raw HexScore should never exceed 110. A value this high indicates
+    // a weight or normalization bug — catch it early in dev before it reaches the UI.
+    if (import.meta.env.DEV && hexScore > 100) {
+      console.warn(`[hexScore] Unexpectedly high score for ${p.name} (${p.pos}): ${hexScore}. Check dimension weights/normalizations.`);
+    }
 
     results.set(p.id, {
       hexScore,

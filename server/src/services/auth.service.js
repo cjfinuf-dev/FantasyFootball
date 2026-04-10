@@ -9,7 +9,7 @@ async function signup({ name, email, password }) {
 
   const existing = db.exec('SELECT id FROM users WHERE email = ?', [email]);
   if (existing.length > 0 && existing[0].values.length > 0) {
-    const err = new Error('An account with this email already exists.');
+    const err = new Error('Signup failed. Please check your details.');
     err.status = 409;
     throw err;
   }
@@ -31,7 +31,7 @@ async function signin({ email, password }) {
 
   const result = db.exec('SELECT id, name, email, password_hash, created_at FROM users WHERE email = ?', [email]);
   if (result.length === 0 || result[0].values.length === 0) {
-    const err = new Error('No account found with this email.');
+    const err = new Error('Invalid email or password.');
     err.status = 401;
     throw err;
   }
@@ -41,7 +41,7 @@ async function signin({ email, password }) {
 
   const valid = await bcrypt.compare(password, found.password_hash);
   if (!valid) {
-    const err = new Error('Incorrect password.');
+    const err = new Error('Invalid email or password.');
     err.status = 401;
     throw err;
   }

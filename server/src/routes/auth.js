@@ -25,7 +25,7 @@ router.post('/signin', validateSignin, async (req, res, next) => {
   }
 });
 
-router.post('/signout', requireAuth, (req, res) => {
+router.post('/signout', (req, res) => {
   res.json({ success: true });
 });
 

@@ -40,10 +40,14 @@ function classifyKey(p, pos) {
 }
 
 function classifyQB(p) {
+  // Guard: if games played is 0 or missing, per-game rate calculations would produce
+  // inflated or nonsensical values — treat as a game manager with no real sample.
+  if (!p.gp || p.gp <= 0) return 'game-manager';
+
   const rushYds = p.rushYds || 0;
   const carries = p.carries || 0;
   const rushTd = p.rushTd || 0;
-  const gp = p.gp || 1;
+  const gp = p.gp;
   const passEpaPerGm = (p.passEpa || 0) / gp;
   const passTd = p.passTd || 0;
 
@@ -78,7 +82,7 @@ function classifyRB(p) {
   if (carries >= 180 && tgtShare < 0.10) return 'power-back';
 
   // Committee: moderate workload
-  if (carries >= 100) return 'committee';
+  if (carries >= 75) return 'committee';
 
   // Backup
   return 'backup';
