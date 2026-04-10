@@ -3,6 +3,7 @@ import { TEAMS, USER_TEAM_ID } from '../../data/teams';
 import { MATCHUPS } from '../../data/matchups';
 import { PLAYERS } from '../../data/players';
 import { getEspnId } from '../../data/espnIds';
+import { getMatchupWinProb } from '../../utils/winProb';
 import PosBadge from '../ui/PosBadge';
 import PlayerHeadshot from '../ui/PlayerHeadshot';
 import PlayerLink from '../ui/PlayerLink';
@@ -10,11 +11,6 @@ import HexBrand from '../ui/HexBrand';
 
 const PLAYER_MAP = {};
 PLAYERS.forEach(p => { PLAYER_MAP[p.id] = p; });
-
-function calcWinProb(projA, projB) {
-  const spread = projA - projB;
-  return 1 / (1 + Math.exp(-spread / 7));
-}
 
 function getTeamProjection(teamId, rosters) {
   if (!rosters || !rosters[teamId]) return 0;
@@ -34,8 +30,8 @@ function getTopPlayers(teamId, rosters, count = 3) {
 }
 
 function WinProbBar({ homeProb }) {
-  const homePct = Math.round(homeProb * 100);
-  const awayPct = 100 - homePct;
+  const homePct = (homeProb * 100).toFixed(1);
+  const awayPct = (100 - homeProb * 100).toFixed(1);
 
   return (
     <div className="ff-winprob" aria-label={`Win probability: Home ${homePct}%, Away ${awayPct}%`}>
@@ -57,7 +53,7 @@ function WinProbBar({ homeProb }) {
 
 function TeamRecord({ team }) {
   return (
-    <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 500 }}>
+    <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 500 }}>
       {team.wins}-{team.losses}{team.ties > 0 ? `-${team.ties}` : ''}
     </span>
   );
@@ -74,12 +70,18 @@ function StreakBadge({ streak }) {
 }
 
 function PlayerRow({ player, onPlayerClick }) {
+  const injuryStatus = player.status !== 'healthy' ? player.status : null;
   return (
     <div className="ff-matchup-player">
       <span className="ff-matchup-player-name" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <PlayerHeadshot espnId={getEspnId(player.name)} name={player.name} size="xs" pos={player.pos} team={player.team} />
         <PosBadge pos={player.pos} size="xs" />
         <PlayerLink name={player.name} playerId={player.id} onPlayerClick={onPlayerClick} />
+        {injuryStatus && (
+          <span style={{ fontSize: 9, fontWeight: 800, color: injuryStatus === 'out' ? 'var(--injury-out)' : 'var(--injury-questionable)', lineHeight: 1 }}>
+            {injuryStatus === 'out' ? 'O' : 'Q'}
+          </span>
+        )}
       </span>
       <span style={{ fontWeight: 600 }} className="tabular-nums">{player.proj}</span>
     </div>
@@ -89,7 +91,13 @@ function PlayerRow({ player, onPlayerClick }) {
 function MatchupCard({ matchup, expanded, rosters, onPlayerClick, onToggle, onMatchupClick }) {
   const homeTeam = TEAMS.find(t => t.id === matchup.home.teamId);
   const awayTeam = TEAMS.find(t => t.id === matchup.away.teamId);
-  const homeProb = calcWinProb(matchup.home.projected, matchup.away.projected);
+  const homeRoster = rosters?.[matchup.home.teamId] || [];
+  const awayRoster = rosters?.[matchup.away.teamId] || [];
+  const homeProb = homeRoster.length && awayRoster.length
+    ? getMatchupWinProb(homeRoster, awayRoster, PLAYER_MAP)
+    : (matchup.home.projected + matchup.away.projected > 0
+      ? matchup.home.projected / (matchup.home.projected + matchup.away.projected)
+      : 0.5);
   const isTossUp = homeProb > 0.45 && homeProb < 0.55;
   const homeFavored = homeProb >= 0.55;
   const awayFavored = homeProb <= 0.45;
@@ -118,7 +126,7 @@ function MatchupCard({ matchup, expanded, rosters, onPlayerClick, onToggle, onMa
       {expanded && (
         <div className="ff-card-header">
           <h2>{isUserMatchup ? 'Matchup Details' : 'Matchup Preview'}</h2>
-          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Week 12</span>
+          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Week 12</span>
         </div>
       )}
 
@@ -134,9 +142,6 @@ function MatchupCard({ matchup, expanded, rosters, onPlayerClick, onToggle, onMa
             {matchup.home.projected.toFixed(1)}
           </div>
           <div className="ff-matchup-projected tabular-nums">Projected</div>
-          <span className={`ff-matchup-tag ${isTossUp ? 'ff-tag-even' : homeFavored ? 'ff-tag-fav' : 'ff-tag-dog'}`}>
-            {isTossUp ? 'Toss-Up' : homeFavored ? 'Favorite' : 'Underdog'}
-          </span>
           {hasRosters && homePlayers.length > 0 && (
             <div className="ff-matchup-players">
               {homePlayers.map((p, i) => (
@@ -160,9 +165,6 @@ function MatchupCard({ matchup, expanded, rosters, onPlayerClick, onToggle, onMa
             {matchup.away.projected.toFixed(1)}
           </div>
           <div className="ff-matchup-projected tabular-nums">Projected</div>
-          <span className={`ff-matchup-tag ${isTossUp ? 'ff-tag-even' : awayFavored ? 'ff-tag-fav' : 'ff-tag-dog'}`}>
-            {isTossUp ? 'Toss-Up' : awayFavored ? 'Favorite' : 'Underdog'}
-          </span>
           {hasRosters && awayPlayers.length > 0 && (
             <div className="ff-matchup-players">
               {awayPlayers.map((p, i) => (
@@ -182,7 +184,7 @@ function MatchupCard({ matchup, expanded, rosters, onPlayerClick, onToggle, onMa
       {expanded && onMatchupClick && (
         <div style={{ padding: '8px 16px', borderTop: '1px solid var(--border)', textAlign: 'center' }}>
           <button className="ff-btn ff-btn-secondary ff-btn-sm" onClick={(e) => { e.stopPropagation(); onMatchupClick(matchup.id); }}
-            style={{ fontSize: 11 }}>
+            style={{ fontSize: 12 }}>
             View Full <HexBrand word="Analysis" icon={false} />
           </button>
         </div>
@@ -191,11 +193,12 @@ function MatchupCard({ matchup, expanded, rosters, onPlayerClick, onToggle, onMa
       {/* Expand hint for compact cards */}
       {!expanded && onToggle && (
         <div style={{
-          padding: '6px 12px', textAlign: 'center', fontSize: 10,
-          color: 'var(--text-muted)', borderTop: '1px solid var(--border)',
-          fontWeight: 500, letterSpacing: '0.03em',
+          padding: '5px 12px', textAlign: 'center', fontSize: 11,
+          color: 'var(--accent-text)', borderTop: '1px solid var(--border)',
+          fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
         }}>
-          Click to {hasRosters ? 'see rosters' : 'expand'}
+          <svg viewBox="0 0 10 6" width="10" height="6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><polyline points="1,1 5,5 9,1"/></svg>
+          {hasRosters ? 'See rosters' : 'Expand'}
         </div>
       )}
     </div>
@@ -247,7 +250,7 @@ export default function MatchupWidget({ mode = 'featured', rosters, onPlayerClic
         padding: '0 4px',
       }}>
         <h3 style={{ fontSize: 14, fontWeight: 700 }}>Other Matchups</h3>
-        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{otherMatchups.length} matchups</span>
+        <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{otherMatchups.length} matchups</span>
       </div>
 
       {/* Matchup grid */}

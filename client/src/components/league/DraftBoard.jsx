@@ -1198,17 +1198,17 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
                 style={{ marginLeft: 'auto', width: 140, padding: '4px 10px', fontSize: 12 }} />
             </div>
             <div className="ff-table-wrap" style={{ maxHeight: 'calc(100vh - 240px)' }}>
-              <table className="ff-table">
+              <table className="ff-table" style={{ tableLayout: 'fixed', width: '100%' }}>
                 <thead>
                   <tr>
                     <th>Player</th>
-                    <th className={sortBy === 'proj' ? 'sort-active' : ''} onClick={() => setSortBy('proj')} style={{ textAlign: 'right' }}>
+                    <th className={sortBy === 'proj' ? 'sort-active' : ''} onClick={() => setSortBy('proj')} style={{ textAlign: 'right', width: 52 }}>
                       Proj {sortBy === 'proj' && <span className="sort-arrow">{'\u25BC'}</span>}
                     </th>
-                    <th className={sortBy === 'hex' ? 'sort-active' : ''} onClick={() => setSortBy('hex')} style={{ textAlign: 'right', color: 'var(--hex-purple)' }}>
+                    <th className={sortBy === 'hex' ? 'sort-active' : ''} onClick={() => setSortBy('hex')} style={{ textAlign: 'right', color: 'var(--hex-purple)', width: 52 }}>
                       Hex {sortBy === 'hex' && <span className="sort-arrow">{'\u25BC'}</span>}
                     </th>
-                    <th style={{ width: 44, textAlign: 'center' }}></th>
+                    <th style={{ width: 62, textAlign: 'center' }}></th>
                   </tr>
                 </thead>
                 <tbody>

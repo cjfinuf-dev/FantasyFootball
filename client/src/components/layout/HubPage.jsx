@@ -52,7 +52,7 @@ export default function HubPage() {
       <div className="ff-hub-banner">
         <div>
           <h1>Welcome back{user?.name ? `, ${user.name.split(' ')[0]}` : ''}</h1>
-          <p>Your fantasy football hub.</p>
+          <p>{leaguesLoading ? '\u00a0' : leagues.length === 0 ? 'Create your first league to get started.' : `${leagues.length} league${leagues.length !== 1 ? 's' : ''} active \u00b7 2024\u201325 season`}</p>
         </div>
       </div>
 
@@ -83,6 +83,7 @@ export default function HubPage() {
                 <div className="ff-empty-state-actions">
                   <button className="ff-btn ff-btn-copper" onClick={onCreateLeague}>+ Create a League</button>
                   <button className="ff-btn ff-btn-secondary" onClick={() => setShowJoinModal(true)}>Join a League</button>
+                  <button className="ff-btn ff-btn-secondary" onClick={() => setShowImportModal(true)}>Import from ESPN/Yahoo</button>
                 </div>
               </div>
             ) : (
