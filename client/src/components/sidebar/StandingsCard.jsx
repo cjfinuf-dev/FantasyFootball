@@ -56,7 +56,7 @@ export default function StandingsCard({ expanded = false, rosters, leagueName = 
     <div className={`ff-sidebar-card${expanded ? ' expanded' : ''}`}>
       <div className="ff-sidebar-card-header">
         <h3>{leagueName} Standings</h3>
-        <span className="ff-mono" style={{ fontSize: 12, color: " }}>
+        <span className="ff-mono" style={{ fontSize: 12, color: 'var(--text-muted)' }}>
           Wk {TEAMS[0].wins + TEAMS[0].losses}
         </span>
       </div>
@@ -94,13 +94,13 @@ export default function StandingsCard({ expanded = false, rosters, leagueName = 
                         {team.clinched && <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--success-green)', letterSpacing: '0.03em' }}>x</span>}
                         {team.eliminated && <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--red)', letterSpacing: '0.03em' }}>e</span>}
                         {!expanded && (
-                          <span className="ff-mono" style={{ fontSize: 12, color: team.streak.startsWith(") ? " : " }}>
+                          <span className="ff-mono" style={{ fontSize: 12, color: team.streak.startsWith('W') ? 'var(--success-green)' : 'var(--red)' }}>
                             {team.streak}
                           </span>
                         )}
                       </div>
                     </td>
-                    <td className="ff-mono" style={{ textAlign: ", fontSize: 14, fontWeight: 500 }}>
+                    <td className="ff-mono" style={{ textAlign: 'center', fontSize: 14, fontWeight: 500 }}>
                       <span style={{ color: 'var(--success-green)' }}>{team.wins}</span>
                       <span style={{ color: 'var(--text-muted)', margin: '0 2px' }}>-</span>
                       <span style={{ color: 'var(--red)' }}>{team.losses}</span>

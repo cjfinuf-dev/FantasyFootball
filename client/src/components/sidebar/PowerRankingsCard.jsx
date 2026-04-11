@@ -133,7 +133,7 @@ export default function PowerRankingsCard({ expanded = false, rosters, scoringPr
     <div className={`ff-sidebar-card${expanded ? ' expanded' : ''}`}>
       <div className="ff-sidebar-card-header">
         <h3>Power Rankings</h3>
-        <span className="ff-mono" style={{ fontSize: 12, color: " }}>
+        <span className="ff-mono" style={{ fontSize: 12, color: 'var(--text-muted)' }}>
           {hasDraftData ? 'HexScore' : 'Pre-Draft'}
         </span>
       </div>
@@ -171,7 +171,7 @@ export default function PowerRankingsCard({ expanded = false, rosters, scoringPr
                     <div className={`ff-power-bar-fill ${isUser ? 'user' : ''}`} style={{ width: `${(team.power / maxPower) * 100}%` }} />
                     <div className="ff-power-bar-avg" style={{ left: `${(avgPower / maxPower) * 100}%` }} title={`Avg: ${Math.round(avgPower)}`} />
                   </div>
-                  <span className="ff-power-score tabular-nums ff-mono" style={{ color: ", fontSize: 13 }}>{team.power}</span>
+                  <span className="ff-power-score tabular-nums ff-mono" style={{ color: 'var(--text)', fontSize: 13 }}>{team.power}</span>
                 </div>
               );
             })}
@@ -191,7 +191,7 @@ export default function PowerRankingsCard({ expanded = false, rosters, scoringPr
                     }}>
                       <div style={{ fontSize: 12, fontWeight: 600, color: `var(--pos-${pos.toLowerCase()})`, marginBottom: 6 }}>{pos}</div>
                       <div style={{ fontSize: 20, fontWeight: 800, color: GRADE_COLORS[data.grade], lineHeight: 1 }}>{data.grade}</div>
-                      <div className="ff-mono" style={{ fontSize: 12, color: ", marginTop: 2 }}>{data.count} players</div>
+                      <div className="ff-mono" style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{data.count} players</div>
                     </div>
                   ))}
                 </div>

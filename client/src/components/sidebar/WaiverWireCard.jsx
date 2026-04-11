@@ -158,7 +158,7 @@ export default function WaiverWireCard({ expanded = false, rosters, onPlayerClic
                   {team?.abbr}
                   {tx.bid !== undefined && <span className="ff-mono" style={{ marginLeft: 4 }}>${tx.bid}</span>}
                 </span>
-                <span className="ff-mono" style={{ color: ", fontSize: 12 }}>{hoursAgo}h</span>
+                <span className="ff-mono" style={{ color: 'var(--text-muted)', fontSize: 12 }}>{hoursAgo}h</span>
               </div>
             );
           })}
