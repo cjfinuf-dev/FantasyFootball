@@ -13,13 +13,17 @@ export function AuthProvider({ children }) {
 
     authApi.getMe()
       .then(data => setUser(data.user))
-      .catch(() => { localStorage.removeItem('ff-token'); })
+      .catch(() => {
+        localStorage.removeItem('ff-token');
+        localStorage.removeItem('ff-refresh-token');
+      })
       .finally(() => setLoading(false));
   }, []);
 
   const handleSignup = useCallback(async ({ name, email, password }) => {
     const data = await authApi.signup({ name, email, password });
     localStorage.setItem('ff-token', data.token);
+    if (data.refreshToken) localStorage.setItem('ff-refresh-token', data.refreshToken);
     setUser(data.user);
     return data;
   }, []);
@@ -27,17 +31,15 @@ export function AuthProvider({ children }) {
   const handleSignin = useCallback(async ({ email, password }) => {
     const data = await authApi.signin({ email, password });
     localStorage.setItem('ff-token', data.token);
+    if (data.refreshToken) localStorage.setItem('ff-refresh-token', data.refreshToken);
     setUser(data.user);
     return data;
   }, []);
 
   const handleSignout = useCallback(async () => {
     try { await authApi.signout(); } catch {}
-    // NOTE: JWTs are stateless — there is no server-side revocation here.
-    // A stolen token remains valid until it expires (7d). If revocation is needed,
-    // implement a server-side token denylist or switch to short-lived access tokens
-    // with refresh token rotation.
     localStorage.removeItem('ff-token');
+    localStorage.removeItem('ff-refresh-token');
     setUser(null);
   }, []);
 

@@ -104,13 +104,13 @@ export default function WaiverWireCard({ expanded = false, rosters, onPlayerClic
           <div style={{ display: 'flex', gap: 12, alignItems: 'center', fontSize: 14 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
               <span style={{ color: 'var(--text-muted)' }}>FAAB:</span>
-              <span style={{ fontFamily: "'DM Mono', monospace", fontWeight: 600, color: faabRemaining > 30 ? 'var(--success-green)' : faabRemaining > 10 ? 'var(--warning-amber)' : 'var(--red)' }}>
+              <span className="ff-mono" style={{ fontWeight: 600, color: faabRemaining > 30 ? 'var(--success-green)' : faabRemaining > 10 ? 'var(--warning-amber)' : 'var(--red)' }}>
                 ${faabRemaining}
               </span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
               <span style={{ color: 'var(--text-muted)' }}>Priority:</span>
-              <span style={{ fontFamily: "'DM Mono', monospace", fontWeight: 600 }}>#{USER_WAIVER_POS}</span>
+              <span className="ff-mono" style={{ fontWeight: 600 }}>#{USER_WAIVER_POS}</span>
             </div>
             {expanded && (
               <button
@@ -156,9 +156,9 @@ export default function WaiverWireCard({ expanded = false, rosters, onPlayerClic
                 <PosBadge pos={tx.pos} size="xs" />
                 <span style={{ color: 'var(--text-muted)', marginLeft: 'auto', fontSize: 12 }}>
                   {team?.abbr}
-                  {tx.bid !== undefined && <span style={{ marginLeft: 4, fontFamily: "'DM Mono', monospace" }}>${tx.bid}</span>}
+                  {tx.bid !== undefined && <span className="ff-mono" style={{ marginLeft: 4 }}>${tx.bid}</span>}
                 </span>
-                <span style={{ color: 'var(--text-muted)', fontSize: 12, fontFamily: "'DM Mono', monospace" }}>{hoursAgo}h</span>
+                <span className="ff-mono" style={{ color: ", fontSize: 12 }}>{hoursAgo}h</span>
               </div>
             );
           })}
@@ -192,11 +192,12 @@ export default function WaiverWireCard({ expanded = false, rosters, onPlayerClic
                   min={0}
                   max={faabRemaining}
                   value={bidAmounts[w.playerId] || ''}
+                  className="ff-mono"
                   placeholder="$"
                   onChange={e => setBidAmounts(prev => ({ ...prev, [w.playerId]: Number(e.target.value) }))}
                   style={{
                     width: 52, padding: '4px 6px', border: '1px solid var(--border)', borderRadius: 4,
-                    fontSize: 14, textAlign: 'center', fontFamily: "'DM Mono', monospace",
+                    fontSize: 14, textAlign: 'center',
                     background: 'var(--bg-white)', color: 'var(--text)',
                   }}
                 />

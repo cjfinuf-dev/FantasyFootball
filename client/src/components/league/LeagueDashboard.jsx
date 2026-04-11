@@ -19,6 +19,7 @@ import LeagueChat from './LeagueChat';
 import PlayoffMachine from './PlayoffMachine';
 import DetailViewLayout from './DetailViewLayout';
 import * as leagueApi from '../../api/leagues';
+import { SkeletonCard, SkeletonTable } from '../ui/Skeleton';
 
 import { TEAMS, USER_TEAM_ID } from '../../data/teams';
 import { MATCHUPS } from '../../data/matchups';
@@ -142,22 +143,28 @@ export default function LeagueDashboard() {
 
   // Fetch league data
   useEffect(() => {
+    const controller = new AbortController();
     setLeagueLoading(true);
-    leagueApi.getLeague(leagueId)
+    leagueApi.getLeague(leagueId, { signal: controller.signal })
       .then(data => {
         setLeague(data.league);
       })
-      .catch(() => navigate('/hub', { replace: true }))
+      .catch(err => {
+        if (err.name === 'AbortError') return;
+        navigate('/hub', { replace: true });
+      })
       .finally(() => setLeagueLoading(false));
+    return () => controller.abort();
   }, [leagueId]);
 
   // Load saved draft
   useEffect(() => {
+    const controller = new AbortController();
     setDraftLoading(true);
     setDraftComplete(false);
     setDraftedRosters(null);
     setSavedDraft(null);
-    leagueApi.getDraft(leagueId)
+    leagueApi.getDraft(leagueId, { signal: controller.signal })
       .then(({ draft }) => {
         if (draft && draft.phase === 'complete' && draft.picks?.length > 0) {
           setSavedDraft(draft);
@@ -170,8 +177,11 @@ export default function LeagueDashboard() {
           setDraftComplete(true);
         }
       })
-      .catch(() => {})
+      .catch(err => {
+        if (err.name === 'AbortError') return;
+      })
       .finally(() => setDraftLoading(false));
+    return () => controller.abort();
   }, [leagueId]);
 
   const handleDraftComplete = async (rosters, picks, draftOrder) => {
@@ -257,16 +267,16 @@ export default function LeagueDashboard() {
 
   if (leagueLoading || !league) {
     return (
-      <div className="ff-overview-layout" style={{ paddingTop: 'calc(var(--navbar-height) + var(--hero-compact-height, 90px) + 20px)' }}>
+      <div className="ff-overview-layout" style={{ paddingTop: 'calc(var(--navbar-height) + var(--hero-compact-height) + 20px)' }}>
         <div className="ff-overview-grid">
           <div className="ff-left">
-            <div className="skeleton" style={{ height: 420, borderRadius: 8 }} />
-            <div className="skeleton" style={{ height: 280, borderRadius: 8 }} />
+            <SkeletonCard lines={5} />
+            <SkeletonTable rows={4} cols={3} />
           </div>
           <div className="ff-right" style={{ position: 'static', maxHeight: 'none' }}>
-            <div className="skeleton" style={{ height: 300, borderRadius: 8 }} />
-            <div className="skeleton" style={{ height: 200, borderRadius: 8 }} />
-            <div className="skeleton" style={{ height: 200, borderRadius: 8 }} />
+            <SkeletonCard lines={4} />
+            <SkeletonCard lines={2} />
+            <SkeletonCard lines={2} />
           </div>
         </div>
       </div>
@@ -301,7 +311,7 @@ export default function LeagueDashboard() {
           {/* Separator */}
           <div className="ff-tabs-separator" />
           {/* League-dependent dropdown */}
-          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', marginRight: '8px' }} ref={moreMenuRef}>
+          <div className="ff-league-dropdown-wrapper" ref={moreMenuRef}>
             <button
               className={`ff-league-dropdown-trigger${allTabs.some(t => t.id === activeTab) || activeTab === 'settings' ? ' has-active-tab' : ''}`}
               onClick={() => setShowMoreMenu(prev => !prev)}
@@ -489,7 +499,7 @@ export default function LeagueDashboard() {
       {activeTab === 'trades' && (
         <div className="ff-tab-content ff-tab-content-wide">
           {draftComplete ? (
-            <TradeCenter rosters={draftedRosters} onRostersChange={setDraftedRosters} scoringPreset={league.scoring_preset} onOpenCompare={(ids) => { setCompareInitIds(ids); setActiveTab('compare'); }} />
+            <TradeCenter rosters={draftedRosters} onRostersChange={setDraftedRosters} scoringPreset={league.scoring_preset} leagueId={leagueId} onOpenCompare={(ids) => { setCompareInitIds(ids); setActiveTab('compare'); }} />
           ) : (
             <div className="ff-card">
               <div className="ff-card-top-accent" style={{ background: 'var(--accent-secondary)' }} />

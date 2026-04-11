@@ -2,12 +2,28 @@ import { TEAMS } from '../data/teams';
 import { MATCHUPS } from '../data/matchups';
 
 // SEASON: 2024-25 — Update these constants each season before playoffs
+// TODO: These constants need to be API-driven long-term so they update
+// automatically each season without a code change.
+export const DATA_SEASON = 2024;
 export const TOTAL_WEEKS = 14;
 export const PLAYOFF_SPOTS = 6;
 export const BYE_SEEDS = 2;
 export const GAMES_PLAYED = 11; // weeks completed so far
 export const REMAINING_WEEKS = TOTAL_WEEKS - GAMES_PLAYED;
 export const SIMULATIONS = 5000;
+
+/**
+ * Check whether the hardcoded DATA_SEASON matches the current calendar year.
+ * Returns a guard object indicating staleness.
+ */
+export function checkSeasonGuard() {
+  const currentYear = new Date().getFullYear();
+  return {
+    stale: currentYear !== DATA_SEASON,
+    dataSeason: DATA_SEASON,
+    currentYear,
+  };
+}
 
 export const schedule = [
   ...MATCHUPS.map(m => ({ home: m.home.teamId, away: m.away.teamId, week: 12 })),
@@ -25,6 +41,11 @@ export function simGame(a, b) {
 }
 
 export function runSimulations(teams, overrides = {}) {
+  const guard = checkSeasonGuard();
+  if (guard.stale) {
+    console.warn(`[playoffCalc] DATA_SEASON (${guard.dataSeason}) does not match current year (${guard.currentYear}). Update constants or switch to API-driven season data.`);
+  }
+
   const teamMap = {};
   teams.forEach(t => { teamMap[t.id] = t; });
 
@@ -79,11 +100,16 @@ export function runSimulations(teams, overrides = {}) {
     const wc1 = simGame(p[2], p[5]); // 3v6
     const wc2 = simGame(p[3], p[4]); // 4v5
     const wcW1 = teamMap[wc1], wcW2 = teamMap[wc2];
-    // Higher seed plays lowest surviving seed
-    const lowSurvivor = wcW1.power < wcW2.power ? wcW1 : wcW2;
-    const highSurvivor = lowSurvivor === wcW1 ? wcW2 : wcW1;
-    const sf1 = simGame(p[0], lowSurvivor);  // 1 vs lowest
-    const sf2 = simGame(p[1], highSurvivor); // 2 vs other
+    // Seed-index-based pairing: look up each winner's original seed position.
+    // The worse-seeded (higher index) winner faces the 1-seed.
+    const seedIndex = {};
+    p.forEach((t, i) => { seedIndex[t.id] = i; });
+    const wc1Seed = seedIndex[wc1] ?? PLAYOFF_SPOTS;
+    const wc2Seed = seedIndex[wc2] ?? PLAYOFF_SPOTS;
+    const worseSeedWinner = wc1Seed > wc2Seed ? wcW1 : wcW2;
+    const betterSeedWinner = worseSeedWinner === wcW1 ? wcW2 : wcW1;
+    const sf1 = simGame(p[0], worseSeedWinner);   // 1 vs worse seed
+    const sf2 = simGame(p[1], betterSeedWinner);  // 2 vs better seed
     const champ = simGame(teamMap[sf1], teamMap[sf2]);
     champCounts[champ]++;
   }

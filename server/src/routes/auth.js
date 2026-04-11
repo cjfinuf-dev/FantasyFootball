@@ -3,6 +3,7 @@ const rateLimit = require('express-rate-limit');
 const authService = require('../services/auth.service');
 const { requireAuth } = require('../middleware/auth');
 const { validateSignup, validateSignin } = require('../middleware/validate');
+const { signToken, verifyRefreshToken } = require('../utils/jwt');
 
 const router = express.Router();
 
@@ -44,6 +45,24 @@ router.post('/signin', signinLimiter, validateSignin, async (req, res, next) => 
 
 router.post('/signout', (req, res) => {
   res.json({ success: true });
+});
+
+router.post('/refresh', async (req, res, next) => {
+  try {
+    const { refreshToken } = req.body;
+    if (!refreshToken) {
+      return res.status(400).json({ error: 'Refresh token is required.' });
+    }
+    const payload = verifyRefreshToken(refreshToken);
+    const user = await authService.getUserById(payload.userId);
+    if (!user) {
+      return res.status(401).json({ error: 'User not found.' });
+    }
+    const token = signToken({ userId: user.id, email: user.email });
+    res.json({ token });
+  } catch (err) {
+    return res.status(401).json({ error: 'Invalid or expired refresh token.' });
+  }
 });
 
 router.get('/me', requireAuth, (req, res) => {

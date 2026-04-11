@@ -276,6 +276,12 @@ function getDraftableDepth(pos, leagueSize = DEFAULT_LEAGUE_SIZE) {
 
 const IDEAL_ROSTER = { QB: 2, RB: 4, WR: 4, TE: 2, K: 1, DEF: 1 };
 
+// Weights intentionally sum to 1.08 (not 1.00). The first seven dimensions
+// (production through ageFactor) sum to 1.00 and represent the core composite.
+// slotValue (0.08) is an additive positional boost — it rewards scarce starting
+// slots without stealing weight from the other dimensions. The sigmoid threshold
+// in the final score transform is calibrated for this 1.08 ceiling; changing the
+// total without recalibrating the sigmoid will shift the score distribution.
 const WEIGHTS = {
   production: 0.25,
   scarcity: 0.15,
@@ -285,7 +291,7 @@ const WEIGHTS = {
   durability: 0.14,
   rosterContext: 0.07,
   ageFactor: 0.08,
-  slotValue: 0.08, // additive on top — total 1.08, not redistributed
+  slotValue: 0.08,
 };
 
 // ─── Position-specific age curve parameters ───
@@ -411,10 +417,10 @@ function calcProduction(player, posGroup, preset) {
   return range > 0 ? (raw - min) / range : 0.5;
 }
 
-function calcScarcity(player, posGroup) {
+function calcScarcity(player, posGroup, rankMap) {
   const count = posGroup.length;
   if (count <= 1) return 1.0;
-  const rank = posGroup.indexOf(player) + 1;
+  const rank = rankMap ? (rankMap.get(player.id) || count) : (posGroup.indexOf(player) + 1);
   // Pure positional rank: best = 1.0, worst ≈ 0.
   // "How many players at your position would you drop before this one?"
   return (count - rank) / (count - 1);
@@ -733,8 +739,8 @@ function calcXFactor(player) {
 // Within draftable range: smooth curve from 1.0 (rank 1) to 0.5 (last draftable).
 // Beyond draftable: sharp exponential dropoff that caps effective HexScore below 50.
 
-function calcDraftValue(player, posGroup) {
-  const rank = posGroup.indexOf(player) + 1;
+function calcDraftValue(player, posGroup, rankMap) {
+  const rank = rankMap ? (rankMap.get(player.id) || posGroup.length) : (posGroup.indexOf(player) + 1);
   const draftable = getDraftableDepth(player.pos);
 
   if (rank <= draftable) {
@@ -928,13 +934,22 @@ export function computeAllHexScores(players = PLAYERS, rosterContext = null, sco
   const extraAge = ageWeight - baseAgeWeight;
   const weightScale = extraAge > 0 ? (nonAgeTotal - extraAge) / nonAgeTotal : 1.0;
 
+  // Pre-build rank maps for O(1) lookups instead of O(n) indexOf per player
+  const rankMaps = {};
+  Object.keys(posGroups).forEach(pos => {
+    const map = new Map();
+    posGroups[pos].forEach((p, i) => map.set(p.id, i + 1));
+    rankMaps[pos] = map;
+  });
+
   players.forEach(p => {
     const posGroup = posGroups[p.pos] || [p];
+    const rankMap = rankMaps[p.pos] || null;
     const archetype = classifyArchetype(p, p.pos);
 
     // Base dimensions
     let production = calcProduction(p, posGroup, scoringPreset);
-    const scarcity = calcScarcity(p, posGroup);
+    const scarcity = calcScarcity(p, posGroup, rankMap);
     const age = getPlayerAge(p.id);
     let consistency = calcConsistency(p, age, p.pos);
     const situation = calcSituation(p, players);
@@ -978,7 +993,7 @@ export function computeAllHexScores(players = PLAYERS, rosterContext = null, sco
 
     // Draft value: multiplier based on position rank vs draftable depth.
     // Non-draftable players (backups beyond threshold) get crushed below 50.
-    const draftValue = calcDraftValue(p, posGroup);
+    const draftValue = calcDraftValue(p, posGroup, rankMap);
     const raw = rawXFactored * draftValue;
 
     let hexScore = parseFloat((sigmoidShape(raw) * 100).toFixed(3));

@@ -223,10 +223,13 @@ async function storeArticles(clusters, sweepId) {
     // Pick best image from cluster — prefer the representative, fall back to any article with an image
     const imageUrl = rep.imageUrl || cluster.articles.find(a => a.imageUrl)?.imageUrl || null;
 
+    // SECURITY: Validate source URL protocol before storing
+    const safeUrl = /^https?:\/\//.test(rep.link) ? rep.link : null;
+
     db.run(
       `INSERT INTO news_articles (title, summary, image_url, source_url, source_name, category, player_name, team_name, source_count, published_at, sweep_id)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [cleanText(rep.title), cleanText(summary), imageUrl, rep.link, rep.sourceName, category, playerName, teamName, cluster.sources.size, rep.pubDate.toISOString(), sweepId]
+      [cleanText(rep.title), cleanText(summary), imageUrl, safeUrl, rep.sourceName, category, playerName, teamName, cluster.sources.size, rep.pubDate.toISOString(), sweepId]
     );
     stored++;
   }
@@ -260,6 +263,7 @@ async function fetchAndStoreNews() {
 
 async function getNews({ limit = 15, before = null, category = null } = {}) {
   const db = await getDb();
+  // SECURITY: conditions array must only contain hardcoded column strings. Never concatenate user input into conditions — values go in params only.
   const conditions = [];
   const params = [];
 

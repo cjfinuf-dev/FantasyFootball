@@ -12,27 +12,17 @@ router.get('/historical', (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// TODO: Implement a proper role system (users table has no role column yet).
+// Until then, these endpoints return 403 unconditionally.
+
 // Admin only — update an entire season's data
-router.put('/season/:year', requireAuth, async (req, res, next) => {
-  if (req.user?.role !== 'admin') return res.status(403).json({ error: 'Admin access required.' });
-  try {
-    const year = Number(req.params.year);
-    if (!year || year < 2000 || year > 2100) {
-      return res.status(400).json({ error: 'Invalid season year' });
-    }
-    const result = await updateSeason(year, req.body);
-    res.json(result);
-  } catch (err) { next(err); }
+router.put('/season/:year', requireAuth, (req, res) => {
+  return res.status(403).json({ error: 'Admin endpoints not yet available.' });
 });
 
 // Admin only — update a single player's history
-router.put('/player/:playerId', requireAuth, async (req, res, next) => {
-  if (req.user?.role !== 'admin') return res.status(403).json({ error: 'Admin access required.' });
-  try {
-    const { playerId } = req.params;
-    const result = await updatePlayer(playerId, req.body);
-    res.json(result);
-  } catch (err) { next(err); }
+router.put('/player/:playerId', requireAuth, (req, res) => {
+  return res.status(403).json({ error: 'Admin endpoints not yet available.' });
 });
 
 module.exports = router;

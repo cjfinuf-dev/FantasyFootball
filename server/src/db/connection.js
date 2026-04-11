@@ -44,4 +44,18 @@ function saveDb() {
   }
 }
 
+// Graceful shutdown — persist in-memory DB to disk before exit
+function registerShutdownHandlers() {
+  const shutdown = (signal) => {
+    console.log(`[db] Received ${signal}, saving database...`);
+    saveDb();
+    process.exit(0);
+  };
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
+}
+
+// Register after module load so db ref is available when signals fire
+registerShutdownHandlers();
+
 module.exports = { getDb, saveDb };

@@ -96,10 +96,13 @@ async function updateLeague(leagueId, userId, updates) {
   }
 
   const colMap = { name: 'name', type: 'type', scoringPreset: 'scoring_preset', scoringJson: 'scoring_json', rosterJson: 'roster_json', leagueSize: 'league_size', settingsJson: 'settings_json' };
+  // SECURITY: Only these column names may appear in the SET clause.
+  // colMap values are hardcoded above — never derived from user input.
+  const ALLOWED_COLS = new Set(Object.values(colMap));
   const sets = [];
   const vals = [];
   for (const [key, val] of Object.entries(updates)) {
-    if (colMap[key]) { sets.push(`${colMap[key]} = ?`); vals.push(val); }
+    if (colMap[key] && ALLOWED_COLS.has(colMap[key])) { sets.push(`${colMap[key]} = ?`); vals.push(val); }
   }
   if (sets.length > 0) {
     sets.push("updated_at = datetime('now')");

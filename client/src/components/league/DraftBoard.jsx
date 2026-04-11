@@ -24,11 +24,15 @@ const POS_BG = {
 const PLAYER_MAP = {};
 PLAYERS.forEach(p => { PLAYER_MAP[p.id] = p; });
 
-function getTeamForPick(pickNumber, draftOrder, teamCount = 12) {
+function getPickInfo(pickNumber, draftOrder, teamCount = 12) {
   const round = Math.floor(pickNumber / teamCount);
   const pickInRound = pickNumber % teamCount;
   const orderIndex = round % 2 === 0 ? pickInRound : (teamCount - 1 - pickInRound);
-  return draftOrder[orderIndex];
+  return { teamId: draftOrder[orderIndex], round, pickInRound };
+}
+
+function getTeamForPick(pickNumber, draftOrder, teamCount = 12) {
+  return getPickInfo(pickNumber, draftOrder, teamCount).teamId;
 }
 
 function shuffleArray(arr) {
@@ -317,7 +321,7 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
   // Execute a pick
   const executePick = useCallback((prev, playerId = null) => {
     if (prev.currentPick >= TOTAL_PICKS) return prev;
-    const teamId = getTeamForPick(prev.currentPick, prev.draftOrder, TOTAL_TEAMS);
+    const { teamId, round, pickInRound } = getPickInfo(prev.currentPick, prev.draftOrder, TOTAL_TEAMS);
     const isUser = teamId === USER_TEAM_ID;
     const pickedSet = new Set(prev.picks.map(p => p.playerId));
 
@@ -332,8 +336,6 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
 
     if (!playerId) return prev;
 
-    const round = Math.floor(prev.currentPick / TOTAL_TEAMS);
-    const pickInRound = prev.currentPick % TOTAL_TEAMS;
     const player = PLAYER_MAP[playerId];
 
     const newPick = { pickNumber: prev.currentPick, round, pickInRound, teamId, playerId, timestamp: Date.now() };

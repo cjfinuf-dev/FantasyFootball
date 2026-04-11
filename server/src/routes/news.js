@@ -1,4 +1,5 @@
 const express = require('express');
+const { requireAuth } = require('../middleware/auth');
 const { getNews, fetchAndStoreNews } = require('../services/news.service');
 const { getActiveSituationEvents } = require('../services/situation.service');
 
@@ -23,8 +24,8 @@ router.get('/impacts', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// Dev-only manual trigger
-router.post('/sweep', async (req, res, next) => {
+// Dev-only manual trigger — requires auth
+router.post('/sweep', requireAuth, async (req, res, next) => {
   try {
     console.log('[News] Manual sweep triggered');
     const result = await fetchAndStoreNews();

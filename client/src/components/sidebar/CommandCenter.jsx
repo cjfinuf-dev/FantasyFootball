@@ -152,7 +152,7 @@ export default function CommandCenter({ rosters, scoringPreset, leagueName, onPl
     <div className="ff-sidebar-card cc-command-center">
       {/* ═══ 1. MATCHUP SNAPSHOT ═══ */}
       {matchupData && (
-        <div className="cc-section cc-matchup" onClick={() => onMatchupClick?.(matchupData.matchupId)} role="button" tabIndex={0}>
+        <button type="button" className="cc-section cc-matchup cc-matchup-btn" onClick={() => onMatchupClick?.(matchupData.matchupId)}>
           <div className="cc-section-label">This Week's Matchup</div>
           <div className="cc-matchup-row">
             <div className="cc-matchup-you">
@@ -172,7 +172,7 @@ export default function CommandCenter({ rosters, scoringPreset, leagueName, onPl
               <span className="cc-matchup-side">{matchupData.oppAbbr} <span className="cc-matchup-rec">{matchupData.oppRecord}</span></span>
             </div>
           </div>
-        </div>
+        </button>
       )}
 
       {/* ═══ 2. ACTION ITEMS ═══ */}
@@ -254,12 +254,12 @@ export default function CommandCenter({ rosters, scoringPreset, leagueName, onPl
       <div className="cc-section cc-trending">
         <div className="cc-section-label">Trending Pickups</div>
         {trending.map(w => (
-          <div key={w.playerId} className="cc-trending-row" onClick={() => onPlayerClick?.(w.playerId)} role="button" tabIndex={0}>
+          <button type="button" key={w.playerId} className="cc-trending-row cc-trending-btn" onClick={() => onPlayerClick?.(w.playerId)}>
             <PosBadge pos={w.pos} size="xs" />
             <span className="cc-trending-name">{w.name}</span>
             <span className={`cc-trending-trend cc-trend-${w.trend}`}>{w.trend === 'up' ? '\u25B2' : '\u25BC'} {w.trendPct}%</span>
             <span className="cc-trending-hex tabular-nums">{formatHex(w.hexScore)}</span>
-          </div>
+          </button>
         ))}
         <button className="cc-view-all" onClick={() => onTabSwitch?.('waivers')}>
           View all <span className="cc-arrow">&rarr;</span>

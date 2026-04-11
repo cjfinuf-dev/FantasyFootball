@@ -1,6 +1,6 @@
 const bcrypt = require('bcrypt');
 const { getDb, saveDb } = require('../db/connection');
-const { signToken } = require('../utils/jwt');
+const { signToken, signRefreshToken } = require('../utils/jwt');
 
 const SALT_ROUNDS = 12;
 
@@ -31,8 +31,9 @@ async function signup({ name, email, password }) {
   const row = result[0].values[0];
   const user = { id: row[0], name: row[1], email: row[2], created_at: row[3] };
   const token = signToken({ userId: user.id, email: user.email });
+  const refreshToken = signRefreshToken(user.id);
 
-  return { user, token };
+  return { user, token, refreshToken };
 }
 
 async function signin({ email, password }) {
@@ -57,8 +58,9 @@ async function signin({ email, password }) {
 
   const user = { id: found.id, name: found.name, email: found.email, created_at: found.created_at };
   const token = signToken({ userId: user.id, email: user.email });
+  const refreshToken = signRefreshToken(user.id);
 
-  return { user, token };
+  return { user, token, refreshToken };
 }
 
 async function getUserById(id) {

@@ -346,7 +346,7 @@ export default function NewsFeed({ onPlayerClick }) {
           const impact = articleImpactMap[article.id];
           return (
           <div key={article.id} className={`ff-news-item${isRead ? ' ff-news-read' : ''}`}>
-            <a href={article.source_url} target="_blank" rel="noopener noreferrer"
+            <a href={article.source_url?.startsWith('http') ? article.source_url : '#'} target="_blank" rel="noopener noreferrer"
               className="ff-news-article" style={{ textDecoration: 'none', color: 'inherit', display: 'flex', flex: 1, minWidth: 0, gap: 12 }}
               onClick={() => handleArticleClick(article.id)}>
               {article.image_url ? (

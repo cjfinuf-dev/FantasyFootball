@@ -266,6 +266,7 @@ async function detectSituationEvents(sweepId) {
 
 async function getActiveSituationEvents({ team = null, playerName = null } = {}) {
   const db = await getDb();
+  // SECURITY: conditions array must only contain hardcoded column strings. Never concatenate user input into conditions — values go in params only.
   const conditions = ['active = 1'];
   const params = [];
 

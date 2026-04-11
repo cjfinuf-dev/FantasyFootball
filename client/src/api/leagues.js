@@ -11,8 +11,8 @@ export async function createLeague(data) {
   });
 }
 
-export async function getLeague(id) {
-  return apiFetch(`/api/leagues/${id}`);
+export async function getLeague(id, options = {}) {
+  return apiFetch(`/api/leagues/${id}`, options);
 }
 
 export async function updateLeague(id, data) {
@@ -48,8 +48,8 @@ export async function saveDraft(leagueId, data) {
   });
 }
 
-export async function getDraft(leagueId) {
-  return apiFetch(`/api/leagues/${leagueId}/draft`);
+export async function getDraft(leagueId, options = {}) {
+  return apiFetch(`/api/leagues/${leagueId}/draft`, options);
 }
 
 export async function deleteDraft(leagueId) {

@@ -10,11 +10,14 @@ function validateSignup(req, res, next) {
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return res.status(400).json({ error: 'A valid email address is required.' });
   }
-  if (!password || password.length < 8) {
-    return res.status(400).json({ error: 'Password must be at least 8 characters.' });
+  if (!password || password.length < 12) {
+    return res.status(400).json({ error: 'Password must be at least 12 characters.' });
   }
   if (password.length > 72) {
     return res.status(400).json({ error: 'Password must be under 72 characters.' });
+  }
+  if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password)) {
+    return res.status(400).json({ error: 'Password must contain at least one uppercase letter, one lowercase letter, and one digit.' });
   }
 
   req.body.name = name.trim();

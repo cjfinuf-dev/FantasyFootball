@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { USER_TEAM_ID } from '../../data/teams';
 import { TRADES_SEED, TRADE_HISTORY_SEED } from '../../data/rosters';
 import { deepClone } from '../../utils/helpers';
@@ -6,10 +6,37 @@ import TradeProposal from './TradeProposal';
 import TradeInbox from './TradeInbox';
 import TradeHistory from './TradeHistory';
 
-export default function TradeCenter({ rosters, onRostersChange, scoringPreset = 'standard', onOpenCompare }) {
+export default function TradeCenter({ rosters, onRostersChange, scoringPreset = 'standard', onOpenCompare, leagueId = 'default' }) {
   const [subTab, setSubTab] = useState('propose');
-  const [trades, setTrades] = useState(() => deepClone(TRADES_SEED));
-  const [history, setHistory] = useState(() => deepClone(TRADE_HISTORY_SEED));
+
+  const [trades, setTrades] = useState(() => {
+    try {
+      const stored = localStorage.getItem('ff-trades-' + leagueId);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed?.v === 1 && Array.isArray(parsed.trades)) return parsed.trades;
+      }
+    } catch { /* fall through to seed */ }
+    return deepClone(TRADES_SEED);
+  });
+
+  const [history, setHistory] = useState(() => {
+    try {
+      const stored = localStorage.getItem('ff-trades-' + leagueId);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed?.v === 1 && Array.isArray(parsed.history)) return parsed.history;
+      }
+    } catch { /* fall through to seed */ }
+    return deepClone(TRADE_HISTORY_SEED);
+  });
+
+  // Persist trades + history to localStorage on change
+  useEffect(() => {
+    try {
+      localStorage.setItem('ff-trades-' + leagueId, JSON.stringify({ v: 1, trades, history }));
+    } catch { /* storage full or unavailable — silent */ }
+  }, [trades, history, leagueId]);
 
   const pendingCount = trades.filter(t =>
     (t.toTeamId === USER_TEAM_ID || t.fromTeamId === USER_TEAM_ID) && t.status === 'pending'

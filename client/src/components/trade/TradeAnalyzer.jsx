@@ -105,7 +105,7 @@ export default function TradeAnalyzer({ sendIds, receiveIds, userRoster, partner
         <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 4 }}>
           {posImpact.warnings.map((w, i) => (
             <div key={`w${i}`} style={{
-              fontSize: 14, padding: '6px 10px', borderRadius: 6,
+              fontSize: 14, padding: '6px 10px', borderRadius: 'var(--radius-sm)',
               background: 'var(--red-light)', color: 'var(--red)',
               display: 'flex', alignItems: 'center', gap: 6,
             }}>
@@ -114,8 +114,8 @@ export default function TradeAnalyzer({ sendIds, receiveIds, userRoster, partner
           ))}
           {posImpact.gains.map((g, i) => (
             <div key={`g${i}`} style={{
-              fontSize: 14, padding: '6px 10px', borderRadius: 6,
-              background: 'rgba(22,163,74,0.08)', color: 'var(--success-green)',
+              fontSize: 14, padding: '6px 10px', borderRadius: 'var(--radius-sm)',
+              background: 'var(--green-light)', color: 'var(--success-green)',
               display: 'flex', alignItems: 'center', gap: 6,
             }}>
               <span style={{ fontSize: 15 }}>{'\u2714'}</span> {g}

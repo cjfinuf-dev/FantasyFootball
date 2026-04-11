@@ -44,21 +44,26 @@ function classifyQB(p) {
   // inflated or nonsensical values — treat as a game manager with no real sample.
   if (!p.gp || p.gp <= 0) return 'game-manager';
 
+  const gp = p.gp;
+  // Normalize volume stats to a 17-game pace so partial-season players
+  // are classified on rate, not raw totals. Floor at 8 to avoid amplifying
+  // tiny samples.
+  const gpScale = 17 / Math.max(gp, 8);
+
   const rushYds = p.rushYds || 0;
   const carries = p.carries || 0;
   const rushTd = p.rushTd || 0;
-  const gp = p.gp;
   const passEpaPerGm = (p.passEpa || 0) / gp;
   const passTd = p.passTd || 0;
 
   // Dual-threat elite: elite rushing production
-  if (rushYds >= 400 && carries >= 80 && rushTd >= 5) return 'dual-threat-elite';
+  if (rushYds * gpScale >= 400 && carries * gpScale >= 80 && rushTd * gpScale >= 5) return 'dual-threat-elite';
 
   // Dual-threat: meaningful rushing involvement
-  if (rushYds >= 250 && carries >= 50) return 'dual-threat';
+  if (rushYds * gpScale >= 250 && carries * gpScale >= 50) return 'dual-threat';
 
-  // Pocket elite: high efficiency passer
-  if (passEpaPerGm >= 5 && passTd >= 25) return 'pocket-elite';
+  // Pocket elite: high efficiency passer (passEpaPerGm already per-game)
+  if (passEpaPerGm >= 5 && passTd * gpScale >= 25) return 'pocket-elite';
 
   // Pocket passer: positive EPA, regular starter
   if (passEpaPerGm >= 0 && gp >= 10) return 'pocket-passer';
@@ -68,60 +73,69 @@ function classifyQB(p) {
 }
 
 function classifyRB(p) {
+  const gp = p.gp || 0;
+  const gpScale = 17 / Math.max(gp, 8);
+
   const carries = p.carries || 0;
-  const tgtShare = p.tgtShare || 0;
+  const tgtShare = p.tgtShare || 0; // already a rate — no scaling
   const rec = p.rec || 0;
 
   // Bell-cow: high volume in both phases
-  if (carries >= 200 && tgtShare >= 0.15 && rec >= 50) return 'bell-cow';
+  if (carries * gpScale >= 200 && tgtShare >= 0.15 && rec * gpScale >= 50) return 'bell-cow';
 
   // Elite pass-catcher: receiving-oriented back
-  if (rec >= 40 && tgtShare >= 0.12) return 'elite-pass-catch';
+  if (rec * gpScale >= 40 && tgtShare >= 0.12) return 'elite-pass-catch';
 
   // Power back: ground-and-pound, limited receiving
-  if (carries >= 180 && tgtShare < 0.10) return 'power-back';
+  if (carries * gpScale >= 180 && tgtShare < 0.10) return 'power-back';
 
   // Committee: moderate workload
-  if (carries >= 75) return 'committee';
+  if (carries * gpScale >= 75) return 'committee';
 
   // Backup
   return 'backup';
 }
 
 function classifyWR(p) {
-  const tgtShare = p.tgtShare || 0;
+  const gp = p.gp || 0;
+  const gpScale = 17 / Math.max(gp, 8);
+
+  const tgtShare = p.tgtShare || 0; // rate — no scaling
   const recYds = p.recYds || 0;
   const tgt = p.tgt || 0;
-  const airShare = p.airShare || 0;
+  const airShare = p.airShare || 0; // rate — no scaling
   const rec = p.rec || 0;
-  const racr = p.racr || 0;
+  const racr = p.racr || 0;         // rate — no scaling
   const yac = p.yac || 0;
 
   // Alpha WR: dominant target share + high yardage
-  if (tgtShare >= 0.25 && recYds >= 1000) return 'alpha-wr';
+  if (tgtShare >= 0.25 && recYds * gpScale >= 1000) return 'alpha-wr';
 
   // Target hog: high volume receiver
-  if (tgt >= 120 && tgtShare >= 0.20) return 'target-hog';
+  if (tgt * gpScale >= 120 && tgtShare >= 0.20) return 'target-hog';
 
-  // Deep threat: high air yards share, big plays
+  // Deep threat: high air yards share, big plays (yds/rec is per-game — no scaling)
   if (airShare >= 0.30 && rec > 0 && recYds / rec >= 15) return 'deep-threat';
 
   // Slot WR: efficient underneath receiver
-  if (rec >= 70 && racr >= 0.95 && rec > 0 && yac / rec >= 5) return 'slot-wr';
+  if (rec * gpScale >= 70 && racr >= 0.95 && rec > 0 && yac / rec >= 5) return 'slot-wr';
 
   // WR2/WR3
   return 'wr2-wr3';
 }
 
 function classifyTE(p) {
-  const tgtShare = p.tgtShare || 0;
+  const gp = p.gp || 0;
+  const gpScale = 17 / Math.max(gp, 8);
+
+  const tgtShare = p.tgtShare || 0; // rate — no scaling
   const rec = p.rec || 0;
 
   // Elite TE: dominant target share and volume
-  if (tgtShare >= 0.20 && rec >= 80) return 'elite-te';
+  if (tgtShare >= 0.20 && rec * gpScale >= 80) return 'elite-te';
 
   // Receiving TE: meaningful pass-catching role
-  if (rec >= 40 && tgtShare >= 0.10) return 'receiving-te';
+  if (rec * gpScale >= 40 && tgtShare >= 0.10) return 'receiving-te';
 
   // Blocking TE
   return 'blocking-te';
