@@ -4487,6 +4487,309 @@
   border: 1px solid var(--border);
 }
 
+/* ─── Compare Mode: Basic — "The Verdict" ─── */
+
+.compare-basic-showdown {
+  display: flex; align-items: center; justify-content: center; gap: 24px;
+  margin-bottom: 24px; flex-wrap: wrap;
+}
+.compare-basic-player-card {
+  flex: 1; min-width: 200px; max-width: 320px;
+  background: var(--bg-white); border: 1.5px solid var(--border); border-radius: 14px;
+  padding: 20px; display: flex; flex-direction: column; align-items: center; gap: 8px;
+  transition: box-shadow 0.2s;
+}
+.compare-basic-player-card.winner {
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.25);
+  border-color: var(--hex-purple);
+}
+.compare-basic-vs {
+  width: 48px; height: 48px; border-radius: 50%;
+  background: var(--accent-10); border: 2px solid var(--hex-purple);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; font-weight: 900; color: var(--hex-purple);
+  flex-shrink: 0;
+}
+.compare-basic-verdict {
+  background: var(--accent-10); border-radius: 12px; padding: 16px 24px;
+  text-align: center; margin-bottom: 24px;
+}
+.compare-basic-verdict h3 {
+  font-size: 22px; font-weight: 900; color: var(--text); margin: 0; line-height: 1.3;
+}
+.compare-basic-faceoff {
+  display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px;
+}
+.compare-basic-faceoff-row {
+  display: flex; align-items: center; gap: 0;
+}
+.compare-basic-faceoff-label {
+  width: 100%; text-align: center; font-size: 12px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.compare-basic-faceoff-bar-left,
+.compare-basic-faceoff-bar-right {
+  flex: 1; height: 28px; display: flex; align-items: center;
+}
+.compare-basic-faceoff-bar-left { justify-content: flex-end; }
+.compare-basic-faceoff-bar-right { justify-content: flex-start; }
+.compare-basic-faceoff-bar-left .bar-fill {
+  height: 100%; border-radius: 6px 0 0 6px; transition: width 0.5s ease-out;
+  margin-left: auto;
+}
+.compare-basic-faceoff-bar-right .bar-fill {
+  height: 100%; border-radius: 0 6px 6px 0; transition: width 0.5s ease-out;
+}
+.compare-basic-faceoff-divider {
+  width: 2px; height: 28px; background: var(--border); flex-shrink: 0;
+}
+.compare-basic-bottomline {
+  background: var(--accent-10); border-left: 3px solid var(--hex-purple);
+  border-radius: 8px; padding: 12px 16px; margin-bottom: 24px;
+}
+.compare-basic-bottomline .label {
+  font-size: 12px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.08em; color: var(--hex-purple); margin-bottom: 4px;
+}
+.compare-basic-bottomline .text {
+  font-size: 15px; font-weight: 600; color: var(--text); line-height: 1.4;
+}
+.compare-basic-profiles {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px; margin-bottom: 24px;
+}
+.compare-basic-profile-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+  padding: 12px 16px;
+}
+.compare-basic-profile-card .name { font-weight: 700; font-size: 15px; }
+.compare-basic-profile-card .archetype {
+  font-size: 14px; color: var(--hex-purple); font-weight: 600; margin-top: 2px;
+}
+/* Multi-player ranked cards (3+) */
+.compare-basic-ranked {
+  display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-bottom: 24px;
+}
+.compare-basic-ranked-card {
+  flex: 1; min-width: 160px; max-width: 240px;
+  background: var(--bg-white); border: 1.5px solid var(--border); border-radius: 12px;
+  padding: 14px; display: flex; flex-direction: column; align-items: center; gap: 6px;
+}
+.compare-basic-ranked-card:first-child {
+  box-shadow: 0 0 16px rgba(139, 92, 246, 0.2);
+  border-color: var(--hex-purple);
+}
+
+/* ─── Compare Mode: League — "Roster Impact" ─── */
+
+.compare-league-header {
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+  padding: 12px 20px; margin-bottom: 20px; flex-wrap: wrap; gap: 8px;
+}
+.compare-league-header .team-label {
+  font-size: 16px; font-weight: 800;
+}
+.compare-league-header .record {
+  font-size: 14px; font-weight: 600; color: var(--text-muted);
+}
+.compare-league-header .vs-text {
+  font-size: 14px; font-weight: 700; color: var(--hex-purple);
+}
+.compare-league-panels {
+  display: grid; grid-template-columns: 1fr auto 1fr; gap: 16px;
+  margin-bottom: 24px; align-items: start;
+}
+.compare-league-player-panel {
+  background: var(--bg-white); border: 1px solid var(--border); border-radius: 12px;
+  padding: 16px; display: flex; flex-direction: column; align-items: center; gap: 10px;
+}
+.compare-league-chart-panel {
+  display: flex; align-items: center; justify-content: center;
+  max-width: 380px; min-width: 280px;
+}
+.compare-league-depth {
+  width: 100%; display: flex; flex-direction: column; gap: 4px; margin-top: 8px;
+}
+.compare-league-depth-bar {
+  display: flex; align-items: center; gap: 8px; font-size: 13px;
+}
+.compare-league-depth-bar .bar-track {
+  flex: 1; height: 14px; background: var(--surface); border-radius: 4px; overflow: hidden;
+}
+.compare-league-depth-bar .bar-fill {
+  height: 100%; border-radius: 4px; transition: width 0.4s ease-out;
+}
+.compare-league-depth-bar.highlighted {
+  font-weight: 700;
+}
+.compare-league-depth-bar.highlighted .bar-track {
+  border: 1.5px solid var(--hex-purple);
+}
+.compare-league-whatif {
+  background: var(--bg-white); border: 1px solid var(--border); border-radius: 12px;
+  padding: 16px 20px; margin-bottom: 24px;
+}
+.compare-league-whatif .title {
+  font-size: 16px; font-weight: 800; margin-bottom: 12px;
+}
+.compare-league-whatif .delta {
+  font-size: 28px; font-weight: 900; text-align: center; padding: 8px 0;
+}
+.compare-league-whatif .delta.positive { color: var(--success-green); }
+.compare-league-whatif .delta.negative { color: #dc2626; }
+.compare-league-team-strength {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;
+}
+.compare-league-strength-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+  padding: 12px 16px;
+}
+.compare-league-strength-card .team-name {
+  font-size: 14px; font-weight: 700; margin-bottom: 8px;
+}
+.compare-league-strength-card .strength-bar {
+  height: 20px; background: var(--border); border-radius: 6px; overflow: hidden;
+}
+.compare-league-strength-card .strength-fill {
+  height: 100%; border-radius: 6px; background: var(--hex-purple);
+  transition: width 0.5s ease-out;
+}
+
+/* ─── Compare Mode: Trade — "The Deal" ─── */
+
+.compare-trade-header {
+  text-align: center; margin-bottom: 20px;
+}
+.compare-trade-header h3 {
+  font-size: 20px; font-weight: 900; margin: 0 0 4px;
+}
+.compare-trade-header .teams {
+  font-size: 15px; font-weight: 600; color: var(--text-muted);
+}
+.compare-trade-deal-row {
+  display: grid; grid-template-columns: 1fr auto 1fr; gap: 16px;
+  margin-bottom: 24px; align-items: stretch;
+}
+.compare-trade-side-card {
+  background: var(--bg-white); border: 1px solid var(--border); border-radius: 12px;
+  overflow: hidden;
+}
+.compare-trade-side-card .side-header {
+  padding: 10px 16px; font-size: 14px; font-weight: 800;
+  text-transform: uppercase; letter-spacing: 0.06em; color: #fff;
+}
+.compare-trade-side-card .side-header.send { background: #dc2626; }
+.compare-trade-side-card .side-header.receive { background: var(--success-green); }
+.compare-trade-side-card .side-body { padding: 12px 16px; }
+.compare-trade-side-card .player-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 0; border-bottom: 1px solid var(--border);
+}
+.compare-trade-side-card .player-row:last-child { border-bottom: none; }
+.compare-trade-side-card .total {
+  padding: 10px 16px; background: var(--surface);
+  font-size: 15px; font-weight: 800; text-align: right;
+  border-top: 1px solid var(--border);
+}
+.compare-trade-bridge {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 12px; min-width: 80px;
+}
+.compare-trade-bridge .scale-bar {
+  width: 6px; flex: 1; min-height: 60px; background: var(--border);
+  border-radius: 3px; position: relative; overflow: hidden;
+}
+.compare-trade-bridge .scale-fill {
+  position: absolute; bottom: 0; width: 100%; border-radius: 3px;
+  transition: height 0.5s ease-out;
+}
+.compare-trade-grade-banner {
+  text-align: center; padding: 16px 20px; border-radius: 12px;
+  margin-bottom: 24px; font-size: 18px; font-weight: 800;
+}
+.compare-trade-grade-banner.favorable { background: rgba(22,163,74,0.12); color: var(--success-green); }
+.compare-trade-grade-banner.neutral { background: rgba(217,119,6,0.12); color: #d97706; }
+.compare-trade-grade-banner.unfavorable { background: rgba(220,38,38,0.12); color: #dc2626; }
+.compare-trade-acceptance {
+  background: var(--bg-white); border: 1.5px solid var(--border); border-radius: 12px;
+  padding: 16px 20px; margin-bottom: 24px;
+}
+.compare-trade-acceptance .title {
+  font-size: 16px; font-weight: 800; margin-bottom: 8px;
+}
+.compare-trade-acceptance .likelihood {
+  display: inline-flex; padding: 4px 12px; border-radius: 6px;
+  font-size: 14px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em;
+}
+.compare-trade-acceptance .likelihood.likely { background: rgba(22,163,74,0.15); color: var(--success-green); }
+.compare-trade-acceptance .likelihood.possible { background: rgba(217,119,6,0.15); color: #d97706; }
+.compare-trade-acceptance .likelihood.unlikely { background: rgba(220,38,38,0.15); color: #dc2626; }
+.compare-trade-acceptance .likelihood.very-unlikely { background: rgba(127,29,29,0.15); color: #991b1b; }
+.compare-trade-acceptance .reason {
+  font-size: 14px; color: var(--text-muted); margin-top: 8px; line-height: 1.5;
+}
+.compare-trade-impact-row {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;
+}
+.compare-trade-impact-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+  padding: 14px 16px;
+}
+.compare-trade-impact-card .card-title {
+  font-size: 15px; font-weight: 800; margin-bottom: 10px;
+}
+.compare-trade-impact-card .delta-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 4px 0; font-size: 14px;
+}
+.compare-trade-impact-card .delta-badge {
+  font-weight: 700; font-size: 13px; padding: 2px 8px; border-radius: 4px;
+}
+.compare-trade-impact-card .delta-badge.gain { background: rgba(22,163,74,0.12); color: var(--success-green); }
+.compare-trade-impact-card .delta-badge.loss { background: rgba(220,38,38,0.12); color: #dc2626; }
+.compare-trade-impact-card .delta-badge.neutral { background: var(--surface); color: var(--text-muted); }
+.compare-trade-tips {
+  display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px;
+}
+.compare-trade-tip {
+  display: flex; align-items: flex-start; gap: 10px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+  padding: 10px 14px; font-size: 14px; line-height: 1.5;
+}
+.compare-trade-tip .icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+.compare-trade-cta-row {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 24px;
+}
+.compare-trade-cta-row .primary-btn {
+  background: var(--hex-purple); color: #fff; border: none; border-radius: 10px;
+  padding: 10px 24px; font-size: 16px; font-weight: 800; cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.compare-trade-cta-row .primary-btn:hover {
+  transform: scale(1.03); box-shadow: 0 4px 16px rgba(139,92,246,0.35);
+}
+.compare-trade-cta-row .guidance {
+  font-size: 14px; color: var(--text-muted);
+}
+
+/* ─── Compare Modes: Responsive ─── */
+
+@media (max-width: 900px) {
+  .compare-league-panels { grid-template-columns: 1fr; }
+  .compare-league-chart-panel { max-width: 100%; min-width: 0; }
+  .compare-league-team-strength { grid-template-columns: 1fr; }
+  .compare-trade-deal-row { grid-template-columns: 1fr; }
+  .compare-trade-bridge { flex-direction: row; min-width: 0; min-height: auto; }
+  .compare-trade-bridge .scale-bar {
+    width: auto; flex: 1; min-height: 6px; height: 6px;
+  }
+  .compare-trade-impact-row { grid-template-columns: 1fr; }
+  .compare-basic-showdown { flex-direction: column; }
+  .compare-basic-player-card { max-width: 100%; }
+}
+
 /* Respect user motion preferences — disable transitions and animations */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
