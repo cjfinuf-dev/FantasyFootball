@@ -5,3 +5,5 @@ server/.env
 server/data/
 *.db
 .DS_Store
+nflverse_cache/
+nfl_player_stats.csv

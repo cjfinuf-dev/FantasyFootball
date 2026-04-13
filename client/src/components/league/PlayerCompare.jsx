@@ -9,8 +9,9 @@ import PosBadge from '../ui/PosBadge';
 import HexBrand from '../ui/HexBrand';
 import { getGrade } from '../../utils/grades';
 
+const ALL_PLAYERS = PLAYERS;
 const PLAYER_MAP = {};
-PLAYERS.forEach(p => { PLAYER_MAP[p.id] = p; });
+ALL_PLAYERS.forEach(p => { PLAYER_MAP[p.id] = p; });
 
 function getOwnerTeam(playerId, rosters) {
   if (!rosters) return null;
@@ -200,7 +201,7 @@ function PlayerSlot({ player, color, onSelect, onRemove, excludeIds, scoringPres
   const results = useMemo(() => {
     if (!query || query.length < 2) return [];
     const q = query.toLowerCase();
-    return PLAYERS.filter(p => !excludeIds.has(p.id) && p.name.toLowerCase().includes(q)).slice(0, 6);
+    return ALL_PLAYERS.filter(p => !excludeIds.has(p.id) && p.name.toLowerCase().includes(q)).slice(0, 8);
   }, [query, excludeIds]);
 
   if (player) {
@@ -568,7 +569,7 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
 
   // --- Shared chart SVG (used in both layouts) ---
   const hexChart = (
-    <svg width={svgSize} height={svgSize} viewBox={`0 0 ${svgSize} ${svgSize}`} style={{ display: 'block', maxWidth: '100%' }}
+    <svg width={svgSize} height={svgSize} viewBox={`0 0 ${svgSize} ${svgSize}`} style={{ display: 'block', maxWidth: '540px' }}
       role="img" aria-label="Player comparison HexChart">
 
       {/* Grade bands */}

@@ -1,5 +1,6 @@
 import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import { PLAYERS } from '../../data/players';
+import { HISTORICAL_STATS } from '../../data/historicalStats';
 import { NFL_TEAMS } from '../../data/nflColors';
 import { getEspnId } from '../../data/espnIds';
 import { getOpponent, getByeWeek } from '../../data/nflSchedule';
@@ -16,6 +17,168 @@ import { getGrade } from '../../utils/grades';
 
 const PLAYER_MAP = {};
 PLAYERS.forEach(p => { PLAYER_MAP[p.id] = p; });
+
+// Lazy-loaded inactive data — populated on first request
+let _inactiveLoaded = false;
+let _inactiveHistStats = null;
+function _loadInactive() {
+  if (_inactiveLoaded) return Promise.resolve();
+  return Promise.all([
+    import('../../data/inactivePlayers'),
+    import('../../data/inactiveHistoricalStats'),
+  ]).then(([pMod, hMod]) => {
+    const activeIds = new Set(PLAYERS.map(p => p.id));
+    pMod.INACTIVE_PLAYERS
+      .filter(p => !activeIds.has(p.id))
+      .forEach(p => {
+        const status = p.lastSeason >= 2025 ? 'NFL' : 'INACT';
+        const avg = p.careerGames > 0 ? +(p.careerFantasyPts / p.careerGames).toFixed(1) : 0;
+        PLAYER_MAP[p.id] = { ...p, status, pts: Math.round(p.careerFantasyPts || 0), proj: 0, avg };
+      });
+    _inactiveHistStats = hMod.INACTIVE_HISTORICAL_STATS;
+    _inactiveLoaded = true;
+  });
+}
+
+// Career stat columns by position — used by CareerStatsTable
+const CAREER_COLS = {
+  QB: [
+    { key: 'cmp', label: 'CMP' }, { key: 'att', label: 'ATT' },
+    { key: 'passYds', label: 'PYDS' }, { key: 'passTd', label: 'PTD' },
+    { key: 'int', label: 'INT' }, { key: 'rushYds', label: 'RYDS' },
+    { key: 'rushTd', label: 'RTD' },
+  ],
+  RB: [
+    { key: 'carries', label: 'CAR' }, { key: 'rushYds', label: 'RYDS' },
+    { key: 'rushTd', label: 'RTD' }, { key: 'rec', label: 'REC' },
+    { key: 'tgt', label: 'TGT' }, { key: 'recYds', label: 'RCYD' },
+    { key: 'recTd', label: 'RCTD' },
+  ],
+  WR: [
+    { key: 'rec', label: 'REC' }, { key: 'tgt', label: 'TGT' },
+    { key: 'recYds', label: 'YDS' }, { key: 'recTd', label: 'TD' },
+    { key: 'tgtShare', label: 'TGT%', fmt: v => v ? (v * 100).toFixed(1) + '%' : '—' },
+    { key: 'yac', label: 'YAC' },
+  ],
+  TE: [
+    { key: 'rec', label: 'REC' }, { key: 'tgt', label: 'TGT' },
+    { key: 'recYds', label: 'YDS' }, { key: 'recTd', label: 'TD' },
+    { key: 'tgtShare', label: 'TGT%', fmt: v => v ? (v * 100).toFixed(1) + '%' : '—' },
+  ],
+  K: [
+    { key: 'fgm', label: 'FGM' }, { key: 'fga', label: 'FGA' },
+    { key: 'fgPct', label: 'FG%', fmt: v => v != null ? (v * 100).toFixed(0) + '%' : '—' },
+    { key: 'patm', label: 'PAT' },
+  ],
+  DEF: [
+    { key: 'tkl', label: 'TKL' }, { key: 'sacks', label: 'SCK' },
+    { key: 'int', label: 'INT' }, { key: 'tfl', label: 'TFL' },
+    { key: 'pd', label: 'PD' }, { key: 'ff', label: 'FF' },
+  ],
+};
+
+function CareerStatsTable({ player }) {
+  const [visibleCount, setVisibleCount] = useState(5);
+  const career = HISTORICAL_STATS?.players?.[player.id]
+    || _inactiveHistStats?.players?.[player.id];
+  if (!career) return null;
+
+  const years = Object.keys(career).sort((a, b) => parseInt(b) - parseInt(a));
+  if (years.length === 0) return null;
+  const visibleYears = years.slice(0, visibleCount);
+
+  const DEF_POSITIONS = ['DE','DT','DL','NT','LB','ILB','OLB','MLB','CB','DB','FS','SS','S','SAF'];
+  const posGroup = DEF_POSITIONS.includes(player.pos) ? 'DEF' : player.pos;
+  const cols = CAREER_COLS[posGroup] || [];
+
+  // Career totals row for counting stats
+  const totalFields = ['carries','rushYds','rushTd','rec','tgt','recYds','recTd',
+    'cmp','att','passYds','passTd','int','fgm','fga','patm','gp',
+    'tkl','sacks','tfl','pd','ff'];
+  const totals = {};
+  totalFields.forEach(f => {
+    totals[f] = years.reduce((sum, yr) => sum + (career[yr][f] || 0), 0);
+  });
+  const totalGP = totals.gp || 1;
+  const totalPts = years.reduce((sum, yr) => sum + (career[yr].totalPts || 0), 0);
+  const careerAvg = totalGP > 0 ? (totalPts / totalGP).toFixed(1) : '—';
+
+  return (
+    <div className="ff-card" style={{ marginBottom: 16, overflow: 'hidden' }}>
+      <div style={{ height: 4, background: 'var(--brand-tan)' }} />
+      <div className="ff-card-header">
+        <h2>Career Statistics</h2>
+        <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+          {years.length} season{years.length !== 1 ? 's' : ''} &middot; {totalGP} GP &middot; {careerAvg} PPR avg
+        </span>
+      </div>
+      <div style={{ overflowX: 'auto' }}>
+        <table className="ff-table" style={{ fontSize: 13 }}>
+          <thead>
+            <tr>
+              <th style={{ textAlign: 'left', paddingLeft: 16 }}>Year</th>
+              <th style={{ textAlign: 'left' }}>Team</th>
+              <th>GP</th>
+              {cols.map(c => <th key={c.key}>{c.label}</th>)}
+              <th style={{ color: 'var(--hex-purple)', fontWeight: 700 }}>PPR Avg</th>
+            </tr>
+          </thead>
+          <tbody>
+            {visibleYears.map(yr => {
+              const s = career[yr];
+              return (
+                <tr key={yr}>
+                  <td style={{ paddingLeft: 16, fontWeight: 600 }}>{yr}</td>
+                  <td style={{ color: 'var(--text-muted)' }}>{s.team || '—'}</td>
+                  <td>{s.gp || '—'}</td>
+                  {cols.map(c => (
+                    <td key={c.key}>{c.fmt ? c.fmt(s[c.key]) : (s[c.key] != null ? s[c.key] : '—')}</td>
+                  ))}
+                  <td style={{ fontWeight: 700, color: 'var(--hex-purple)' }} className="tabular-nums">
+                    {s.avgPts || '—'}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+          {years.length > 1 && (
+            <tfoot>
+              <tr style={{ background: 'var(--surface)', fontWeight: 700, borderTop: '2px solid var(--border)' }}>
+                <td style={{ paddingLeft: 16 }}>Career</td>
+                <td>—</td>
+                <td>{totalGP}</td>
+                {cols.map(c => {
+                  if (c.fmt) return <td key={c.key}>—</td>;
+                  return <td key={c.key}>{totals[c.key] || '—'}</td>;
+                })}
+                <td style={{ color: 'var(--hex-purple)' }} className="tabular-nums">{careerAvg}</td>
+              </tr>
+            </tfoot>
+          )}
+        </table>
+      </div>
+      {visibleCount < years.length && (() => {
+        const remaining = years.length - visibleCount;
+        const label = remaining <= 5 ? `Show ${remaining} more season${remaining !== 1 ? 's' : ''}` : 'Show 5 more seasons';
+        return (
+          <button
+            onClick={() => setVisibleCount(v => v + 5)}
+            style={{
+              display: 'block', width: '100%', padding: '8px 0',
+              background: 'none', border: 'none', borderTop: '1px solid var(--border)',
+              color: 'var(--text-muted)', fontSize: 12, fontWeight: 600,
+              cursor: 'pointer', letterSpacing: '0.03em',
+            }}
+            onMouseEnter={e => e.currentTarget.style.color = 'var(--hex-purple)'}
+            onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
+          >
+            {label}
+          </button>
+        );
+      })()}
+    </div>
+  );
+}
 
 // User-facing dimension labels — derived from internal dimensions but reframed
 const HEX_DIMENSIONS = [
@@ -129,7 +292,7 @@ function HexRadar({ dimensions, hexData, player }) {
   const compareResults = useMemo(() => {
     if (!compareQuery || compareQuery.length < 2) return [];
     const q = compareQuery.toLowerCase();
-    return PLAYERS.filter(p => p.id !== player.id && p.name.toLowerCase().includes(q)).slice(0, 5);
+    return ALL_PLAYERS.filter(p => p.id !== player.id && p.name.toLowerCase().includes(q)).slice(0, 6);
   }, [compareQuery, player.id]);
 
   const compareHexData = comparePlayer ? getHexData(comparePlayer.id) : null;
@@ -430,7 +593,17 @@ const TIER_DESCRIPTIONS = {
 };
 
 export default function PlayerStats({ playerId, onBack }) {
+  const [, forceUpdate] = useState(0);
+  const [inactiveLoading, setInactiveLoading] = useState(false);
   const player = PLAYER_MAP[playerId];
+
+  // Lazy-load inactive data if player not found in base roster
+  useEffect(() => {
+    if (!player && !_inactiveLoaded) {
+      setInactiveLoading(true);
+      _loadInactive().then(() => { setInactiveLoading(false); forceUpdate(n => n + 1); });
+    }
+  }, [player, playerId]);
 
   const nflTeam = useMemo(
     () => player ? NFL_TEAMS.find(t => t.id === player.team.toLowerCase()) : null,
@@ -481,7 +654,16 @@ export default function PlayerStats({ playerId, onBack }) {
     return (
       <div className="ff-card">
         <div className="ff-card-body" style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>
-          Player not found.
+          {inactiveLoading ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+              <svg className="ff-hex-spinner" viewBox="0 0 48 52">
+                <polygon points="24,2 46,14 46,38 24,50 2,38 2,14" />
+              </svg>
+              <span>Loading player data...</span>
+            </div>
+          ) : (
+            'Player not found.'
+          )}
         </div>
       </div>
     );
@@ -508,7 +690,7 @@ export default function PlayerStats({ playerId, onBack }) {
         }}>
           {/* Left: Photo */}
           <div style={{ display: 'flex', alignItems: 'flex-end', padding: '16px 0 0 20px', flexShrink: 0 }}>
-            <PlayerHeadshot espnId={getEspnId(player.name)} name={player.name} size="lg" pos={player.pos} team={player.team} />
+            <PlayerHeadshot espnId={getEspnId(player.name)} name={player.name} size="lg" pos={player.pos} team={player.team} headshotUrl={player.headshotUrl} />
           </div>
 
           {/* Center: Name + Metadata */}
@@ -549,26 +731,40 @@ export default function PlayerStats({ playerId, onBack }) {
           </div>
 
           {/* Right: Key Stats Panel */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 0, borderLeft: '1px solid var(--border)', flexShrink: 0 }}>
-            {/* Projection — hero number */}
-            <div style={{ textAlign: 'center', padding: '16px 20px' }}>
-              <div style={{ fontSize: 34, fontWeight: 900, lineHeight: 1 }} className="tabular-nums"><AnimatedNumber value={player.proj} /></div>
-              <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginTop: 3 }}>Proj</div>
+          {player.status === 'RET' ? (
+            /* Retired players — show last active season instead of proj/pts */
+            <div style={{ display: 'flex', alignItems: 'center', borderLeft: '1px solid var(--border)', flexShrink: 0, padding: '16px 20px', gap: 16 }}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 28, fontWeight: 900, lineHeight: 1, color: 'var(--text-muted)' }} className="tabular-nums">{player.lastSeason}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginTop: 3 }}>Last Season</div>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 28, fontWeight: 900, lineHeight: 1, color: 'var(--text-muted)' }} className="tabular-nums">{player.firstSeason}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginTop: 3 }}>First Season</div>
+              </div>
             </div>
-            {/* Avg + Last — secondary stats */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '16px 20px 16px 0' }}>
-              <div>
-                <div style={{ fontSize: 18, fontWeight: 700, lineHeight: 1, color: player.proj > player.avg ? 'var(--success-green)' : player.proj < player.avg ? 'var(--red)' : 'var(--text)' }} className="tabular-nums">
-                  {player.avg} {player.proj > player.avg ? '\u2191' : player.proj < player.avg ? '\u2193' : ''}
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 0, borderLeft: '1px solid var(--border)', flexShrink: 0 }}>
+              {/* Projection — hero number */}
+              <div style={{ textAlign: 'center', padding: '16px 20px' }}>
+                <div style={{ fontSize: 34, fontWeight: 900, lineHeight: 1 }} className="tabular-nums"><AnimatedNumber value={player.proj} /></div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginTop: 3 }}>Proj</div>
+              </div>
+              {/* Avg + Last — secondary stats */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '16px 20px 16px 0' }}>
+                <div>
+                  <div style={{ fontSize: 18, fontWeight: 700, lineHeight: 1, color: player.proj > player.avg ? 'var(--success-green)' : player.proj < player.avg ? 'var(--red)' : 'var(--text)' }} className="tabular-nums">
+                    {player.avg} {player.proj > player.avg ? '\u2191' : player.proj < player.avg ? '\u2193' : ''}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginTop: 1 }}>Season Avg</div>
                 </div>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginTop: 1 }}>Season Avg</div>
-              </div>
-              <div>
-                <div style={{ fontSize: 18, fontWeight: 700, lineHeight: 1 }} className="tabular-nums">{player.pts}</div>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginTop: 1 }}>Last Week</div>
+                <div>
+                  <div style={{ fontSize: 18, fontWeight: 700, lineHeight: 1 }} className="tabular-nums">{player.pts}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginTop: 1 }}>Last Week</div>
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
@@ -581,8 +777,11 @@ export default function PlayerStats({ playerId, onBack }) {
         </div>
       )}
 
-      {/* HexScore Breakdown — wider than parent for chart space */}
-      {hexData && (
+      {/* Career Stats — shown for all players with historical data */}
+      <CareerStatsTable player={player} />
+
+      {/* HexScore Breakdown — only shown for active players */}
+      {hexData && player.status !== 'RET' && (
         <div className="ff-card" style={{ marginBottom: 16, overflow: 'hidden' }}>
           <div style={{ height: 4, background: 'var(--accent)' }} />
 

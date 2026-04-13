@@ -1,5 +1,5 @@
 /**
- * expand-stats.js — Parse nfl_player_stats_2021_2025.csv and generate
+ * expand-stats.js — Parse nfl_player_stats.csv and generate
  * expanded data files for the HexMetrics client.
  *
  * Outputs:
@@ -14,11 +14,15 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..');
-const CSV_PATH = path.join(ROOT, 'nfl_player_stats_2021_2025.csv');
+const CSV_PATH = path.join(ROOT, 'nfl_player_stats.csv');
 const PLAYER_MAP_PATH = path.join(ROOT, 'player_map.json');
 const OUT_DETAILED = path.join(ROOT, 'client/src/data/playerDetailedStats.js');
 const OUT_PLAYERS = path.join(ROOT, 'client/src/data/players.js');
 const OUT_HISTORICAL = path.join(ROOT, 'client/src/data/historicalStats.js');
+const OUT_RETIRED = path.join(ROOT, 'client/src/data/retiredPlayers.js');
+const OUT_INACTIVE_PLAYERS = path.join(ROOT, 'client/src/data/inactivePlayers.js');
+const OUT_INACTIVE_DETAILED = path.join(ROOT, 'client/src/data/inactiveDetailedStats.js');
+const OUT_INACTIVE_HISTORICAL = path.join(ROOT, 'client/src/data/inactiveHistoricalStats.js');
 
 // ── Parse CSV ──────────────────────────────────────────────────────────────────
 function parseCSV(csvText) {
@@ -323,6 +327,7 @@ playerMap.forEach(p => {
 
 // Match CSV rows to player IDs
 const matched = {};    // playerId → { seasons: { year: stats } }
+const inactiveMatched = {};  // nflverseId → { name, pos, team, seasons }
 const unmatched = new Set();
 let matchCount = 0;
 
@@ -349,6 +354,27 @@ for (const row of regRows) {
       matchCount++;
     } else {
       unmatched.add(displayName);
+      const nflId = (row.player_id || '').trim();
+      if (nflId) {
+        if (!inactiveMatched[nflId]) {
+          inactiveMatched[nflId] = {
+            id: nflId,
+            name: displayName,
+            pos: pos,
+            posGroup: (row.position_group || '').trim(),
+            headshot: (row.headshot_url || '').trim(),
+            team: (row.recent_team || '').trim(),
+            latestSeason: 0,
+            seasons: {}
+          };
+        }
+        const season = numInt(row.season);
+        inactiveMatched[nflId].seasons[season] = buildStats(row);
+        if (season > inactiveMatched[nflId].latestSeason) {
+          inactiveMatched[nflId].latestSeason = season;
+          inactiveMatched[nflId].team = (row.recent_team || '').trim();
+        }
+      }
     }
     continue;
   }
@@ -362,17 +388,46 @@ for (const row of regRows) {
 console.log(`Matched ${matchCount} row-seasons across ${Object.keys(matched).length} players`);
 console.log(`Unmatched display names: ${unmatched.size}`);
 
-// Show which of our 255 players didn't match
+// Players without CSV data — create zeroed-stats stub entries
+// (e.g. players on IR all season still appear in historicalStats with gp:0)
+const currentYear = Math.max(...[...new Set(regRows.map(r => numInt(r.season)))]);
 const unmatchedPlayers = playerMap.filter(p => !matched[p.id]);
-console.log(`\nPlayers without CSV data (${unmatchedPlayers.length}):`);
-unmatchedPlayers.forEach(p => console.log(`  ${p.id} ${p.name} (${p.pos} ${p.team})`));
+if (unmatchedPlayers.length > 0) {
+  console.log(`\nCreating zero-stat stubs for ${unmatchedPlayers.length} players without CSV data:`);
+  for (const p of unmatchedPlayers) {
+    console.log(`  ${p.id} ${p.name} (${p.pos} ${p.team}) → stub gp:0 for ${currentYear}`);
+    const zeroRow = {};
+    Object.keys(buildStats({ season: String(currentYear), recent_team: p.team, games: '0' })).forEach(k => {
+      zeroRow[k] = k === 'season' ? currentYear : k === 'team' ? p.team : 0;
+    });
+    zeroRow.games = 0;
+    if (!matched[p.id]) matched[p.id] = { player: p, seasons: {} };
+    matched[p.id].seasons[currentYear] = zeroRow;
+  }
+}
+
+// Also add zero-stat current-year entries for matched players missing this season
+// (e.g. Tank Dell has 2023/2024 stats but missed 2025 on IR)
+const missingCurrentYear = playerMap.filter(p => matched[p.id] && !matched[p.id].seasons[currentYear]);
+if (missingCurrentYear.length > 0) {
+  console.log(`\nAdding ${currentYear} zero-stat entries for ${missingCurrentYear.length} matched players missing current season:`);
+  for (const p of missingCurrentYear) {
+    console.log(`  ${p.id} ${p.name} (${p.pos} ${p.team}) → gp:0 for ${currentYear}`);
+    const zeroRow = {};
+    Object.keys(buildStats({ season: String(currentYear), recent_team: p.team, games: '0' })).forEach(k => {
+      zeroRow[k] = k === 'season' ? currentYear : k === 'team' ? p.team : 0;
+    });
+    zeroRow.games = 0;
+    matched[p.id].seasons[currentYear] = zeroRow;
+  }
+}
 
 // ── Generate playerDetailedStats.js ────────────────────────────────────────────
 console.log('\nGenerating playerDetailedStats.js...');
 
 let detailedJS = `/**
  * Player Detailed Stats — Full statistical breakdown per player per season
- * Generated from nfl_player_stats_2021_2025.csv by scripts/expand-stats.js
+ * Generated from nfl_player_stats.csv by scripts/expand-stats.js
  * ${new Date().toISOString().split('T')[0]}
  *
  * Keys: passing, rushing, receiving, kicking, defense, returns, misc
@@ -422,14 +477,38 @@ while ((om = origRe.exec(origContent)) !== null) {
 
 let playersJS = `export const PLAYERS = [\n`;
 
-// Group by position for comments
-const posGroups = { QB: [], RB: [], WR: [], TE: [], K: [] };
+// Group by position for comments (include DEF)
+const POS_ORDER = ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'];
+const posGroups = {};
+POS_ORDER.forEach(p => { posGroups[p] = []; });
 origPlayers.forEach(p => {
   if (posGroups[p.pos]) posGroups[p.pos].push(p);
 });
 
-for (const [pos, players] of Object.entries(posGroups)) {
-  playersJS += `  // ===== ${pos}S (${players.length}) =====\n`;
+// Capture DEF entries as raw lines from original content (they have unique stat fields)
+const defEntries = [];
+const defLineRe = /^(\s*\{[^}]*pos:'DEF'[^}]*\},?)$/gm;
+let defMatch;
+while ((defMatch = defLineRe.exec(origContent)) !== null) {
+  defEntries.push(defMatch[1]);
+}
+
+for (const pos of POS_ORDER) {
+  const players = posGroups[pos];
+  if (players.length === 0 && pos !== 'DEF') continue;
+
+  const label = pos === 'DEF' ? 'DEF' : `${pos}S`;
+
+  // DEF entries: preserve raw lines (unique stat schema)
+  if (pos === 'DEF') {
+    if (defEntries.length === 0) continue;
+    playersJS += `  // ===== ${label} (${defEntries.length}) =====\n`;
+    defEntries.forEach(line => { playersJS += line + '\n'; });
+    playersJS += '\n';
+    continue;
+  }
+
+  playersJS += `  // ===== ${label} (${players.length}) =====\n`;
   for (const p of players) {
     // Base fields (preserved from original)
     // Escape apostrophes in names for JS string literals (De'Von → De\'Von)
@@ -459,47 +538,122 @@ for (const [pos, players] of Object.entries(posGroups)) {
 
 playersJS += `];\n`;
 
+// Preserve PLAYERS_LAST_UPDATED if present in original
+const lastUpdatedMatch = origContent.match(/export const PLAYERS_LAST_UPDATED\s*=\s*(\{[^}]+\});/);
+if (lastUpdatedMatch) {
+  playersJS += `\nexport const PLAYERS_LAST_UPDATED = ${lastUpdatedMatch[1]};\n`;
+}
+
 fs.writeFileSync(OUT_PLAYERS, playersJS);
 console.log(`Wrote ${OUT_PLAYERS} (${(playersJS.length / 1024).toFixed(0)} KB)`);
 
-// ── Regenerate historicalStats.js with detailed breakdowns ─────────────────────
-console.log('\nGenerating historicalStats.js...');
-
+// ── Collect active-player seasons (used later when building combined histStats) ─
 const allSeasons = new Set();
 Object.values(matched).forEach(({ seasons }) => {
   Object.keys(seasons).forEach(yr => allSeasons.add(parseInt(yr)));
 });
 const sortedSeasons = [...allSeasons].sort();
 
-let histJS = `/**
- * Historical Player Stats — Real NFL data from nflverse (2021-2025)
- * Generated from nfl_player_stats_2021_2025.csv by scripts/expand-stats.js
+// ── Extract Retired / Inactive Players ────────────────────────────────────────
+console.log('\nExtracting retired/inactive players from CSV...');
+
+const FANTASY_POSITIONS = new Set(['QB', 'RB', 'WR', 'TE', 'K']);
+const QUALIFY_GAMES = 8;
+const QUALIFY_PPR_TOTAL = 80; // total PPR fantasy points in a season to qualify
+
+// Build normalized name set of active players (to exclude from retired list)
+const activeNormSet = new Set(playerMap.map(p => normalize(p.name)));
+
+const retiredRaw = {}; // normName → { name, pos, seasons: {} }
+
+for (const row of regRows) {
+  const pos = (row.position || '').trim();
+  if (!FANTASY_POSITIONS.has(pos)) continue;
+
+  const displayName = (row.player_display_name || '').trim();
+  if (!displayName) continue;
+
+  const normName = normalize(displayName);
+  const stripped = normName.replace(/\s+(jr|sr|ii|iii|iv|v)$/, '');
+
+  // Skip active players
+  if (activeNormSet.has(normName) || activeNormSet.has(stripped)) continue;
+
+  const season = numInt(row.season);
+  const stats = buildStats(row);
+
+  if (!retiredRaw[normName]) {
+    retiredRaw[normName] = { name: displayName, pos, seasons: {} };
+  }
+  // Keep highest-PPR row per season (handles position changes within a year)
+  const existing = retiredRaw[normName].seasons[season];
+  if (!existing || stats.fantasyPtsPpr > existing.fantasyPtsPpr) {
+    retiredRaw[normName].seasons[season] = stats;
+  }
+}
+
+// Filter: must have at least one qualifying season
+const qualifying = Object.values(retiredRaw).filter(p =>
+  Object.values(p.seasons).some(s => s.games >= QUALIFY_GAMES && s.fantasyPtsPpr >= QUALIFY_PPR_TOTAL)
+);
+
+// Sort by: latest season desc, then career PPR points desc (most prolific first)
+qualifying.sort((a, b) => {
+  const la = Math.max(...Object.keys(a.seasons).map(Number));
+  const lb = Math.max(...Object.keys(b.seasons).map(Number));
+  if (lb !== la) return lb - la;
+  const aTotal = Object.values(a.seasons).reduce((s, x) => s + (x.fantasyPtsPpr || 0), 0);
+  const bTotal = Object.values(b.seasons).reduce((s, x) => s + (x.fantasyPtsPpr || 0), 0);
+  return bTotal - aTotal;
+});
+
+// Assign IDs and compute metadata
+qualifying.forEach((p, i) => {
+  p.id = `r${String(i + 1).padStart(4, '0')}`;
+  const years = Object.keys(p.seasons).map(Number);
+  p.lastSeason = Math.max(...years);
+  p.firstSeason = Math.min(...years);
+  p.lastTeam = p.seasons[p.lastSeason]?.team || 'FA';
+});
+
+console.log(`Qualifying retired/inactive players: ${qualifying.length}`);
+
+// ── Write retiredPlayers.js ────────────────────────────────────────────────────
+console.log('\nGenerating retiredPlayers.js...');
+
+let retiredJS = `/**
+ * Retired / Inactive Players
+ * Generated from nfl_player_stats.csv by scripts/expand-stats.js
  * ${new Date().toISOString().split('T')[0]}
  *
- * Now includes full stat breakdowns per season (not just gp/totalPts/avgPts).
- * Used by HexScore engine for multi-year weighted production.
+ * Includes all QB/RB/WR/TE/K players with at least one season of
+ * ${QUALIFY_GAMES}+ games and ${QUALIFY_PPR_TOTAL}+ total PPR fantasy points.
+ * IDs use the format r0001, r0002, ...
  */
 
-export const HISTORICAL_STATS = {
-  players: {\n`;
+export const RETIRED_PLAYERS = [\n`;
 
-for (const pid of sortedIds) {
-  const { player, seasons } = matched[pid];
+for (const p of qualifying) {
+  const escapedName = p.name.replace(/'/g, "\\'");
+  retiredJS += `  { id:'${p.id}', name:'${escapedName}', team:'${p.lastTeam}', pos:'${p.pos}', pts:0, proj:0, avg:0, status:'RET', lastSeason:${p.lastSeason}, firstSeason:${p.firstSeason} },\n`;
+}
+retiredJS += `];\n`;
+
+fs.writeFileSync(OUT_RETIRED, retiredJS);
+console.log(`Wrote ${OUT_RETIRED} (${(retiredJS.length / 1024).toFixed(0)} KB, ${qualifying.length} players)`);
+
+// ── Helper: build compact history entry for a player ──────────────────────────
+function buildHistEntry(pos, seasons) {
   const seasonKeys = Object.keys(seasons).sort((a, b) => parseInt(b) - parseInt(a));
-
-  histJS += `    ${pid}: { `;
   const parts = [];
   for (const yr of seasonKeys) {
     const s = seasons[yr];
     const gp = s.games;
     const totalPts = s.fantasyPtsPpr;
     const avgPts = gp > 0 ? num(totalPts / gp, 1) : 0;
-
-    // Build compact stat object per season
     const compact = { gp, totalPts, avgPts };
-
-    // Add key position stats
-    if (player.pos === 'QB') {
+    if (s.team) compact.team = s.team;
+    if (pos === 'QB') {
       if (s.passingYards) compact.passYds = s.passingYards;
       if (s.passingTds) compact.passTd = s.passingTds;
       if (s.passingInt) compact.int = s.passingInt;
@@ -508,7 +662,7 @@ for (const pid of sortedIds) {
       if (s.rushingYards) compact.rushYds = s.rushingYards;
       if (s.rushingTds) compact.rushTd = s.rushingTds;
       if (s.passingEpa) compact.passEpa = s.passingEpa;
-    } else if (player.pos === 'RB') {
+    } else if (pos === 'RB') {
       if (s.rushingYards) compact.rushYds = s.rushingYards;
       if (s.rushingTds) compact.rushTd = s.rushingTds;
       if (s.carries) compact.carries = s.carries;
@@ -516,7 +670,7 @@ for (const pid of sortedIds) {
       if (s.receivingYards) compact.recYds = s.receivingYards;
       if (s.receivingTds) compact.recTd = s.receivingTds;
       if (s.targets) compact.tgt = s.targets;
-    } else if (player.pos === 'WR') {
+    } else if (pos === 'WR') {
       if (s.receptions) compact.rec = s.receptions;
       if (s.targets) compact.tgt = s.targets;
       if (s.receivingYards) compact.recYds = s.receivingYards;
@@ -524,34 +678,178 @@ for (const pid of sortedIds) {
       if (s.receivingYAC) compact.yac = s.receivingYAC;
       if (s.targetShare) compact.tgtShare = s.targetShare;
       if (s.rushingYards) compact.rushYds = s.rushingYards;
-    } else if (player.pos === 'TE') {
+    } else if (pos === 'TE') {
       if (s.receptions) compact.rec = s.receptions;
       if (s.targets) compact.tgt = s.targets;
       if (s.receivingYards) compact.recYds = s.receivingYards;
       if (s.receivingTds) compact.recTd = s.receivingTds;
       if (s.targetShare) compact.tgtShare = s.targetShare;
-    } else if (player.pos === 'K') {
+    } else if (pos === 'K') {
       if (s.fgMade) compact.fgm = s.fgMade;
       if (s.fgAtt) compact.fga = s.fgAtt;
       if (s.fgPct) compact.fgPct = s.fgPct;
       if (s.patMade) compact.patm = s.patMade;
+    } else if (['DE','DT','DL','NT','LB','ILB','OLB','MLB','CB','DB','FS','SS','S','SAF'].includes(pos)) {
+      if (s.defTacklesCombined) compact.tkl = s.defTacklesCombined;
+      if (s.defSacks) compact.sacks = s.defSacks;
+      if (s.defInterceptions) compact.int = s.defInterceptions;
+      if (s.defTFL) compact.tfl = s.defTFL;
+      if (s.defPassDefended) compact.pd = s.defPassDefended;
+      if (s.defFumblesForced) compact.ff = s.defFumblesForced;
     }
-
     parts.push(`'${yr}': ${JSON.stringify(compact)}`);
   }
-  histJS += parts.join(', ');
-  histJS += ` }, // ${player.name}\n`;
+  return parts;
 }
 
-histJS += `  },
+// ── Regenerate historicalStats.js with active + retired players ───────────────
+console.log('\nRegenerating historicalStats.js with retired player data...');
+
+// Collect all seasons across both active and retired
+const allSeasonsCombined = new Set([...allSeasons]);
+qualifying.forEach(p => Object.keys(p.seasons).forEach(yr => allSeasonsCombined.add(parseInt(yr))));
+const sortedSeasonsCombined = [...allSeasonsCombined].sort();
+
+let histJSCombined = `/**
+ * Historical Player Stats — Real NFL data from nflverse (1999-2025)
+ * Generated from nfl_player_stats.csv by scripts/expand-stats.js
+ * ${new Date().toISOString().split('T')[0]}
+ *
+ * Includes active players (p-IDs) and retired/inactive players (r-IDs).
+ * All stats are regular-season only. Scoring format: PPR.
+ */
+
+export const HISTORICAL_STATS = {
+  players: {\n`;
+
+// Active players (reuse existing histJS entries by rebuilding)
+for (const pid of sortedIds) {
+  const { player, seasons } = matched[pid];
+  const parts = buildHistEntry(player.pos, seasons);
+  histJSCombined += `    ${pid}: { ${parts.join(', ')} }, // ${player.name}\n`;
+}
+
+// Retired players
+for (const p of qualifying) {
+  const parts = buildHistEntry(p.pos, p.seasons);
+  if (parts.length === 0) continue;
+  const escapedName = p.name.replace(/'/g, "\\'");
+  histJSCombined += `    ${p.id}: { ${parts.join(', ')} }, // ${escapedName} (RET)\n`;
+}
+
+histJSCombined += `  },
   meta: {
     scoringFormat: 'ppr',
     lastUpdated: '${new Date().toISOString()}',
-    seasons: ${JSON.stringify(sortedSeasons)}
+    seasons: ${JSON.stringify(sortedSeasonsCombined)}
   }
 };\n`;
 
-fs.writeFileSync(OUT_HISTORICAL, histJS);
-console.log(`Wrote ${OUT_HISTORICAL} (${(histJS.length / 1024).toFixed(0)} KB)`);
+fs.writeFileSync(OUT_HISTORICAL, histJSCombined);
+console.log(`Wrote ${OUT_HISTORICAL} (${(histJSCombined.length / 1024).toFixed(0)} KB)`);
+
+// ── Generate inactivePlayers.js ───────────────────────────────────────────────
+console.log('\nGenerating inactivePlayers.js...');
+
+const inactiveList = Object.values(inactiveMatched);
+// Sort by latest season desc, then career PPR desc
+inactiveList.sort((a, b) => {
+  if (b.latestSeason !== a.latestSeason) return b.latestSeason - a.latestSeason;
+  const aTotal = Object.values(a.seasons).reduce((s, x) => s + (x.fantasyPtsPpr || 0), 0);
+  const bTotal = Object.values(b.seasons).reduce((s, x) => s + (x.fantasyPtsPpr || 0), 0);
+  return bTotal - aTotal;
+});
+
+console.log(`Inactive players collected: ${inactiveList.length}`);
+
+let inactivePlayersJS = `/**
+ * Inactive Players — All historical players not in the active roster
+ * Generated from nfl_player_stats.csv by scripts/expand-stats.js
+ * ${new Date().toISOString().split('T')[0]}
+ *
+ * All positions included (QB, RB, WR, TE, K, DL, LB, DB, OL, P, LS, etc.)
+ * IDs use nflverse player_id format (e.g., "00-0019596").
+ */
+
+export const INACTIVE_PLAYERS = [\n`;
+
+for (const p of inactiveList) {
+  const years = Object.keys(p.seasons).map(Number).sort();
+  const careerGames = Object.values(p.seasons).reduce((s, x) => s + (x.games || 0), 0);
+  const careerFantasyPts = num(Object.values(p.seasons).reduce((s, x) => s + (x.fantasyPtsPpr || 0), 0), 1);
+  const teamSet = [];
+  for (const yr of years) {
+    const t = p.seasons[yr].team;
+    if (t && !teamSet.includes(t)) teamSet.push(t);
+  }
+  const escapedName = p.name.replace(/'/g, "\\'");
+  inactivePlayersJS += `  { id:'${p.id}', name:'${escapedName}', team:'${p.team}', pos:'${p.pos}', posGroup:'${p.posGroup}', inactive:true, headshotUrl:'${p.headshot}', careerGames:${careerGames}, careerFantasyPts:${careerFantasyPts}, firstSeason:${years[0]}, lastSeason:${years[years.length - 1]}, careerSeasons:${JSON.stringify(years)}, teamHistory:${JSON.stringify(teamSet)} },\n`;
+}
+
+inactivePlayersJS += `];\n`;
+
+fs.writeFileSync(OUT_INACTIVE_PLAYERS, inactivePlayersJS);
+console.log(`Wrote ${OUT_INACTIVE_PLAYERS} (${(inactivePlayersJS.length / 1024).toFixed(0)} KB, ${inactiveList.length} players)`);
+
+// ── Generate inactiveDetailedStats.js ─────────────────────────────────────────
+console.log('\nGenerating inactiveDetailedStats.js...');
+
+let inactiveDetailedJS = `/**
+ * Inactive Player Detailed Stats — Full statistical breakdown per player per season
+ * Generated from nfl_player_stats.csv by scripts/expand-stats.js
+ * ${new Date().toISOString().split('T')[0]}
+ */
+
+export const INACTIVE_DETAILED_STATS = {\n`;
+
+for (const p of inactiveList) {
+  const seasonKeys = Object.keys(p.seasons).sort((a, b) => parseInt(b) - parseInt(a));
+  const escapedName = p.name.replace(/'/g, "\\'");
+  inactiveDetailedJS += `  '${p.id}': { // ${escapedName} (${p.pos})\n`;
+  for (const yr of seasonKeys) {
+    const trimmed = trimStats(p.seasons[yr], p.pos);
+    const { season: _s, ...rest } = trimmed;
+    inactiveDetailedJS += `    '${yr}': ${JSON.stringify(rest)},\n`;
+  }
+  inactiveDetailedJS += `  },\n`;
+}
+inactiveDetailedJS += `};\n`;
+
+fs.writeFileSync(OUT_INACTIVE_DETAILED, inactiveDetailedJS);
+console.log(`Wrote ${OUT_INACTIVE_DETAILED} (${(inactiveDetailedJS.length / 1024).toFixed(0)} KB)`);
+
+// ── Generate inactiveHistoricalStats.js ───────────────────────────────────────
+console.log('\nGenerating inactiveHistoricalStats.js...');
+
+const inactiveSeasons = new Set();
+inactiveList.forEach(p => Object.keys(p.seasons).forEach(yr => inactiveSeasons.add(parseInt(yr))));
+const sortedInactiveSeasons = [...inactiveSeasons].sort();
+
+let inactiveHistJS = `/**
+ * Inactive Player Historical Stats — Compact per-season summaries
+ * Generated from nfl_player_stats.csv by scripts/expand-stats.js
+ * ${new Date().toISOString().split('T')[0]}
+ */
+
+export const INACTIVE_HISTORICAL_STATS = {
+  players: {\n`;
+
+for (const p of inactiveList) {
+  const parts = buildHistEntry(p.pos, p.seasons);
+  if (parts.length === 0) continue;
+  const escapedName = p.name.replace(/'/g, "\\'");
+  inactiveHistJS += `    '${p.id}': { ${parts.join(', ')} }, // ${escapedName}\n`;
+}
+
+inactiveHistJS += `  },
+  meta: {
+    scoringFormat: 'ppr',
+    lastUpdated: '${new Date().toISOString()}',
+    seasons: ${JSON.stringify(sortedInactiveSeasons)}
+  }
+};\n`;
+
+fs.writeFileSync(OUT_INACTIVE_HISTORICAL, inactiveHistJS);
+console.log(`Wrote ${OUT_INACTIVE_HISTORICAL} (${(inactiveHistJS.length / 1024).toFixed(0)} KB)`);
 
 console.log('\nDone! All data files regenerated.');

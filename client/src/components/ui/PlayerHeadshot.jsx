@@ -18,7 +18,7 @@ export function getTeamLogoUrl(team) {
   return `https://a.espncdn.com/i/teamlogos/nfl/500/${mapped}.png`;
 }
 
-export default function PlayerHeadshot({ espnId, name, size = 'sm', pos, team }) {
+export default function PlayerHeadshot({ espnId, name, size = 'sm', pos, team, headshotUrl }) {
   const [failed, setFailed] = useState(false);
   const dim = SIZE_MAP[size] || SIZE_MAP.sm;
 
@@ -44,7 +44,7 @@ export default function PlayerHeadshot({ espnId, name, size = 'sm', pos, team })
     if (espnId) {
       src = `https://a.espncdn.com/combiner/i?img=/i/headshots/nfl/players/full/${espnId}.png&w=${dim.w * 3}&h=${dim.h * 3}`;
     } else if (name) {
-      src = getHeadshotUrl(name);
+      src = getHeadshotUrl(name) || headshotUrl || null;
     }
   }
 

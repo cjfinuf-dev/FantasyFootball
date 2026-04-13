@@ -12,7 +12,7 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..');
-const ROSTER_CSV = path.join(ROOT, 'roster_2025.csv');
+const ROSTER_CSV = path.join(ROOT, 'nflverse_cache', 'roster_2025.csv');
 const PLAYERS_FILE = path.join(ROOT, 'client/src/data/players.js');
 const OUTPUT = path.join(ROOT, 'client/src/data/playerAges.js');
 
@@ -27,6 +27,10 @@ while ((m = pRe.exec(pContent)) !== null) {
 console.log(`Found ${players.length} players in players.js`);
 
 // Parse nflverse roster CSV
+if (!fs.existsSync(ROSTER_CSV)) {
+  console.error(`ERROR: ${ROSTER_CSV} not found. Run: node scripts/fetch-season.js --download`);
+  process.exit(1);
+}
 const rosterLines = fs.readFileSync(ROSTER_CSV, 'utf-8').split('\n');
 const rHeaders = rosterLines[0].split(',');
 const nameIdx = rHeaders.indexOf('full_name');

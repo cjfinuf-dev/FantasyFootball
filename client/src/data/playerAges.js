@@ -37,6 +37,10 @@ export const PLAYER_AGES = {
   p30: 25, // Michael Penix Jr.
   p31: 26, // Malik Willis
   p32: 31, // Marcus Mariota
+  p296: 29, // Deshaun Watson
+  p305: 29, // Gardner Minshew
+  p320: 26, // Will Levis
+  p321: 23, // Anthony Richardson
   p33: 29, // Christian McCaffrey
   p34: 23, // Bijan Robinson
   p35: 23, // Jahmyr Gibbs
@@ -117,6 +121,12 @@ export const PLAYER_AGES = {
   p110: 21, // Braelon Allen
   p111: 25, // Ray Davis
   p112: 26, // Brian Robinson
+  p298: 30, // Austin Ekeler
+  p300: 29, // Joe Mixon
+  p303: 27, // Alexander Mattison
+  p307: 26, // Salvon Ahmed
+  p315: 25, // Jerome Ford
+  p318: 24, // Roschon Johnson
   p113: 24, // Puka Nacua
   p114: 23, // Jaxon Smith-Njigba
   p115: 25, // Ja'Marr Chase
@@ -197,6 +207,21 @@ export const PLAYER_AGES = {
   p190: 25, // Kevin Austin Jr.
   p191: 32, // Sterling Shepard
   p192: 27, // Greg Dortch
+  p293: 32, // DeAndre Carter
+  p294: 31, // Trent Taylor
+  p295: 30, // Mike Williams
+  p297: 29, // Noah Brown
+  p299: 30, // Zay Jones
+  p301: 30, // Josh Reynolds
+  p308: 26, // Gabe Davis
+  p309: 27, // Brandon Aiyuk
+  p310: 29, // Van Jefferson
+  p313: 25, // Rondale Moore
+  p314: 25, // Josh Palmer
+  p317: 25, // Tank Dell
+  p319: 24, // Trey Palmer
+  p322: 24, // Luke McCaffrey
+  p324: 23, // Jaylin Lane
   p193: 25, // Trey McBride
   p194: 31, // George Kittle
   p195: 24, // Tucker Kraft
@@ -233,6 +258,13 @@ export const PLAYER_AGES = {
   p226: 28, // Dawson Knox
   p227: 30, // Evan Engram
   p228: 29, // Mike Gesicki
+  p302: 27, // Irv Smith
+  p304: 28, // Foster Moreau
+  p306: 28, // Donald Parham
+  p311: 25, // Brevin Jordan
+  p312: 26, // Brock Wright
+  p316: 24, // Darnell Washington
+  p323: 22, // Ja'Tavion Sanders
   p229: 31, // Ka'imi Fairbairn
   p230: 34, // Jason Myers
   p231: 26, // Spencer Shrader
@@ -265,6 +297,38 @@ export const PLAYER_AGES = {
   p258: 25, // Chad Ryland
   p259: 25, // Lucas Havrisik
   p260: 41, // Matt Prater
+  p261: 25, // UNMATCHED - placeholder // Buffalo Bills D/ST
+  p262: 25, // UNMATCHED - placeholder // Philadelphia Eagles D/ST
+  p263: 25, // UNMATCHED - placeholder // Baltimore Ravens D/ST
+  p264: 25, // UNMATCHED - placeholder // Denver Broncos D/ST
+  p265: 25, // UNMATCHED - placeholder // Minnesota Vikings D/ST
+  p266: 25, // UNMATCHED - placeholder // Pittsburgh Steelers D/ST
+  p267: 25, // UNMATCHED - placeholder // San Francisco 49ers D/ST
+  p268: 25, // UNMATCHED - placeholder // Detroit Lions D/ST
+  p269: 25, // UNMATCHED - placeholder // Kansas City Chiefs D/ST
+  p270: 25, // UNMATCHED - placeholder // Houston Texans D/ST
+  p271: 25, // UNMATCHED - placeholder // Los Angeles Chargers D/ST
+  p272: 25, // UNMATCHED - placeholder // Green Bay Packers D/ST
+  p273: 25, // UNMATCHED - placeholder // Chicago Bears D/ST
+  p274: 25, // UNMATCHED - placeholder // Dallas Cowboys D/ST
+  p275: 25, // UNMATCHED - placeholder // Cleveland Browns D/ST
+  p276: 25, // UNMATCHED - placeholder // New York Jets D/ST
+  p277: 25, // UNMATCHED - placeholder // Tampa Bay Buccaneers D/ST
+  p278: 25, // UNMATCHED - placeholder // Miami Dolphins D/ST
+  p279: 25, // UNMATCHED - placeholder // New Orleans Saints D/ST
+  p280: 25, // UNMATCHED - placeholder // Seattle Seahawks D/ST
+  p281: 25, // UNMATCHED - placeholder // Cincinnati Bengals D/ST
+  p282: 25, // UNMATCHED - placeholder // Washington Commanders D/ST
+  p283: 25, // UNMATCHED - placeholder // Indianapolis Colts D/ST
+  p284: 25, // UNMATCHED - placeholder // Los Angeles Rams D/ST
+  p285: 25, // UNMATCHED - placeholder // Atlanta Falcons D/ST
+  p286: 25, // UNMATCHED - placeholder // Arizona Cardinals D/ST
+  p287: 25, // UNMATCHED - placeholder // New York Giants D/ST
+  p288: 25, // UNMATCHED - placeholder // Jacksonville Jaguars D/ST
+  p289: 25, // UNMATCHED - placeholder // Tennessee Titans D/ST
+  p290: 25, // UNMATCHED - placeholder // New England Patriots D/ST
+  p291: 25, // UNMATCHED - placeholder // Las Vegas Raiders D/ST
+  p292: 25, // UNMATCHED - placeholder // Carolina Panthers D/ST
 };
 
 export function getPlayerAge(playerId) {

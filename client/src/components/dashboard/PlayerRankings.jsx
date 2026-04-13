@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useRef } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { PLAYERS } from '../../data/players';
 import { getEspnId } from '../../data/espnIds';
 import { getHexScore, getHexTier, getHistoricalData, formatHex } from '../../utils/hexScore';
@@ -7,6 +7,12 @@ import PosBadge from '../ui/PosBadge';
 import StatusLabel from '../ui/StatusLabel';
 import PlayerHeadshot from '../ui/PlayerHeadshot';
 import PlayerLink from '../ui/PlayerLink';
+
+const ACTIVE_IDS = new Set(PLAYERS.map(p => p.id));
+
+const POOL_ORDER = { ACT: 0, INACT: 1 };
+const getPool = (status) => status === 'INACT' ? 'INACT' : 'ACT';
+const isNonRostered = (status) => status === 'INACT' || status === 'NFL';
 
 function RangeFilter({ value, onChange }) {
   return (
@@ -101,6 +107,8 @@ export default function PlayerRankings({ onPlayerClick }) {
   const [showFilters, setShowFilters] = useState(false);
   const [rowLimit, setRowLimit] = useState(50);
   const [detailView, setDetailView] = useState(false);
+  const [showRetired, setShowRetired] = useState(false);
+  const [inactivePool, setInactivePool] = useState(null);
   const [tableScrolled, setTableScrolled] = useState(false);
   const [scrolledEnd, setScrolledEnd] = useState(false);
   const [csvToast, setCsvToast] = useState(false);
@@ -111,9 +119,30 @@ export default function PlayerRankings({ onPlayerClick }) {
     setScrolledEnd(e.target.scrollLeft + e.target.clientWidth >= e.target.scrollWidth - 4);
   }, []);
 
+  // Lazy-load inactive players index on first toggle (slim ~750KB vs full 1.9MB)
+  useEffect(() => {
+    if ((showRetired || search.length >= 3) && !inactivePool) {
+      import('../../data/inactivePlayersIndex').then(mod => {
+        const HEADSHOT_PREFIX = {
+          u: 'https://static.www.nfl.com/image/upload/f_auto,q_auto/league/',
+          p: 'https://static.www.nfl.com/image/private/f_auto,q_auto/league/',
+        };
+        const getHeadshot = (h) => h ? HEADSHOT_PREFIX[h[0]] + h.slice(1) : null;
+        const pool = mod.INACTIVE_INDEX
+          .filter(p => !ACTIVE_IDS.has(p.id))
+          .map(p => {
+            const status = p.lastSeason >= 2025 ? 'NFL' : 'INACT';
+            const avg = p.gp > 0 ? +(p.pts / p.gp).toFixed(1) : 0;
+            return { ...p, status, pts: Math.round(p.pts), proj: 0, avg, headshotUrl: getHeadshot(p.h) };
+          });
+        setInactivePool(pool);
+      });
+    }
+  }, [showRetired, search, inactivePool]);
+
   // Detail view forces history on and max rows
   const effectiveShowHistory = detailView || showHistory;
-  const effectiveRowLimit = detailView ? 260 : rowLimit;
+  const effectiveRowLimit = detailView ? 9999 : showRetired ? 500 : rowLimit;
   const positions = ['ALL', 'QB', 'RB', 'WR', 'TE', 'K', 'DEF'];
 
   const [filters, setFilters] = useState({
@@ -158,11 +187,23 @@ export default function PlayerRankings({ onPlayerClick }) {
   const statColumns = posFilter !== 'ALL' && POS_STAT_COLUMNS[posFilter] ? POS_STAT_COLUMNS[posFilter] : [];
 
   const filtered = useMemo(() => {
-    return PLAYERS
+    const searchLower = search.toLowerCase();
+
+    // Toggle swaps view: active-only vs retired/inactive-only
+    // Search >= 3 chars searches across all pools
+    const pool = search.length >= 3
+      ? [...PLAYERS, ...(inactivePool || [])]
+      : showRetired
+        ? (inactivePool || []).filter(p => p.status === 'INACT')
+        : PLAYERS;
+
+    return pool
       .filter(p => posFilter === 'ALL' || p.pos === posFilter)
-      .filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
+      .filter(p => p.name.toLowerCase().includes(searchLower))
       .filter(p => {
         if (!showFilters && !hasActiveFilters) return true;
+        // Retired players skip numeric filters — they have no current-season stats
+        if (isNonRostered(p.status)) return filters.status === 'ALL' || filters.status === p.status;
         const hex = getHexScore(p.id);
         if (!passesRange(hex, filters.hex)) return false;
         if (!passesRange(p.pts, filters.pts)) return false;
@@ -182,6 +223,20 @@ export default function PlayerRankings({ onPlayerClick }) {
         return true;
       })
       .sort((a, b) => {
+        // When sorting by pool, use explicit pool ordering
+        if (sortField === 'pool') {
+          const ap = POOL_ORDER[getPool(a.status)] ?? 0;
+          const bp = POOL_ORDER[getPool(b.status)] ?? 0;
+          if (ap !== bp) return sortDir === 'asc' ? ap - bp : bp - ap;
+          // Within same pool, secondary sort by avg desc
+          return (b.avg || 0) - (a.avg || 0);
+        }
+        // Default: retired/inactive sort to the bottom unless searching by name
+        if (!search) {
+          const aRet = (isNonRostered(a.status)) ? 1 : 0;
+          const bRet = (isNonRostered(b.status)) ? 1 : 0;
+          if (aRet !== bRet) return aRet - bRet;
+        }
         if (sortField === 'hex') {
           const ah = getHexScore(a.id), bh = getHexScore(b.id);
           return sortDir === 'asc' ? ah - bh : bh - ah;
@@ -196,7 +251,7 @@ export default function PlayerRankings({ onPlayerClick }) {
         if (typeof av === 'string') return sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
         return sortDir === 'asc' ? av - bv : bv - av;
       });
-  }, [sortField, sortDir, posFilter, search, filters, yearFilters, showFilters, hasActiveFilters, effectiveShowHistory, historicalData, seasons]);
+  }, [sortField, sortDir, posFilter, search, showRetired, inactivePool, filters, yearFilters, showFilters, hasActiveFilters, effectiveShowHistory, historicalData, seasons]);
 
   const SortArrow = ({ field }) => {
     if (field !== sortField) return null;
@@ -211,13 +266,13 @@ export default function PlayerRankings({ onPlayerClick }) {
   };
 
   const handleExportCSV = () => {
-    const headers = ['Rank', 'Player', 'Team', 'POS', 'HEX', 'PTS', 'PROJ', 'AVG'];
+    const headers = ['Rank', 'Player', 'Team', 'POS', 'Pool', 'HEX', 'PTS', 'PROJ', 'AVG'];
     statColumns.forEach(col => headers.push(col.label));
     if (effectiveShowHistory) seasons.forEach(yr => headers.push(`${yr} GP`, `${yr} Total`, `${yr} PPG`));
     headers.push('Status');
 
     const rows = filtered.map((p, i) => {
-      const row = [i + 1, `"${p.name}"`, p.team, p.pos, getHexScore(p.id), p.pts, p.proj, p.avg];
+      const row = [i + 1, `"${p.name}"`, p.team, p.pos, getPool(p.status), getHexScore(p.id), p.pts, p.proj, p.avg];
       statColumns.forEach(col => row.push(p[col.key] ?? ''));
       if (effectiveShowHistory) {
         const h = getPlayerHistory(p.id);
@@ -299,6 +354,11 @@ export default function PlayerRankings({ onPlayerClick }) {
               History
             </label>
           )}
+          <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 14, color: showRetired ? 'var(--text)' : 'var(--text-muted)', cursor: 'pointer' }}>
+            <input type="checkbox" checked={showRetired} onChange={e => setShowRetired(e.target.checked)}
+              style={{ width: 12, height: 12, accentColor: 'var(--text-muted)' }} />
+            Retired
+          </label>
           <button
             className={`ff-tm-filter-pill${showFilters ? ' active' : ''}`}
             onClick={() => setShowFilters(f => !f)}>
@@ -351,7 +411,7 @@ export default function PlayerRankings({ onPlayerClick }) {
               {/* Grouping header — shown when stat columns or history are on */}
               {(statColumns.length > 0 || effectiveShowHistory) && (
                 <tr>
-                  <th colSpan={4} style={{
+                  <th colSpan={5} style={{
                     textAlign: 'left', fontSize: 12, fontWeight: 700, letterSpacing: '0.06em',
                     textTransform: 'uppercase', color: 'var(--text-muted)',
                     background: 'var(--surface)', borderBottom: '2px solid var(--border)',
@@ -394,6 +454,7 @@ export default function PlayerRankings({ onPlayerClick }) {
                 <th style={{ width: 44 }}>#</th>
                 <th onClick={() => handleSort('name')} className={sortField === 'name' ? 'sort-active' : ''}>Player <SortArrow field="name" /></th>
                 <th style={{ width: 48 }}>POS</th>
+                <th style={{ width: 52 }} onClick={() => handleSort('pool')} className={sortField === 'pool' ? 'sort-active' : ''}>POOL <SortArrow field="pool" /></th>
                 <th style={{ width: 48 }} onClick={() => handleSort('status')} className={sortField === 'status' ? 'sort-active' : ''}>STS <SortArrow field="status" /></th>
                 <th style={{ width: 60, borderLeft: (statColumns.length > 0 || effectiveShowHistory) ? '2px solid var(--border-strong)' : undefined }} onClick={() => handleSort('hex')} className={sortField === 'hex' ? 'sort-active' : ''}>
                   <span style={{ color: 'var(--hex-purple, #8B5CF6)' }}>HEX</span> <SortArrow field="hex" />
@@ -429,6 +490,7 @@ export default function PlayerRankings({ onPlayerClick }) {
                   <th></th>
                   <th></th>
                   <th></th>
+                  <th></th>
                   <th style={{ borderLeft: effectiveShowHistory ? '2px solid var(--border-strong)' : undefined }}><RangeFilter value={filters.hex} onChange={v => setFilter('hex', v)} /></th>
                   <th><RangeFilter value={filters.pts} onChange={v => setFilter('pts', v)} /></th>
                   <th><RangeFilter value={filters.proj} onChange={v => setFilter('proj', v)} /></th>
@@ -447,13 +509,13 @@ export default function PlayerRankings({ onPlayerClick }) {
               )}
               {showFilters && hasActiveFilters && (
                 <tr style={{ background: 'var(--surface, var(--bg-alt))' }}>
-                  <th colSpan={8 + statColumns.length + (effectiveShowHistory ? seasons.length * 3 : 0)} style={{ textAlign: 'left', padding: '4px 12px' }}>
+                  <th colSpan={9 + statColumns.length + (effectiveShowHistory ? seasons.length * 3 : 0)} style={{ textAlign: 'left', padding: '4px 12px' }}>
                     <button onClick={clearFilters}
                       style={{ background: 'none', border: 'none', color: 'var(--red, #ef4444)', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: '2px 4px' }}>
                       Clear all filters
                     </button>
                     <span style={{ marginLeft: 8, fontSize: 12, color: 'var(--text-muted)' }}>
-                      Showing {filtered.length} of {PLAYERS.filter(p => posFilter === 'ALL' || p.pos === posFilter).length}
+                      Showing {filtered.length}
                     </span>
                   </th>
                 </tr>
@@ -475,7 +537,7 @@ export default function PlayerRankings({ onPlayerClick }) {
                         </span>
                       ) : (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <PlayerHeadshot espnId={getEspnId(p.name)} name={p.name} size="tiny" pos={p.pos} team={p.team} />
+                          <PlayerHeadshot espnId={getEspnId(p.name)} name={p.name} size="tiny" pos={p.pos} team={p.team} headshotUrl={p.headshotUrl} />
                           <div>
                             <PlayerLink name={p.name} playerId={p.id} onPlayerClick={onPlayerClick} />
                             <span className="player-team">{p.team}</span>
@@ -484,11 +546,21 @@ export default function PlayerRankings({ onPlayerClick }) {
                       )}
                     </td>
                     <td><PosBadge pos={p.pos} /></td>
+                    <td>{(() => {
+                      const pool = getPool(p.status);
+                      const cfg = { ACT: { label: 'ACT', color: 'var(--success-green)', bg: 'var(--green-light)' }, INACT: { label: 'INACT', color: 'var(--text-muted)', bg: 'var(--surface)' } };
+                      const c = cfg[pool];
+                      return <span style={{ display: 'inline-block', padding: '3px 6px', borderRadius: 4, background: c.bg, color: c.color, fontSize: 11, fontWeight: 700, letterSpacing: '0.03em' }}>{c.label}</span>;
+                    })()}</td>
                     <td><StatusLabel status={p.status} /></td>
-                    <td className="tabular-nums" style={{ ...hexChipStyle(hex), borderLeft: (statColumns.length > 0 || effectiveShowHistory) ? '2px solid var(--border-strong)' : undefined }}>{formatHex(hex)}</td>
-                    <td className="tabular-nums text-muted-sm">{p.pts}</td>
-                    <td className="tabular-nums text-muted-sm">{p.proj}</td>
-                    <td style={{ fontWeight: 700, color: 'var(--text)' }} className="tabular-nums">{p.avg}</td>
+                    <td className="tabular-nums" style={{ ...hexChipStyle(hex), borderLeft: (statColumns.length > 0 || effectiveShowHistory) ? '2px solid var(--border-strong)' : undefined }}>
+                      {isNonRostered(p.status) ? '—' : formatHex(hex)}
+                    </td>
+                    <td className="tabular-nums text-muted-sm">{isNonRostered(p.status) ? (p.pts || '—') : p.pts}</td>
+                    <td className="tabular-nums text-muted-sm">{isNonRostered(p.status) ? '—' : p.proj}</td>
+                    <td style={{ fontWeight: 700, color: isNonRostered(p.status) ? 'var(--text-muted)' : 'var(--text)' }} className="tabular-nums">
+                      {isNonRostered(p.status) ? (p.avg || '—') : p.avg}
+                    </td>
                     {statColumns.map((col, ci) => {
                       const val = p[col.key];
                       const display = col.fmt ? col.fmt(val) : (val ?? '—');
@@ -504,6 +576,13 @@ export default function PlayerRankings({ onPlayerClick }) {
                       );
                     })}
                     {!detailView && statColumns.length === 0 && !effectiveShowHistory && <td>{(() => {
+                      if (isNonRostered(p.status)) {
+                        // Use last 5 seasons of historical avgPts for retired/inactive players
+                        const histYears = Object.keys(history || {}).sort((a, b) => parseInt(a) - parseInt(b));
+                        const weeks = histYears.slice(-5).map(yr => history[yr]?.avgPts || 0);
+                        if (weeks.length === 0) return null;
+                        return <Sparkline data={weeks} />;
+                      }
                       const seed = parseInt(p.id.slice(1)) || 1;
                       const base = p.avg || p.proj || 10;
                       const weeks = Array.from({ length: 5 }, (_, w) => {

@@ -4,6 +4,8 @@ export default function StatusLabel({ status }) {
     out: { color: 'var(--injury-out)', bg: 'var(--red-light)', label: 'OUT', dotClass: 'injury-dot--out' },
     questionable: { color: 'var(--injury-questionable)', bg: 'var(--warning-amber-light)', label: 'Q', dotClass: 'injury-dot--questionable' },
     probable: { color: 'var(--injury-probable)', bg: 'var(--green-light)', label: 'PROB', dotClass: 'injury-dot--healthy' },
+    ir: { color: 'var(--injury-out)', bg: 'var(--red-light)', label: 'IR', dotClass: 'injury-dot--out' },
+    pup: { color: 'var(--injury-questionable)', bg: 'var(--warning-amber-light)', label: 'PUP', dotClass: 'injury-dot--questionable' },
   };
 
   const c = config[status];
