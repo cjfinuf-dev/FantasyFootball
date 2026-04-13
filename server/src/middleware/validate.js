@@ -7,7 +7,7 @@ function validateSignup(req, res, next) {
   if (name.length > 100) {
     return res.status(400).json({ error: 'Name must be under 100 characters.' });
   }
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
     return res.status(400).json({ error: 'A valid email address is required.' });
   }
   if (!password || password.length < 12) {
@@ -28,7 +28,7 @@ function validateSignup(req, res, next) {
 function validateSignin(req, res, next) {
   const { email, password } = req.body;
 
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
     return res.status(400).json({ error: 'A valid email address is required.' });
   }
   if (!password) {

@@ -5,6 +5,7 @@ import { ROSTER_PRESETS } from '../../data/scoring';
 import { getEspnId } from '../../data/espnIds';
 import { getHexScore, getHexData, formatHex } from '../../utils/hexScore';
 import { getMatchupWinProb } from '../../utils/winProb';
+import { useLiveTick } from '../../hooks/useLiveTick';
 import PosBadge from '../ui/PosBadge';
 import HexBrand from '../ui/HexBrand';
 import PlayerHeadshot from '../ui/PlayerHeadshot';
@@ -312,6 +313,7 @@ const POS_COLORS = {
 };
 
 export default function MatchupDetail({ matchup, rosters, onBack, onPlayerClick }) {
+  const tick = useLiveTick();
   const homeTeam = TEAMS.find(t => t.id === matchup.home.teamId);
   const awayTeam = TEAMS.find(t => t.id === matchup.away.teamId);
   const isUserMatchup = matchup.home.teamId === USER_TEAM_ID || matchup.away.teamId === USER_TEAM_ID;
@@ -320,12 +322,12 @@ export default function MatchupDetail({ matchup, rosters, onBack, onPlayerClick 
   const homeProj = useMemo(() => {
     if (!rosters?.[matchup.home.teamId]) return matchup.home.projected;
     return rosters[matchup.home.teamId].reduce((s, pid) => s + (PLAYER_MAP[pid]?.proj || 0), 0);
-  }, [rosters, matchup]);
+  }, [rosters, matchup, tick]);
 
   const awayProj = useMemo(() => {
     if (!rosters?.[matchup.away.teamId]) return matchup.away.projected;
     return rosters[matchup.away.teamId].reduce((s, pid) => s + (PLAYER_MAP[pid]?.proj || 0), 0);
-  }, [rosters, matchup]);
+  }, [rosters, matchup, tick]);
 
   const homeRoster = rosters?.[matchup.home.teamId] || [];
   const awayRoster = rosters?.[matchup.away.teamId] || [];
@@ -336,12 +338,12 @@ export default function MatchupDetail({ matchup, rosters, onBack, onPlayerClick 
   const awayPct = (100 - homeWinProb * 100).toFixed(2);
 
   // Team dimensions for radar
-  const homeDims = useMemo(() => calcTeamDims(matchup.home.teamId, rosters), [rosters, matchup]);
-  const awayDims = useMemo(() => calcTeamDims(matchup.away.teamId, rosters), [rosters, matchup]);
+  const homeDims = useMemo(() => calcTeamDims(matchup.home.teamId, rosters), [rosters, matchup, tick]);
+  const awayDims = useMemo(() => calcTeamDims(matchup.away.teamId, rosters), [rosters, matchup, tick]);
 
   // Position-by-position comparison
-  const homeSlots = useMemo(() => assignToSlots(rosters?.[matchup.home.teamId] || []), [rosters, matchup]);
-  const awaySlots = useMemo(() => assignToSlots(rosters?.[matchup.away.teamId] || []), [rosters, matchup]);
+  const homeSlots = useMemo(() => assignToSlots(rosters?.[matchup.home.teamId] || []), [rosters, matchup, tick]);
+  const awaySlots = useMemo(() => assignToSlots(rosters?.[matchup.away.teamId] || []), [rosters, matchup, tick]);
 
   // Key advantages
   const advantages = MATCHUP_DIMS.map((dim, i) => {

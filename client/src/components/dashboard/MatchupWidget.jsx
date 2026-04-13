@@ -4,10 +4,13 @@ import { MATCHUPS } from '../../data/matchups';
 import { PLAYERS } from '../../data/players';
 import { getEspnId } from '../../data/espnIds';
 import { getMatchupWinProb } from '../../utils/winProb';
+import { GAMES_PLAYED } from '../../data/seasonConfig';
+import { useLiveTick } from '../../hooks/useLiveTick';
 import PosBadge from '../ui/PosBadge';
 import PlayerHeadshot from '../ui/PlayerHeadshot';
 import PlayerLink from '../ui/PlayerLink';
 import HexBrand from '../ui/HexBrand';
+import AnimatedNumber from '../ui/AnimatedNumber';
 
 const PLAYER_MAP = {};
 PLAYERS.forEach(p => { PLAYER_MAP[p.id] = p; });
@@ -35,7 +38,7 @@ function WinProbBar({ homeProb }) {
 
   return (
     <div className="ff-winprob" aria-label={`Win probability: Home ${homePct}%, Away ${awayPct}%`}>
-      <span className="ff-winprob-label tabular-nums" style={{ color: 'var(--accent)', fontWeight: 700 }}>{homePct}%</span>
+      <span className="ff-winprob-label tabular-nums" style={{ color: 'var(--accent)', fontWeight: 700 }}><AnimatedNumber value={parseFloat(homePct)} decimals={1} suffix="%" /></span>
       <div className="ff-winprob-bar" style={{ position: 'relative' }}>
         <div className="ff-winprob-fill" style={{ width: `${homePct}%`, background: 'var(--accent)', borderRadius: '3px 0 0 3px' }} />
         <div className="ff-winprob-fill" style={{ width: `${awayPct}%`, background: 'var(--accent-secondary)', borderRadius: '0 3px 3px 0' }} />
@@ -46,14 +49,14 @@ function WinProbBar({ homeProb }) {
           boxShadow: '0 0 0 1px var(--border)',
         }} />
       </div>
-      <span className="ff-winprob-label tabular-nums" style={{ color: 'var(--accent-secondary-text)', fontWeight: 700 }}>{awayPct}%</span>
+      <span className="ff-winprob-label tabular-nums" style={{ color: 'var(--accent-secondary-text)', fontWeight: 700 }}><AnimatedNumber value={parseFloat(awayPct)} decimals={1} suffix="%" /></span>
     </div>
   );
 }
 
 function TeamRecord({ team }) {
   return (
-    <span style={{ fontSize: 14, color: 'var(--text-muted)', fontWeight: 500 }}>
+    <span className="text-muted-sm" style={{ fontSize: 14, fontWeight: 500 }}>
       {team.wins}-{team.losses}{team.ties > 0 ? `-${team.ties}` : ''}
     </span>
   );
@@ -73,7 +76,7 @@ function PlayerRow({ player, onPlayerClick }) {
   const injuryStatus = player.status !== 'healthy' ? player.status : null;
   return (
     <div className="ff-matchup-player">
-      <span className="ff-matchup-player-name" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <span className="ff-matchup-player-name">
         <PlayerHeadshot espnId={getEspnId(player.name)} name={player.name} size="xs" pos={player.pos} team={player.team} />
         <PosBadge pos={player.pos} size="xs" />
         <PlayerLink name={player.name} playerId={player.id} onPlayerClick={onPlayerClick} />
@@ -124,7 +127,7 @@ function MatchupCard({ matchup, expanded, rosters, onPlayerClick, onToggle, onMa
         <div className="ff-your-matchup-label" style={{
           position: 'absolute', top: 0, left: 16,
           transform: 'translateY(-50%)',
-          padding: '3px 10px', borderRadius: 'var(--radius-sm)',
+          padding: '4px 10px', borderRadius: 'var(--radius-sm)',
           background: 'var(--accent)', color: 'var(--on-accent)',
           fontSize: 11, fontWeight: 700, textTransform: 'uppercase',
           letterSpacing: '0.06em', lineHeight: '18px',
@@ -134,7 +137,7 @@ function MatchupCard({ matchup, expanded, rosters, onPlayerClick, onToggle, onMa
       {expanded && (
         <div className="ff-card-header">
           <h2>{isUserMatchup ? 'Matchup Details' : 'Matchup Preview'}</h2>
-          <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>Week 12</span>
+          <span className="ff-card-header-meta">Week {GAMES_PLAYED + 1}</span>
         </div>
       )}
 
@@ -142,12 +145,12 @@ function MatchupCard({ matchup, expanded, rosters, onPlayerClick, onToggle, onMa
         {/* Home Team */}
         <div className="ff-matchup-team">
           <div className="ff-matchup-team-name" style={!expanded ? { fontSize: 15 } : undefined}>{homeTeam.name}</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 'var(--space-1)' }}>
             <TeamRecord team={homeTeam} />
             <StreakBadge streak={homeTeam.streak} />
           </div>
-          <div className="ff-matchup-score tabular-nums" style={!expanded ? { fontSize: 26 } : undefined}>
-            {matchup.home.projected.toFixed(1)}
+          <div className="ff-matchup-score ff-mono tabular-nums" style={!expanded ? { fontSize: 26 } : undefined}>
+            <AnimatedNumber value={matchup.home.projected} decimals={1} />
           </div>
           <div className="ff-matchup-projected tabular-nums">Projected</div>
           {hasRosters && homePlayers.length > 0 && (
@@ -165,12 +168,12 @@ function MatchupCard({ matchup, expanded, rosters, onPlayerClick, onToggle, onMa
         {/* Away Team */}
         <div className="ff-matchup-team">
           <div className="ff-matchup-team-name" style={!expanded ? { fontSize: 15 } : undefined}>{awayTeam.name}</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 'var(--space-1)' }}>
             <TeamRecord team={awayTeam} />
             <StreakBadge streak={awayTeam.streak} />
           </div>
-          <div className="ff-matchup-score tabular-nums" style={!expanded ? { fontSize: 26 } : undefined}>
-            {matchup.away.projected.toFixed(1)}
+          <div className="ff-matchup-score ff-mono tabular-nums" style={!expanded ? { fontSize: 26 } : undefined}>
+            <AnimatedNumber value={matchup.away.projected} decimals={1} />
           </div>
           <div className="ff-matchup-projected tabular-nums">Projected</div>
           {hasRosters && awayPlayers.length > 0 && (
@@ -184,13 +187,13 @@ function MatchupCard({ matchup, expanded, rosters, onPlayerClick, onToggle, onMa
       </div>
 
       {/* Win Probability */}
-      <div style={{ padding: expanded ? '0 20px 16px' : '0 0 12px' }}>
+      <div style={{ padding: expanded ? '0 var(--space-4) var(--space-3)' : '0 0 var(--space-2-5)' }}>
         <WinProbBar homeProb={homeProb} />
       </div>
 
       {/* View Full Matchup link */}
       {expanded && onMatchupClick && (
-        <div style={{ padding: '8px 16px', borderTop: '1px solid var(--border)', textAlign: 'center' }}>
+        <div style={{ padding: 'var(--space-1-5) var(--space-3)', borderTop: '1px solid var(--border)', textAlign: 'center' }}>
           <button className="ff-btn ff-btn-secondary ff-btn-sm" onClick={(e) => { e.stopPropagation(); onMatchupClick(matchup.id); }}
             style={{ fontSize: 14 }}>
             View Full <HexBrand word="Analysis" icon={false} />
@@ -201,7 +204,7 @@ function MatchupCard({ matchup, expanded, rosters, onPlayerClick, onToggle, onMa
       {/* Expand hint for compact cards */}
       {!expanded && onToggle && (
         <div style={{
-          padding: '5px 12px', textAlign: 'center', fontSize: 13,
+          padding: 'var(--space-1) var(--space-2-5)', textAlign: 'center', fontSize: 13,
           color: 'var(--accent-text)', borderTop: '1px solid var(--border)',
           fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
         }}>
@@ -215,6 +218,7 @@ function MatchupCard({ matchup, expanded, rosters, onPlayerClick, onToggle, onMa
 
 export default function MatchupWidget({ mode = 'featured', rosters, onPlayerClick, onMatchupClick }) {
   const [expandedId, setExpandedId] = useState(null);
+  const tick = useLiveTick();
 
   const matchups = useMemo(() => {
     if (!rosters) return MATCHUPS;
@@ -227,7 +231,7 @@ export default function MatchupWidget({ mode = 'featured', rosters, onPlayerClic
         away: { ...m.away, projected: awayProj || m.away.projected },
       };
     });
-  }, [rosters]);
+  }, [rosters, tick]);
 
   const userMatchup = matchups.find(
     m => m.home.teamId === USER_TEAM_ID || m.away.teamId === USER_TEAM_ID
@@ -246,7 +250,7 @@ export default function MatchupWidget({ mode = 'featured', rosters, onPlayerClic
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
       {/* User's matchup — always expanded at top */}
       <div>
         <MatchupCard matchup={userMatchup} expanded rosters={rosters} onPlayerClick={onPlayerClick} onMatchupClick={onMatchupClick} />

@@ -30,6 +30,7 @@ export function classifyArchetype(player, pos) {
 }
 
 function classifyKey(p, pos) {
+  if (!p.gp || p.gp < 4) return 'sample-too-small';
   switch (pos) {
     case 'QB': return classifyQB(p);
     case 'RB': return classifyRB(p);
@@ -40,8 +41,6 @@ function classifyKey(p, pos) {
 }
 
 function classifyQB(p) {
-  // Guard: if games played is 0 or missing, per-game rate calculations would produce
-  // inflated or nonsensical values — treat as a game manager with no real sample.
   if (!p.gp || p.gp <= 0) return 'game-manager';
 
   const gp = p.gp;
@@ -73,6 +72,7 @@ function classifyQB(p) {
 }
 
 function classifyRB(p) {
+  if (!p.gp || p.gp <= 0) return 'backup';
   const gp = p.gp || 0;
   const gpScale = 17 / Math.max(gp, 8);
 
@@ -97,6 +97,7 @@ function classifyRB(p) {
 }
 
 function classifyWR(p) {
+  if (!p.gp || p.gp <= 0) return 'wr2-wr3';
   const gp = p.gp || 0;
   const gpScale = 17 / Math.max(gp, 8);
 
@@ -125,6 +126,7 @@ function classifyWR(p) {
 }
 
 function classifyTE(p) {
+  if (!p.gp || p.gp <= 0) return 'blocking-te';
   const gp = p.gp || 0;
   const gpScale = 17 / Math.max(gp, 8);
 

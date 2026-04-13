@@ -1,13 +1,12 @@
-import { useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { TEAMS, USER_TEAM_ID } from '../../data/teams';
 import { PLAYERS } from '../../data/players';
+import { PLAYOFF_SPOTS } from '../../data/seasonConfig';
 import { getHexScore } from '../../utils/hexScore';
 import Sparkline from '../ui/Sparkline';
 
 const PLAYER_MAP = {};
 PLAYERS.forEach(p => { PLAYER_MAP[p.id] = p; });
-
-const PLAYOFF_SPOTS = 6;
 
 function getRosterHexTotal(teamId, rosters) {
   if (!rosters || !rosters[teamId]) return 0;
@@ -34,7 +33,10 @@ function getWeeklyTrend(team) {
   });
 }
 
-export default function StandingsCard({ expanded = false, rosters, leagueName = 'League', onTeamClick }) {
+export default function StandingsCard({ expanded: expandedProp = false, rosters, leagueName = 'League', onTeamClick }) {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const expanded = expandedProp || sidebarOpen;
+  const showToggle = !expandedProp;
   const standings = useMemo(() => {
     return [...TEAMS].sort((a, b) => {
       // Sort by wins, then PF as tiebreaker
@@ -54,11 +56,15 @@ export default function StandingsCard({ expanded = false, rosters, leagueName = 
 
   return (
     <div className={`ff-sidebar-card${expanded ? ' expanded' : ''}`}>
-      <div className="ff-sidebar-card-header">
+      <div className={`ff-sidebar-card-header${showToggle ? ' toggleable' : ''}`}
+        onClick={showToggle ? () => setSidebarOpen(prev => !prev) : undefined}>
         <h3>{leagueName} Standings</h3>
-        <span className="ff-mono" style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-          Wk {TEAMS[0].wins + TEAMS[0].losses}
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span className="ff-mono text-muted-sm" style={{ fontSize: 12 }}>
+            Wk {TEAMS[0].wins + TEAMS[0].losses}
+          </span>
+          {showToggle && <svg className={`ff-sidebar-card-toggle${expanded ? ' open' : ''}`} viewBox="0 0 10 6" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><polyline points="1,1 5,5 9,1"/></svg>}
+        </div>
       </div>
       <div className="ff-sidebar-card-body" style={{ padding: 0 }}>
         <div className="ff-table-wrap">
@@ -66,12 +72,12 @@ export default function StandingsCard({ expanded = false, rosters, leagueName = 
             <caption className="ff-skip-link">{leagueName} Standings</caption>
             <thead>
               <tr>
-                <th style={{ width: 36 }}>#</th>
+                <th style={{ width: 40 }}>#</th>
                 <th>Team</th>
                 <th style={{ textAlign: 'center' }}>Record</th>
                 {expanded && <th style={{ textAlign: 'right' }}>PF</th>}
                 {expanded && <th style={{ textAlign: 'right' }}>PA</th>}
-                <th style={{ textAlign: 'center', width: 52 }}>Trend</th>
+                <th style={{ textAlign: 'center', width: 60 }}>Trend</th>
                 {expanded && <th style={{ textAlign: 'right' }}>Playoff %</th>}
               </tr>
             </thead>
@@ -81,7 +87,7 @@ export default function StandingsCard({ expanded = false, rosters, leagueName = 
                 const zoneClass = i < PLAYOFF_SPOTS ? 'playoff-zone' : i >= 10 ? 'danger-zone' : 'below-cutline';
                 return (
                   <tr key={team.id} className={`${zoneClass} ${isUser ? 'user-team' : ''}`}>
-                    <td style={{ fontWeight: 600, color: 'var(--text-muted)', fontSize: 14 }}>{i + 1}</td>
+                    <td className="text-muted-sm" style={{ fontWeight: 600, fontSize: 14 }}>{i + 1}</td>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         <button
@@ -101,9 +107,9 @@ export default function StandingsCard({ expanded = false, rosters, leagueName = 
                       </div>
                     </td>
                     <td className="ff-mono" style={{ textAlign: 'center', fontSize: 14, fontWeight: 500 }}>
-                      <span style={{ color: 'var(--success-green)' }}>{team.wins}</span>
+                      <span className="text-win">{team.wins}</span>
                       <span style={{ color: 'var(--text-muted)', margin: '0 2px' }}>-</span>
-                      <span style={{ color: 'var(--red)' }}>{team.losses}</span>
+                      <span className="text-loss">{team.losses}</span>
                       {expanded && team.streak && (
                         <span style={{
                           marginLeft: 6, fontSize: 12, fontWeight: 600,
@@ -119,7 +125,7 @@ export default function StandingsCard({ expanded = false, rosters, leagueName = 
                       </td>
                     )}
                     {expanded && (
-                      <td className="tabular-nums" style={{ textAlign: 'right', fontSize: 14, color: 'var(--text-muted)' }}>
+                      <td className="tabular-nums text-muted-sm" style={{ textAlign: 'right', fontSize: 14 }}>
                         {team.pa.toFixed(1)}
                       </td>
                     )}
@@ -144,7 +150,7 @@ export default function StandingsCard({ expanded = false, rosters, leagueName = 
         </div>
         {/* Legend */}
         {expanded && (
-          <div style={{ padding: '10px 14px', display: 'flex', gap: 16, fontSize: 12, color: 'var(--text-muted)' }}>
+          <div className="text-muted-sm" style={{ padding: '10px 14px', display: 'flex', gap: 16, fontSize: 12 }}>
             <span><strong style={{ color: 'var(--success-green)' }}>x</strong> = clinched</span>
             <span><strong style={{ color: 'var(--red)' }}>e</strong> = eliminated</span>
             <span>Top {PLAYOFF_SPOTS} make playoffs</span>

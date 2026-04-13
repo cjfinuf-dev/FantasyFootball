@@ -2,12 +2,11 @@ const { verifyToken } = require('../utils/jwt');
 const { getUserById } = require('../services/auth.service');
 
 async function requireAuth(req, res, next) {
-  const header = req.headers.authorization;
-  if (!header || !header.startsWith('Bearer ')) {
+  // Read JWT from httpOnly cookie; fall back to Authorization header for backwards compat
+  const token = req.cookies?.['ff-token'] || (req.headers.authorization?.startsWith('Bearer ') ? req.headers.authorization.split(' ')[1] : null);
+  if (!token) {
     return res.status(401).json({ error: 'Authentication required.' });
   }
-
-  const token = header.slice(7);
 
   try {
     const payload = verifyToken(token);

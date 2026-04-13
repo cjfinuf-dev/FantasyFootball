@@ -1,6 +1,5 @@
 import { useState, useMemo, useCallback, useRef } from 'react';
 import { PLAYERS } from '../../data/players';
-import { POS_COLORS } from '../../utils/helpers';
 import { getEspnId } from '../../data/espnIds';
 import { getHexScore, getHexTier, getHistoricalData, formatHex } from '../../utils/hexScore';
 import Sparkline from '../ui/Sparkline';
@@ -287,7 +286,7 @@ export default function PlayerRankings({ onPlayerClick }) {
             <button key={pos}
               className={`ff-tm-filter-pill${posFilter === pos ? ' active' : ''}`}
               onClick={() => setPosFilter(pos)}
-              style={posFilter === pos && pos !== 'ALL' ? { background: `var(${POS_COLORS[pos]})`, borderColor: `var(${POS_COLORS[pos]})`, color: 'var(--on-accent)' } : {}}>
+              data-pos={pos !== 'ALL' ? pos : undefined}>
               {pos}
             </button>
           ))}
@@ -319,7 +318,7 @@ export default function PlayerRankings({ onPlayerClick }) {
             CSV
           </button>
           <input className="ff-search-input ff-search-input-expand" type="text" placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)}
-            style={{ fontSize: 14, padding: '4px 8px' }} />
+            style={{ fontSize: 14, padding: '5px 8px' }} />
         </div>
       </div>
       {/* HexScore tier legend */}
@@ -345,7 +344,7 @@ export default function PlayerRankings({ onPlayerClick }) {
         ))}
       </div>
       <div className="ff-card-body" style={{ padding: detailView ? '4px 0 0' : '12px 0 0' }}>
-        <div className={detailView ? '' : `ff-table-fade${tableScrolled ? ' scrolled-right' : ''}${scrolledEnd ? ' scrolled-end' : ''}`} style={detailView ? { fontSize: 14 } : { position: 'relative' }}>
+        <div className={detailView ? '' : `ff-table-fade ff-table-scroll-hint${tableScrolled ? ' scrolled-right' : ''}${scrolledEnd ? ' scrolled-end' : ''}`} style={detailView ? { fontSize: 14 } : { position: 'relative' }}>
         <div className="ff-table-wrap" ref={tableWrapRef} onScroll={handleTableScroll} style={{ maxHeight: detailView ? 'none' : `min(calc(100vh - var(--player-table-offset)), ${effectiveRowLimit > 50 ? 800 : (effectiveShowHistory ? 600 : 440)}px)` }}>
           <table className="ff-table" style={detailView ? { fontSize: 14 } : undefined}>
             <thead>
@@ -467,7 +466,7 @@ export default function PlayerRankings({ onPlayerClick }) {
 
                 return (
                   <tr key={p.id}>
-                    <td style={{ fontWeight: 600, color: 'var(--text-muted)' }}>{i + 1}</td>
+                    <td className="text-muted-sm" style={{ fontWeight: 600 }}>{i + 1}</td>
                     <td>
                       {detailView ? (
                         <span>
@@ -487,8 +486,8 @@ export default function PlayerRankings({ onPlayerClick }) {
                     <td><PosBadge pos={p.pos} /></td>
                     <td><StatusLabel status={p.status} /></td>
                     <td className="tabular-nums" style={{ ...hexChipStyle(hex), borderLeft: (statColumns.length > 0 || effectiveShowHistory) ? '2px solid var(--border-strong)' : undefined }}>{formatHex(hex)}</td>
-                    <td style={{ color: 'var(--text-muted)' }} className="tabular-nums">{p.pts}</td>
-                    <td style={{ color: 'var(--text-muted)' }} className="tabular-nums">{p.proj}</td>
+                    <td className="tabular-nums text-muted-sm">{p.pts}</td>
+                    <td className="tabular-nums text-muted-sm">{p.proj}</td>
                     <td style={{ fontWeight: 700, color: 'var(--text)' }} className="tabular-nums">{p.avg}</td>
                     {statColumns.map((col, ci) => {
                       const val = p[col.key];

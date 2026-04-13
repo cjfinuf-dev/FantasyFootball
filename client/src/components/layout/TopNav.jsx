@@ -48,10 +48,10 @@ export default function TopNav({ onSignIn, onSignUp, onCreateLeague }) {
           <img src="/logo-full.png" alt="HexMetrics" width="112" height="28" style={{ height: 'var(--logo-height-nav)', width: 'var(--logo-width-nav)' }} />
         </div>
         {isLeagueView && activeLeague && (
-          <>
-            <span className="ff-nav-breadcrumb-sep">/</span>
-            <span className="ff-nav-breadcrumb-label">{activeLeague.name}</span>
-          </>
+          <nav aria-label="breadcrumb" style={{ display: 'contents' }}>
+            <span className="ff-nav-breadcrumb-sep" aria-hidden="true">/</span>
+            <span className="ff-nav-breadcrumb-label" aria-current="page">{activeLeague.name}</span>
+          </nav>
         )}
       </div>
 
@@ -70,7 +70,7 @@ export default function TopNav({ onSignIn, onSignUp, onCreateLeague }) {
         {ThemeToggle}
         {user ? (
           <div className="ff-nav-user-group">
-            <button className="ff-create-league-btn" onClick={onCreateLeague} style={isLeagueView ? { fontSize: 13, padding: '4px 10px', opacity: 0.75 } : undefined}>+ New League</button>
+            <button className={`ff-create-league-btn${isLeagueView ? ' ff-create-league-btn--compact' : ''}`} onClick={onCreateLeague}>+ New League</button>
             <div className="auth-avatar">{user.name.charAt(0).toUpperCase()}</div>
             <span className="auth-user-name">{user.name}</span>
             <button className="top-navbar-login" onClick={handleSignout}>Sign Out</button>

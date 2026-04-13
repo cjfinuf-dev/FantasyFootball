@@ -1,5 +1,5 @@
-// SEASON: Update DATA_SEASON each year — used to detect stale static data at runtime
-export const DATA_SEASON = 2024;
+// Season constants centralized in seasonConfig.js
+export { DATA_SEASON } from './seasonConfig';
 
 export const LEAGUE_NAME = 'VIAM Killas';
 

@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { LeaguesProvider } from './context/LeaguesContext';
+import { LiveScoringProvider } from './context/LiveScoringContext';
 import App from './App';
 import './index.css';
 
@@ -27,9 +28,11 @@ ReactDOM.createRoot(document.getElementById('root')).render(
       <ThemeProvider>
         <AuthProvider>
           <LeaguesProvider>
-            <BrowserRouter>
-              <App />
-            </BrowserRouter>
+            <LiveScoringProvider>
+              <BrowserRouter>
+                <App />
+              </BrowserRouter>
+            </LiveScoringProvider>
           </LeaguesProvider>
         </AuthProvider>
       </ThemeProvider>

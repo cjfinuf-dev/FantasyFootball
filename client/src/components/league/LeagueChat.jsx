@@ -116,6 +116,23 @@ export default function LeagueChat({ league, leagueId }) {
     scrollToBottom(false);
   }, [messages, scrollToBottom]);
 
+  // Dismiss emoji picker on click-outside or Escape
+  useEffect(() => {
+    if (!tappedMsgId) return;
+    const handleClickOutside = (e) => {
+      const picker = e.target.closest('.ff-chat-react-picker');
+      const msg = e.target.closest('.ff-chat-msg');
+      if (!picker && !msg) setTappedMsgId(null);
+    };
+    const handleEscape = (e) => { if (e.key === 'Escape') setTappedMsgId(null); };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [tappedMsgId]);
+
   const sendMessage = useCallback(() => {
     const text = inputText.trim();
     if (!text) return;
@@ -319,12 +336,12 @@ export default function LeagueChat({ league, leagueId }) {
                       <div className={`ff-chat-react-picker${isSelf ? ' ff-chat-react-picker-self' : ''}`}>
                         <div className="ff-chat-react-row">
                           {REACT_EMOJIS.map(emoji => (
-                            <button key={emoji} onClick={(e) => { e.stopPropagation(); toggleReaction(msg.id, emoji); }}>{emoji}</button>
+                            <button key={emoji} onClick={(e) => { e.stopPropagation(); toggleReaction(msg.id, emoji); setTappedMsgId(null); }}>{emoji}</button>
                           ))}
                         </div>
                         <div className="ff-chat-react-row">
                           {SPORTS_EMOJIS.map(emoji => (
-                            <button key={emoji} onClick={(e) => { e.stopPropagation(); toggleReaction(msg.id, emoji); }}>{emoji}</button>
+                            <button key={emoji} onClick={(e) => { e.stopPropagation(); toggleReaction(msg.id, emoji); setTappedMsgId(null); }}>{emoji}</button>
                           ))}
                         </div>
                       </div>

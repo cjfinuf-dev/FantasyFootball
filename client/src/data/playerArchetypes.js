@@ -1,5 +1,5 @@
 /**
- * Player Archetypes — Generated from 2025 NFL season stats
+ * Player Archetypes ï¿½ Generated from 2025 NFL season stats
  */
 
 export const ARCHETYPES = {
@@ -21,6 +21,7 @@ export const ARCHETYPES = {
   'elite-te':          { fantasyPremium: 1.08, floorBoost: 0.08, pprAdjust: 0.06, description: 'Top-5 TE, hyper-targeted' },
   'receiving-te':      { fantasyPremium: 1.00, floorBoost: 0.03, pprAdjust: 0.04, description: 'Pass-catching TE' },
   'blocking-te':       { fantasyPremium: 0.85, floorBoost: 0.01, pprAdjust: 0.01, description: 'Blocking-first TE' },
+  'sample-too-small':  { fantasyPremium: 1.00, floorBoost: 0, pprAdjust: 0, description: 'Insufficient games played' },
   'default':           { fantasyPremium: 1.00, floorBoost: 0.00, pprAdjust: 0, description: 'Standard' },
 };
 

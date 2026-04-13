@@ -1,8 +1,19 @@
 const crypto = require('crypto');
+const { z } = require('zod');
 const { getDb, saveDb } = require('../db/connection');
 
+const leagueUpdateSchema = z.object({
+  name: z.string().max(100).optional(),
+  type: z.string().max(50).optional(),
+  scoringPreset: z.string().max(50).optional(),
+  scoringJson: z.string().max(10000).optional(),
+  rosterJson: z.string().max(10000).optional(),
+  leagueSize: z.number().int().min(4).max(32).optional(),
+  settingsJson: z.string().max(10000).optional(),
+}).strict();
+
 function generateInviteCode() {
-  return crypto.randomBytes(4).toString('hex').toUpperCase();
+  return crypto.randomBytes(8).toString('hex').toUpperCase();
 }
 
 async function getUserLeagues(userId) {
@@ -85,6 +96,7 @@ async function getLeagueById(leagueId, userId) {
 }
 
 async function updateLeague(leagueId, userId, updates) {
+  const validated = leagueUpdateSchema.parse(updates);
   const db = await getDb();
 
   const leagueResult = db.exec('SELECT commissioner_id FROM leagues WHERE id = ?', [leagueId]);
@@ -101,7 +113,7 @@ async function updateLeague(leagueId, userId, updates) {
   const ALLOWED_COLS = new Set(Object.values(colMap));
   const sets = [];
   const vals = [];
-  for (const [key, val] of Object.entries(updates)) {
+  for (const [key, val] of Object.entries(validated)) {
     if (colMap[key] && ALLOWED_COLS.has(colMap[key])) { sets.push(`${colMap[key]} = ?`); vals.push(val); }
   }
   if (sets.length > 0) {

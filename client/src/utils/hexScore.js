@@ -28,6 +28,8 @@ import { getPlayerAge } from '../data/playerAges';
 import { HISTORICAL_STATS } from '../data/historicalStats';
 import { calcStatProduction } from './statProduction';
 import { classifyArchetype } from './archetypeClassifier';
+import { INJURY_TYPES, POSITION_VULNERABILITY, POSITION_SEVERITY_CAP } from '../data/injurySeverity';
+import { classifyPlayerInjury } from './injuryClassifier';
 
 const PLAYER_MAP = {};
 PLAYERS.forEach(p => { PLAYER_MAP[p.id] = p; });
@@ -73,7 +75,7 @@ export function getHistoricalData() {
 
 /**
  * Compute weighted historical production for a player.
- * Weights: 50% most recent, 25% prior, 15% two years ago, 10% three years ago.
+ * Weights: 65% most recent, 20% prior, 10% two years ago, 5% three years ago.
  * Adapts to available data (rookies get full weight on available seasons).
  */
 function getWeightedProduction(playerId) {
@@ -108,7 +110,7 @@ function getWeightedProduction(playerId) {
 
   // Fluke dampener: when the most recent qualifying season is anomalously low
   // relative to an established track record, partially restore it toward the
-  // historical baseline. Only fires on large drops (30%+) and skips players
+  // historical baseline. Only fires on moderate+ drops (15%+) and skips players
   // showing a consistent downward trend — that's real regression, not a fluke.
   if (avgs.length >= 3) {
     const recent = avgs[0];
@@ -120,10 +122,10 @@ function getWeightedProduction(playerId) {
         const priorMedian = sorted[Math.floor(sorted.length / 2)];
         const dropPct = priorMedian > 0 ? Math.max(0, (priorMedian - recent) / priorMedian) : 0;
 
-        if (dropPct > 0.30) {
-          const trackStrength = Math.min(1.0, priorValid.length / 4);
-          const flukeConf = Math.min(1.0, dropPct / 0.50) * trackStrength;
-          avgs[0] = recent + (priorMedian - recent) * flukeConf * 0.50;
+        if (dropPct > 0.15) {
+          const trackStrength = Math.min(1.0, priorValid.length / 3);
+          const flukeConf = Math.min(1.0, dropPct / 0.35) * trackStrength;
+          avgs[0] = recent + (priorMedian - recent) * flukeConf * 0.75;
         }
       }
     }
@@ -230,10 +232,10 @@ const PRODUCTION_PROFILE = {
 const SLOT_SUB_WEIGHTS = { eligibility: 0.25, demand: 0.20, attrition: 0.20, production: 0.35 };
 const DEFAULT_LEAGUE_SIZE = 12;
 
-// Position HexScore caps — applied on final score after sigmoid.
-// QB capped at 85: no QB should rank in the top 20 overall (elite RBs/WRs fill those slots).
-// K/DEF capped at 60: kickers and defenses are always end-of-draft value.
-const POSITION_HEXSCORE_CAP = { K: 65, DEF: 60 };
+// Position weight multiplier — applied pre-sigmoid to compress K/DEF into a lower
+// scoring band while preserving spread.  QB/RB/WR/TE get full range (1.00).
+// K (0.72) → natural ceiling ~67;  DEF (0.68) → natural ceiling ~63.
+const POSITION_WEIGHT = { QB: 1.00, RB: 1.00, WR: 1.00, TE: 1.00, K: 0.72, DEF: 0.68 };
 
 // ─── Pedigree Bonus System ───
 // Post-sigmoid additive bonus (0–10 pts) rewarding sustained elite performance.
@@ -254,7 +256,7 @@ const ARCHETYPE_PEDIGREE = {
   'wr2-wr3': 0.35,          'backup': 0.20,
 };
 
-const MAX_PEDIGREE_BONUS = 6;
+const MAX_PEDIGREE_BONUS = 10;
 
 // ─── Draft Value ───
 // How many players at each position are worth spending a draft pick on.
@@ -338,7 +340,8 @@ function adjustShareForGP(shareValue, gp, maxGP = 17) {
 }
 
 function calcAgeFactor(age, pos) {
-  if (pos === 'DEF' || age === null) return 1.0;
+  if (pos === 'DEF') return 1.0;
+  if (age === null || age === undefined) return 0.85;
 
   const curve = AGE_CURVES[pos];
   if (!curve) return 1.0;
@@ -406,6 +409,7 @@ function getSosMultiplier(team) {
 }
 
 function calcProduction(player, posGroup, preset) {
+  if (!player.gp || player.gp <= 0) return 0;
   const profile = getScoringProfile(preset);
   const mult = profile.prodMultiplier[player.pos] || 1.0;
   const sosMult = getSosMultiplier(player.team);
@@ -414,12 +418,16 @@ function calcProduction(player, posGroup, preset) {
   const max = Math.max(...values);
   const min = Math.min(...values);
   const range = max - min;
+  // Fallback: when all players score identically (range === 0), return neutral 0.5
   return range > 0 ? (raw - min) / range : 0.5;
 }
 
 function calcScarcity(player, posGroup, rankMap) {
   const count = posGroup.length;
+  // Fallback: when all players score identically (range === 0), return neutral 0.5
   if (count <= 1) return 1.0;
+  // Note: rankMap is based on rawProduction (pre-cap). K/DEF cap is applied after
+  // scarcity so positional ranking reflects uncapped output values.
   const rank = rankMap ? (rankMap.get(player.id) || count) : (posGroup.indexOf(player) + 1);
   // Pure positional rank: best = 1.0, worst ≈ 0.
   // "How many players at your position would you drop before this one?"
@@ -564,7 +572,7 @@ function calcHealth(player) {
 // Replaces the fabricated injuryProfiles.js data with actual games-played
 // from HISTORICAL_STATS across the most recent 3 seasons.
 
-function calcDurabilityFromHistory(playerId) {
+function calcDurabilityFromHistory(playerId, pos, age) {
   const history = _historicalData?.players?.[playerId];
   if (!history) return 0.70; // unknown = slightly below average
 
@@ -572,12 +580,12 @@ function calcDurabilityFromHistory(playerId) {
   const recentYears = years.slice(0, 3);
   if (recentYears.length === 0) return 0.70;
 
-  // Raw availability: games played / max possible (17 per season)
+  // Raw availability: games played / max possible (17 per season) — unchanged
   const totalGP = recentYears.reduce((sum, y) => sum + (history[String(y)]?.gp || 0), 0);
   const maxGP = recentYears.length * 17;
   const availability = totalGP / maxGP;
 
-  // Trend bonus: reward improving GP, penalize declining
+  // Trend bonus: reward improving GP, penalize declining — unchanged
   let trendBonus = 0;
   if (recentYears.length >= 2) {
     const recentGP = history[String(recentYears[0])]?.gp || 0;
@@ -586,11 +594,40 @@ function calcDurabilityFromHistory(playerId) {
     else if (recentGP < priorGP - 3) trendBonus = -0.05;
   }
 
-  // Severity proxy: seasons with GP <= 8 count as major miss events
+  // GP-based major miss proxy — kept for seasons without specific injury data
   const majorMisses = recentYears.filter(y => (history[String(y)]?.gp || 0) <= 8).length;
-  const severityPenalty = majorMisses * 0.08;
+  const majorMissPenalty = majorMisses * 0.08;
 
-  return Math.max(0.10, Math.min(1.0, availability + trendBonus - severityPenalty));
+  // ─── Injury Severity Dampener ───
+  // Classifies current injury from situation changes, then applies position-aware
+  // severity hit. Separate from fluke protection (age recovery applied downstream).
+  let injurySeverityHit = 0;
+  const player = PLAYER_MAP[playerId];
+  if (player && pos) {
+    const allChanges = [...SITUATION_CHANGES, ..._dynamicSituationChanges];
+    const injuryInfo = classifyPlayerInjury(player, allChanges);
+
+    if (injuryInfo) {
+      const baseSeverity = injuryInfo.severity / 5.0;
+      const posVulnerability = injuryInfo.positionImpact;
+
+      // Age amplification: older players at physical positions recover slower
+      const curve = AGE_CURVES[pos];
+      let agePenalty = 0;
+      if (curve && age !== null && age > curve.primeEnd) {
+        agePenalty = Math.min(0.20, ((age - curve.primeEnd) / (curve.cliff - curve.primeEnd)) * 0.20);
+      }
+
+      // Recurrence: check if multiple seasons had major misses (proxy for same injury recurring)
+      const recurrencePenalty = majorMisses >= 2 ? 0.10 : 0;
+
+      const rawHit = baseSeverity * posVulnerability + agePenalty + recurrencePenalty;
+      const posCap = POSITION_SEVERITY_CAP[pos] || 0.55;
+      injurySeverityHit = Math.min(posCap, rawHit);
+    }
+  }
+
+  return Math.max(0.10, Math.min(1.0, availability + trendBonus - majorMissPenalty - injurySeverityHit));
 }
 
 function calcRosterContext(player, rosterPlayerIds, allPlayers) {
@@ -778,7 +815,7 @@ function calcHistoricalPeakFloor(playerId, pos, currentScore) {
   if (!history) return 0;
 
   const years = Object.keys(history).map(Number).sort((a, b) => b - a);
-  const recentYears = years.slice(0, 2);
+  const recentYears = years.slice(0, 3);
 
   // Find peak season avgPts (must have played 8+ games to count)
   const peakAvg = Math.max(0, ...recentYears
@@ -809,7 +846,7 @@ function calcHistoricalPeakFloor(playerId, pos, currentScore) {
   });
   const currentYear = Math.max(...years);
   const yearsSincePeak = peakYear ? (currentYear - peakYear) : 2;
-  const decayedFloor = floorScore * Math.pow(0.80, yearsSincePeak);
+  const decayedFloor = floorScore * Math.pow(0.85, yearsSincePeak);
 
   return decayedFloor > currentScore ? decayedFloor : 0;
 }
@@ -852,7 +889,7 @@ function calcPedigreeBonus(playerId, pos, archetypeKey) {
   const sorted = [...priorAvgs].sort((a, b) => a - b);
   const priorMedian = sorted[Math.floor(sorted.length / 2)];
   const dropPct = priorMedian > 0 ? Math.max(0, (priorMedian - recentAvg) / priorMedian) : 0;
-  if (dropPct <= 0.30) return 0; // no fluke — algorithm handles this player fine
+  if (dropPct <= 0.15) return 0; // no fluke — algorithm handles this player fine
 
   // 1. Elite Season Depth (weight: 0.35) — qualifying seasons with gp >= 10
   let depth = 0;
@@ -954,7 +991,7 @@ export function computeAllHexScores(players = PLAYERS, rosterContext = null, sco
     let consistency = calcConsistency(p, age, p.pos);
     const situation = calcSituation(p, players);
     const health = calcHealth(p);
-    const rawDurability = calcDurabilityFromHistory(p.id);
+    const rawDurability = calcDurabilityFromHistory(p.id, p.pos, age);
     const context = calcRosterContext(p, rosterContext, players);
     const ageFactor = calcAgeFactor(age, p.pos);
 
@@ -986,10 +1023,14 @@ export function computeAllHexScores(players = PLAYERS, rosterContext = null, sco
       ageFactor * ageWeight +
       pprBonus;
 
+    // Position weight: compresses K/DEF into lower scoring band pre-sigmoid
+    const posWeight = POSITION_WEIGHT[p.pos] ?? 1.00;
+    const rawWeighted = rawBase * posWeight;
+
     // X-Factor: usage/target share multiplier — hyper-targeted players get boosted
     const xFactor = calcXFactor(p);
     const xFactorMultiplier = 0.85 + (xFactor * 0.25); // scales 0.85 (low usage) → 1.10 (hyper-targeted)
-    const rawXFactored = rawBase * xFactorMultiplier;
+    const rawXFactored = rawWeighted * xFactorMultiplier;
 
     // Draft value: multiplier based on position rank vs draftable depth.
     // Non-draftable players (backups beyond threshold) get crushed below 50.
@@ -1004,16 +1045,9 @@ export function computeAllHexScores(players = PLAYERS, rosterContext = null, sco
       hexScore = peakFloor;
     }
 
-    // Pedigree bonus: post-sigmoid additive reward for sustained elite performance.
-    // K/DEF excluded — no historical pedigree signal for those positions.
-    const pedigreeBonus = (p.pos === 'K' || p.pos === 'DEF')
-      ? 0
-      : calcPedigreeBonus(p.id, p.pos, archetype.key);
-    hexScore = Math.min(99.999, hexScore + pedigreeBonus);
-
-    // Hard cap for K/DEF — no kicker or defense above 60
-    const posCap = POSITION_HEXSCORE_CAP[p.pos];
-    if (posCap && hexScore > posCap) hexScore = posCap;
+    // Pedigree protection is applied as a fluke dampener multiplier in
+    // statProduction.js — flows through production dimension, not post-sigmoid.
+    const pedigreeBonus = 0;
 
     // Sanity check: raw HexScore should never exceed 110. A value this high indicates
     // a weight or normalization bug — catch it early in dev before it reaches the UI.

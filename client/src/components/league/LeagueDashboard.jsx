@@ -42,7 +42,17 @@ const TAB_ICONS = {
   locked: <svg viewBox="0 0 14 15.5" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d={HEX}/><rect x="5" y="7.5" width="4" height="3" rx="0.5"/><path d="M5.8 7.5V6.5a1.2 1.2 0 012.4 0v1"/></svg>,
 };
 
-const INDEPENDENT_TABS = [
+// Primary league tabs — shown inline in the tab strip
+const PRIMARY_TABS = [
+  { id: 'overview', label: 'Overview' },
+  { id: 'matchups', label: 'Matchups' },
+  { id: 'standings', label: 'Standings' },
+  { id: 'lineup', label: 'Lineup' },
+];
+const PRIMARY_TAB_IDS = new Set(PRIMARY_TABS.map(t => t.id));
+
+// Secondary / always-available tabs — grouped in dropdown
+const SECONDARY_TABS = [
   { id: 'players', label: 'Players' },
   { id: 'compare', label: 'Compare' },
   { id: 'news', label: 'News' },
@@ -240,12 +250,9 @@ export default function LeagueDashboard() {
 
   const isTabDisabled = (id) => !draftComplete && DRAFT_REQUIRED_TABS.has(id);
 
-  const allTabs = draftComplete
+  // Dropdown league tabs (everything not shown inline)
+  const dropdownLeagueTabs = draftComplete
     ? [
-        { id: 'overview', label: 'League Overview' },
-        { id: 'lineup', label: 'My Lineup' },
-        { id: 'matchups', label: 'Matchups' },
-        { id: 'standings', label: 'League Standings' },
         { id: 'playoffs', label: 'Playoffs' },
         { id: 'waivers', label: 'Waivers' },
         { id: 'trades', label: 'Trades' },
@@ -254,15 +261,25 @@ export default function LeagueDashboard() {
       ]
     : [
         { id: 'draft', label: 'Draft' },
-        { id: 'overview', label: 'League Overview' },
-        { id: 'lineup', label: 'My Lineup' },
-        { id: 'matchups', label: 'Matchups' },
-        { id: 'standings', label: 'League Standings' },
         { id: 'playoffs', label: 'Playoffs' },
         { id: 'waivers', label: 'Waivers' },
         { id: 'trades', label: 'Trades' },
         { id: 'chat', label: 'League Chat' },
       ];
+
+  // Active tab in dropdown (for trigger label)
+  const activeDropdownTab = [...dropdownLeagueTabs, ...SECONDARY_TABS].find(t => t.id === activeTab);
+
+  // Keyboard nav for tab strip
+  const handleTabKeyDown = (e) => {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    const tabs = e.currentTarget.querySelectorAll('.ff-league-tab:not(.disabled)');
+    const current = [...tabs].indexOf(e.target);
+    if (current === -1) return;
+    e.preventDefault();
+    const next = e.key === 'ArrowRight' ? (current + 1) % tabs.length : (current - 1 + tabs.length) % tabs.length;
+    tabs[next].focus();
+  };
 
 
   if (leagueLoading || !league) {
@@ -294,34 +311,54 @@ export default function LeagueDashboard() {
             <span className="ff-hero-meta">
               {league.type} &middot; {league.scoring_preset?.toUpperCase() || 'PPR'} &middot; {league.league_size}-Team &middot; <strong>{league.team_name}</strong>{league.role === 'commissioner' ? ' · Commissioner' : ''}
             </span>
+            <button onClick={() => setActiveTab('settings')}
+              className={`ff-hero-settings-btn${activeTab === 'settings' ? ' active' : ''}`}
+              title="League Settings">
+              <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M6.1 1.5h1.8l.3 1.3.9.4 1.1-.7 1.3 1.3-.7 1.1.4.9 1.3.3v1.8l-1.3.3-.4.9.7 1.1-1.3 1.3-1.1-.7-.9.4-.3 1.3H6.1l-.3-1.3-.9-.4-1.1.7-1.3-1.3.7-1.1-.4-.9-1.3-.3V6.1l1.3-.3.4-.9-.7-1.1 1.3-1.3 1.1.7.9-.4z"/><circle cx="7" cy="7" r="2"/>
+              </svg>
+            </button>
           </div>
 
           {/* League Nav Tabs */}
           <span id="tab-lock-desc" hidden>Complete the draft first</span>
-          <div className="ff-tabs-container">
-          {/* Independent tabs — always enabled */}
-          {INDEPENDENT_TABS.map(t => (
-            <button
-              key={t.id}
-              className={`ff-league-tab${activeTab === t.id ? ' active' : ''}`}
-              onClick={() => { setActiveTab(t.id); setShowMoreMenu(false); }}>
-              {TAB_ICONS[t.id]}{t.label}
-            </button>
-          ))}
+          <div className="ff-tabs-container" role="tablist" onKeyDown={handleTabKeyDown}>
+          {/* Primary league tabs — inline */}
+          {PRIMARY_TABS.map(t => {
+            const locked = isTabDisabled(t.id);
+            return (
+              <button
+                key={t.id}
+                role="tab"
+                aria-selected={activeTab === t.id}
+                aria-describedby={locked ? 'tab-lock-desc' : undefined}
+                className={`ff-league-tab${activeTab === t.id ? ' active' : ''}${locked ? ' disabled' : ''}`}
+                onClick={() => {
+                  if (locked) {
+                    setLockToast(true);
+                    setTimeout(() => setLockToast(false), 2000);
+                    return;
+                  }
+                  setActiveTab(t.id); setShowMoreMenu(false);
+                }}>
+                {locked ? TAB_ICONS.locked : TAB_ICONS[t.id]}{t.label}
+              </button>
+            );
+          })}
           {/* Separator */}
           <div className="ff-tabs-separator" />
-          {/* League-dependent dropdown */}
+          {/* More dropdown — remaining league + tools */}
           <div className="ff-league-dropdown-wrapper" ref={moreMenuRef}>
             <button
-              className={`ff-league-dropdown-trigger${allTabs.some(t => t.id === activeTab) || activeTab === 'settings' ? ' has-active-tab' : ''}`}
+              className={`ff-league-dropdown-trigger${activeDropdownTab ? ' has-active-tab' : ''}`}
               onClick={() => setShowMoreMenu(prev => !prev)}
               aria-haspopup="listbox"
               aria-expanded={showMoreMenu}>
-              {allTabs.find(t => t.id === activeTab)?.label || (activeTab === 'settings' ? 'Settings' : 'League')} <span className="chevron">▾</span>
+              {activeDropdownTab?.label || 'More'} <span className="chevron">▾</span>
             </button>
             {showMoreMenu && (
               <div className="ff-more-tabs-menu">
-                {allTabs.map(t => {
+                {dropdownLeagueTabs.map(t => {
                   const locked = isTabDisabled(t.id);
                   return (
                     <button key={t.id}
@@ -348,19 +385,16 @@ export default function LeagueDashboard() {
                     </button>
                   );
                 })}
+                <div className="ff-more-tabs-divider" />
+                {SECONDARY_TABS.map(t => (
+                  <button key={t.id}
+                    className={`ff-more-tab-item${activeTab === t.id ? ' active' : ''}`}
+                    onClick={() => { setActiveTab(t.id); setShowMoreMenu(false); }}>
+                    {TAB_ICONS[t.id]}{t.label}
+                  </button>
+                ))}
               </div>
             )}
-          </div>
-          <div className="ff-tab-actions">
-            <button onClick={() => setActiveTab('settings')}
-              role="tab"
-              aria-selected={activeTab === 'settings'}
-              className={`ff-league-tab ff-league-tab-gear${activeTab === 'settings' ? ' active' : ''}`}
-              title="League Info">
-              <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" style={{ margin: 0 }}>
-                <path d="M6.1 1.5h1.8l.3 1.3.9.4 1.1-.7 1.3 1.3-.7 1.1.4.9 1.3.3v1.8l-1.3.3-.4.9.7 1.1-1.3 1.3-1.1-.7-.9.4-.3 1.3H6.1l-.3-1.3-.9-.4-1.1.7-1.3-1.3.7-1.1-.4-.9-1.3-.3V6.1l1.3-.3.4-.9-.7-1.1 1.3-1.3 1.1.7.9-.4z"/><circle cx="7" cy="7" r="2"/>
-              </svg>
-            </button>
           </div>
           </div>
         </div>

@@ -8,38 +8,27 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('ff-token');
-    if (!token) { setLoading(false); return; }
-
+    // Check auth state via cookie-authenticated /me endpoint
     authApi.getMe()
       .then(data => setUser(data.user))
-      .catch(() => {
-        localStorage.removeItem('ff-token');
-        localStorage.removeItem('ff-refresh-token');
-      })
+      .catch(() => { /* no valid session */ })
       .finally(() => setLoading(false));
   }, []);
 
   const handleSignup = useCallback(async ({ name, email, password }) => {
     const data = await authApi.signup({ name, email, password });
-    localStorage.setItem('ff-token', data.token);
-    if (data.refreshToken) localStorage.setItem('ff-refresh-token', data.refreshToken);
     setUser(data.user);
     return data;
   }, []);
 
   const handleSignin = useCallback(async ({ email, password }) => {
     const data = await authApi.signin({ email, password });
-    localStorage.setItem('ff-token', data.token);
-    if (data.refreshToken) localStorage.setItem('ff-refresh-token', data.refreshToken);
     setUser(data.user);
     return data;
   }, []);
 
   const handleSignout = useCallback(async () => {
     try { await authApi.signout(); } catch {}
-    localStorage.removeItem('ff-token');
-    localStorage.removeItem('ff-refresh-token');
     setUser(null);
   }, []);
 

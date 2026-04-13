@@ -6,6 +6,8 @@ import {
   schedule, simGame, runSimulations, getMagicNumber, getEliminated, getStatus,
 } from '../../utils/playoffCalc';
 
+const INTERACTIVE_SIMS = 2000;
+
 /* ─── Stagger animation helper ─── */
 function Stagger({ children, className, delay = 0.04 }) {
   const ref = useRef(null);
@@ -26,10 +28,23 @@ function Stagger({ children, className, delay = 0.04 }) {
 export default function PlayoffMachine({ rosters, onTeamClick }) {
   const [overrides, setOverrides] = useState({});
   const [hoveredTeam, setHoveredTeam] = useState(null);
+  const [debouncedOverrides, setDebouncedOverrides] = useState({});
+  const debounceRef = useRef(null);
+
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setDebouncedOverrides(overrides);
+    }, 300);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [overrides]);
 
   // Baseline (no overrides) for delta comparison
   const baseline = useMemo(() => runSimulations(TEAMS, {}), []);
-  const results = useMemo(() => runSimulations(TEAMS, overrides), [overrides]);
+  const results = useMemo(() => {
+    const hasOvr = Object.keys(debouncedOverrides).length > 0;
+    return runSimulations(TEAMS, debouncedOverrides, hasOvr ? INTERACTIVE_SIMS : undefined);
+  }, [debouncedOverrides]);
   const sorted = useMemo(() => [...results].sort((a, b) => b.playoffPct - a.playoffPct), [results]);
   const hasOverrides = Object.keys(overrides).length > 0;
 
@@ -50,8 +65,8 @@ export default function PlayoffMachine({ rosters, onTeamClick }) {
   const teamMap = {};
   TEAMS.forEach(t => { teamMap[t.id] = t; });
 
-  const weekGroups = [12, 13, 14].map(w => ({
-    week: w, label: w === 12 ? 'This Week' : `Week ${w}`,
+  const weekGroups = Array.from({ length: REMAINING_WEEKS }, (_, i) => GAMES_PLAYED + 1 + i).map(w => ({
+    week: w, label: w === GAMES_PLAYED + 1 ? 'This Week' : `Week ${w}`,
     games: schedule.filter(g => g.week === w),
   }));
 

@@ -9,6 +9,25 @@ import PlayerHeadshot from '../ui/PlayerHeadshot';
 const PLAYER_MAP = {};
 PLAYERS.forEach(p => { PLAYER_MAP[p.id] = p; });
 
+const STARTER_COUNTS = { QB: 1, RB: 2, WR: 2, TE: 1, K: 1, DEF: 1 };
+const NEED_BOOST = 1.15;
+
+function getPositionalNeedBoost(receiveIds, roster) {
+  if (!roster || roster.length === 0) return {};
+  const boosts = {};
+  for (const pos of ['QB', 'RB', 'WR', 'TE']) {
+    const rosterAtPos = roster.filter(pid => PLAYER_MAP[pid]?.pos === pos);
+    const needed = STARTER_COUNTS[pos] || 1;
+    const deficit = needed - rosterAtPos.length;
+    if (deficit > 0) {
+      receiveIds.forEach(id => {
+        if (PLAYER_MAP[id]?.pos === pos) boosts[id] = NEED_BOOST;
+      });
+    }
+  }
+  return boosts;
+}
+
 const SCORING_OPTIONS = [
   { value: 'standard', label: 'Standard' },
   { value: 'ppr', label: 'PPR' },

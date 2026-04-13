@@ -1,5 +1,5 @@
-// SEASON: Update DATA_SEASON each year — used to detect stale static data at runtime
-export const DATA_SEASON = 2024;
+// Season constants centralized in seasonConfig.js
+export { DATA_SEASON } from './seasonConfig';
 
 export const MATCHUPS = [
   { id: 'm1', home: { teamId: 't1', score: 0, projected: 124.5 }, away: { teamId: 't2', score: 0, projected: 118.3 }, status: 'scheduled' },

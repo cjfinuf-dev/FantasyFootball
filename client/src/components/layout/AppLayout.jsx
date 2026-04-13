@@ -9,6 +9,7 @@ import DeleteLeagueModal from '../league/DeleteLeagueModal';
 import { getSituationEvents } from '../../api/stats';
 import { setSituationEvents } from '../../utils/hexScore';
 import { getHexIconOverlay } from '../../utils/hexMeshIcons';
+import { checkSeasonGuard } from '../../data/seasonConfig';
 
 export default function AppLayout() {
   const { user } = useAuth();
@@ -43,6 +44,7 @@ export default function AppLayout() {
   };
 
   const isLeagueView = location.pathname.startsWith('/league/');
+  const seasonGuard = checkSeasonGuard();
 
   const activeIconTab = useMemo(() => {
     const p = location.pathname;
@@ -75,6 +77,12 @@ export default function AppLayout() {
         onSignUp={() => setShowAuthModal('signup')}
         onCreateLeague={() => setShowCreateLeague(true)}
       />
+
+      {seasonGuard.stale && (
+        <div className="ff-season-stale-banner" role="alert">
+          Data is from the {seasonGuard.dataSeason} season. Projections and standings may be outdated.
+        </div>
+      )}
 
       <main id="main-content" style={hexIconStyle}>
         <Outlet context={{

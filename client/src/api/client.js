@@ -1,56 +1,83 @@
 const BASE_URL = import.meta.env.VITE_API_URL || '';
+const DEFAULT_TIMEOUT_MS = 30_000;
 
 let _refreshing = null; // singleton promise to avoid concurrent refresh calls
 
+function timeoutSignal(ms) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), ms);
+  controller.signal.addEventListener('abort', () => clearTimeout(id));
+  return controller.signal;
+}
+
+function mergeSignals(externalSignal, timeoutMs) {
+  const timeout = timeoutSignal(timeoutMs);
+  if (!externalSignal) return timeout;
+  const controller = new AbortController();
+  const onAbort = () => controller.abort();
+  externalSignal.addEventListener('abort', onAbort);
+  timeout.addEventListener('abort', onAbort);
+  return controller.signal;
+}
+
 async function refreshAccessToken() {
-  const refreshToken = localStorage.getItem('ff-refresh-token');
-  if (!refreshToken) return null;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const res = await fetch(`${BASE_URL}/api/auth/refresh`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        signal: timeoutSignal(DEFAULT_TIMEOUT_MS),
+      });
 
-  const res = await fetch(`${BASE_URL}/api/auth/refresh`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ refreshToken }),
-  });
+      if (res.ok) {
+        return true;
+      }
 
-  if (!res.ok) {
-    localStorage.removeItem('ff-token');
-    localStorage.removeItem('ff-refresh-token');
-    return null;
+      // First attempt failed — wait 2s before retry
+      if (attempt === 0) {
+        await new Promise(r => setTimeout(r, 2000));
+        continue;
+      }
+    } catch {
+      if (attempt === 0) {
+        await new Promise(r => setTimeout(r, 2000));
+        continue;
+      }
+    }
   }
 
-  const data = await res.json();
-  if (data.token) {
-    localStorage.setItem('ff-token', data.token);
-    return data.token;
-  }
-  return null;
+  // Both attempts failed — notify UI
+  window.dispatchEvent(new CustomEvent('ff:session-expired'));
+  return false;
 }
 
 export async function apiFetch(path, options = {}) {
-  const token = localStorage.getItem('ff-token');
   const headers = {
     'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...options.headers,
   };
 
-  const { signal, ...restOptions } = options;
+  const { signal: externalSignal, timeout = DEFAULT_TIMEOUT_MS, ...restOptions } = options;
+  const signal = mergeSignals(externalSignal, timeout);
   const res = await fetch(`${BASE_URL}${path}`, {
     ...restOptions,
     headers,
-    ...(signal ? { signal } : {}),
+    credentials: 'include',
+    signal,
   });
 
   // On 401, attempt one token refresh and retry the original request
   if (res.status === 401 && path !== '/api/auth/refresh') {
     if (!_refreshing) _refreshing = refreshAccessToken().finally(() => { _refreshing = null; });
-    const newToken = await _refreshing;
-    if (newToken) {
-      const retryHeaders = { ...headers, Authorization: `Bearer ${newToken}` };
+    const refreshed = await _refreshing;
+    if (refreshed) {
+      const retrySignal = mergeSignals(externalSignal, timeout);
       const retryRes = await fetch(`${BASE_URL}${path}`, {
         ...restOptions,
-        headers: retryHeaders,
-        ...(signal ? { signal } : {}),
+        headers,
+        credentials: 'include',
+        signal: retrySignal,
       });
 
       let retryData;

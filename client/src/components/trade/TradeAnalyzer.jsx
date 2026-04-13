@@ -5,6 +5,23 @@ const PLAYER_MAP = {};
 PLAYERS.forEach(p => { PLAYER_MAP[p.id] = p; });
 
 const STARTER_COUNTS = { QB: 1, RB: 2, WR: 2, TE: 1, K: 1, DEF: 1 };
+const NEED_BOOST = 1.15;
+
+function getPositionalNeedBoost(receiveIds, userRoster, scoringPreset) {
+  if (!userRoster || userRoster.length === 0) return {};
+  const boosts = {};
+  for (const pos of ['QB', 'RB', 'WR', 'TE']) {
+    const rosterAtPos = userRoster.filter(pid => PLAYER_MAP[pid]?.pos === pos);
+    const needed = STARTER_COUNTS[pos] || 1;
+    const deficit = needed - rosterAtPos.length;
+    if (deficit > 0) {
+      receiveIds.forEach(id => {
+        if (PLAYER_MAP[id]?.pos === pos) boosts[id] = NEED_BOOST;
+      });
+    }
+  }
+  return boosts;
+}
 
 function getPositionalImpact(sendIds, receiveIds, userRoster, scoringPreset) {
   if (!userRoster || userRoster.length === 0) return null;
@@ -53,6 +70,17 @@ export default function TradeAnalyzer({ sendIds, receiveIds, userRoster, partner
   if (sendIds.length === 0 && receiveIds.length === 0) return null;
 
   const { sendTotal, receiveTotal, delta, ratio, label, css } = computeTradeTier(sendIds, receiveIds, userRoster, partnerRoster, scoringPreset);
+
+  // Contextual value: apply positional-need boost to received players
+  const needBoosts = getPositionalNeedBoost(receiveIds, userRoster, scoringPreset);
+  const contextualReceiveTotal = receiveIds.reduce((sum, id) => {
+    const raw = getHexScore(id, scoringPreset);
+    const mult = needBoosts[id] || 1.0;
+    return sum + raw * mult;
+  }, 0);
+  const contextualReceive = Math.round(contextualReceiveTotal * 10) / 10;
+  const hasContextBoost = contextualReceive !== receiveTotal;
+
   const combinedValue = sendTotal + receiveTotal;
   const noValueData = combinedValue < 5;
   const totalValue = combinedValue || 1;
@@ -97,6 +125,13 @@ export default function TradeAnalyzer({ sendIds, receiveIds, userRoster, partner
           Net: <strong style={{ color: delta >= 0 ? 'var(--success-green)' : 'var(--red)' }}>
             {delta >= 0 ? '+' : ''}{delta}
           </strong> HexScore
+          {hasContextBoost && (
+            <span style={{ marginLeft: 8, fontSize: 13, color: 'var(--text-muted)' }}>
+              Contextual: <strong style={{ color: contextualReceive >= sendTotal ? 'var(--success-green)' : 'var(--red)' }}>
+                {contextualReceive}
+              </strong>
+            </span>
+          )}
         </span>
       </div>
 

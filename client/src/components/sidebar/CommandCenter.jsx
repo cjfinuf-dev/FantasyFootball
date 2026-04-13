@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { TEAMS, USER_TEAM_ID } from '../../data/teams';
 import { MATCHUPS } from '../../data/matchups';
 import { PLAYERS } from '../../data/players';
@@ -6,10 +6,12 @@ import { WAIVERS } from '../../data/waivers';
 import { TRADES_SEED } from '../../data/rosters';
 import { getByeWeek } from '../../data/nflSchedule';
 import { calcWinProb } from '../../utils/winProb';
+import { useLiveTick } from '../../hooks/useLiveTick';
 import { getHexScore, formatHex } from '../../utils/hexScore';
 import { runSimulations, getStatus, getMagicNumber, GAMES_PLAYED } from '../../utils/playoffCalc';
 import { getAllAlerts } from '../../utils/rosterAlerts';
 import PosBadge from '../ui/PosBadge';
+import AnimatedNumber from '../ui/AnimatedNumber';
 
 const PLAYER_MAP = {};
 PLAYERS.forEach(p => { PLAYER_MAP[p.id] = p; });
@@ -45,6 +47,8 @@ function getPositionGrades(teamId, rosters, scoringPreset) {
 }
 
 export default function CommandCenter({ rosters, scoringPreset, leagueName, onPlayerClick, onMatchupClick, onTabSwitch }) {
+  const tick = useLiveTick();
+
   // ─── Matchup Snapshot ───
   const matchup = useMemo(() => {
     return MATCHUPS.find(m => m.home.teamId === USER_TEAM_ID || m.away.teamId === USER_TEAM_ID);
@@ -76,13 +80,13 @@ export default function CommandCenter({ rosters, scoringPreset, leagueName, onPl
       labelClass,
       matchupId: matchup.id,
     };
-  }, [matchup, rosters]);
+  }, [matchup, rosters, tick]);
 
   // ─── Action Items ───
   const alerts = useMemo(() => {
     if (!rosters) return [];
     return getAllAlerts(rosters, PLAYER_MAP, CURRENT_WEEK, TRADES_SEED, USER_TEAM_ID);
-  }, [rosters]);
+  }, [rosters, tick]);
 
   // ─── Playoff Pulse ───
   const playoffData = useMemo(() => {
@@ -132,6 +136,13 @@ export default function CommandCenter({ rosters, scoringPreset, leagueName, onPl
     }));
   }, [scoringPreset]);
 
+  const [collapsed, setCollapsed] = useState({ playoff: true, standing: true, trending: true });
+  const toggleSection = (key) => setCollapsed(prev => ({ ...prev, [key]: !prev[key] }));
+
+  const chevron = (key) => (
+    <svg className={`cc-section-chevron${!collapsed[key] ? ' open' : ''}`} viewBox="0 0 10 6" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><polyline points="1,1 5,5 9,1"/></svg>
+  );
+
   const hasDraftData = rosters && Object.values(rosters).some(r => r.length > 0);
 
   if (!hasDraftData) {
@@ -152,11 +163,12 @@ export default function CommandCenter({ rosters, scoringPreset, leagueName, onPl
     <div className="ff-sidebar-card cc-command-center">
       {/* ═══ 1. MATCHUP SNAPSHOT ═══ */}
       {matchupData && (
-        <button type="button" className="cc-section cc-matchup cc-matchup-btn" onClick={() => onMatchupClick?.(matchupData.matchupId)}>
+        <div className="cc-section cc-matchup">
           <div className="cc-section-label">This Week's Matchup</div>
+          <button type="button" className="cc-matchup-btn" onClick={() => onMatchupClick?.(matchupData.matchupId)}>
           <div className="cc-matchup-row">
             <div className="cc-matchup-you">
-              <span className="cc-matchup-proj tabular-nums">{matchupData.userProj.toFixed(1)}</span>
+              <span className="cc-matchup-proj tabular-nums"><AnimatedNumber value={matchupData.userProj} decimals={1} /></span>
               <span className="cc-matchup-side">You</span>
             </div>
             <div className="cc-matchup-vs">
@@ -165,14 +177,15 @@ export default function CommandCenter({ rosters, scoringPreset, leagueName, onPl
                 <div className="ff-winprob-fill cc-wp-fill-user" style={{ width: `${(matchupData.winProb * 100).toFixed(1)}%` }} />
                 <div className="ff-winprob-fill cc-wp-fill-opp" style={{ width: `${((1 - matchupData.winProb) * 100).toFixed(1)}%` }} />
               </div>
-              <span className="cc-wp-pct tabular-nums">{(matchupData.winProb * 100).toFixed(0)}%</span>
+              <span className="cc-wp-pct tabular-nums"><AnimatedNumber value={matchupData.winProb * 100} decimals={0} suffix="%" /></span>
             </div>
             <div className="cc-matchup-opp">
-              <span className="cc-matchup-proj tabular-nums">{matchupData.oppProj.toFixed(1)}</span>
+              <span className="cc-matchup-proj tabular-nums"><AnimatedNumber value={matchupData.oppProj} decimals={1} /></span>
               <span className="cc-matchup-side">{matchupData.oppAbbr} <span className="cc-matchup-rec">{matchupData.oppRecord}</span></span>
             </div>
           </div>
-        </button>
+          </button>
+        </div>
       )}
 
       {/* ═══ 2. ACTION ITEMS ═══ */}
@@ -211,10 +224,13 @@ export default function CommandCenter({ rosters, scoringPreset, leagueName, onPl
 
       {/* ═══ 3. PLAYOFF PULSE ═══ */}
       {playoffData && (
-        <div className="cc-section cc-playoff">
-          <div className="cc-section-label">Playoff Pulse</div>
-          <div className="cc-playoff-row">
-            <div className="cc-playoff-big tabular-nums">{playoffData.playoffPct.toFixed(1)}%</div>
+        <div className={`cc-section cc-playoff${collapsed.playoff ? ' cc-collapsed' : ''}`}>
+          <button className="cc-section-toggle" onClick={() => toggleSection('playoff')}>
+            <span className="cc-section-label">Playoff Pulse</span>
+            {chevron('playoff')}
+          </button>
+          {!collapsed.playoff && <div className="cc-playoff-row">
+            <div className="cc-playoff-big tabular-nums"><AnimatedNumber value={playoffData.playoffPct} decimals={1} suffix="%" /></div>
             <div className="cc-playoff-detail">
               {playoffData.status && (
                 <span className={`cc-playoff-badge cc-playoff-badge--${playoffData.status.cls}`}>
@@ -223,14 +239,17 @@ export default function CommandCenter({ rosters, scoringPreset, leagueName, onPl
               )}
               <span className="cc-playoff-context">{playoffData.contextLine}</span>
             </div>
-          </div>
+          </div>}
         </div>
       )}
 
       {/* ═══ 4. YOUR STANDING ═══ */}
-      <div className="cc-section cc-standing">
-        <div className="cc-section-label">Your Standing</div>
-        <div className="cc-standing-row">
+      <div className={`cc-section cc-standing${collapsed.standing ? ' cc-collapsed' : ''}`}>
+        <button className="cc-section-toggle" onClick={() => toggleSection('standing')}>
+          <span className="cc-section-label">Your Standing</span>
+          {chevron('standing')}
+        </button>
+        {!collapsed.standing && <div className="cc-standing-row">
           <span className="cc-standing-rank tabular-nums">#{standingData.rank}<span className="cc-standing-of"> of {standingData.total}</span></span>
           <span className={`cc-standing-movement${standingData.movement > 0 ? ' cc-move-up' : standingData.movement < 0 ? ' cc-move-down' : ''}`}>
             {standingData.movement > 0 ? '\u25B2' : standingData.movement < 0 ? '\u25BC' : '\u2022'}
@@ -247,12 +266,16 @@ export default function CommandCenter({ rosters, scoringPreset, leagueName, onPl
               ))}
             </div>
           )}
-        </div>
+        </div>}
       </div>
 
       {/* ═══ 5. TRENDING PICKUPS ═══ */}
-      <div className="cc-section cc-trending">
-        <div className="cc-section-label">Trending Pickups</div>
+      <div className={`cc-section cc-trending${collapsed.trending ? ' cc-collapsed' : ''}`}>
+        <button className="cc-section-toggle" onClick={() => toggleSection('trending')}>
+          <span className="cc-section-label">Trending Pickups</span>
+          {chevron('trending')}
+        </button>
+        {!collapsed.trending && <>
         {trending.map(w => (
           <button type="button" key={w.playerId} className="cc-trending-row cc-trending-btn" onClick={() => onPlayerClick?.(w.playerId)}>
             <PosBadge pos={w.pos} size="xs" />
@@ -264,6 +287,7 @@ export default function CommandCenter({ rosters, scoringPreset, leagueName, onPl
         <button className="cc-view-all" onClick={() => onTabSwitch?.('waivers')}>
           View all <span className="cc-arrow">&rarr;</span>
         </button>
+        </>}
       </div>
     </div>
   );

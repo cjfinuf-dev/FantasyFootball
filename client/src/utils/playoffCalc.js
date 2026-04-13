@@ -1,32 +1,15 @@
 import { TEAMS } from '../data/teams';
 import { MATCHUPS } from '../data/matchups';
+import {
+  DATA_SEASON, TOTAL_WEEKS, PLAYOFF_SPOTS, BYE_SEEDS,
+  GAMES_PLAYED, REMAINING_WEEKS, SIMULATIONS, checkSeasonGuard,
+} from '../data/seasonConfig';
 
-// SEASON: 2024-25 — Update these constants each season before playoffs
-// TODO: These constants need to be API-driven long-term so they update
-// automatically each season without a code change.
-export const DATA_SEASON = 2024;
-export const TOTAL_WEEKS = 14;
-export const PLAYOFF_SPOTS = 6;
-export const BYE_SEEDS = 2;
-export const GAMES_PLAYED = 11; // weeks completed so far
-export const REMAINING_WEEKS = TOTAL_WEEKS - GAMES_PLAYED;
-export const SIMULATIONS = 5000;
-
-/**
- * Check whether the hardcoded DATA_SEASON matches the current calendar year.
- * Returns a guard object indicating staleness.
- */
-export function checkSeasonGuard() {
-  const currentYear = new Date().getFullYear();
-  return {
-    stale: currentYear !== DATA_SEASON,
-    dataSeason: DATA_SEASON,
-    currentYear,
-  };
-}
+// Re-export so existing consumers don't break
+export { DATA_SEASON, TOTAL_WEEKS, PLAYOFF_SPOTS, BYE_SEEDS, GAMES_PLAYED, REMAINING_WEEKS, SIMULATIONS, checkSeasonGuard };
 
 export const schedule = [
-  ...MATCHUPS.map(m => ({ home: m.home.teamId, away: m.away.teamId, week: 12 })),
+  ...MATCHUPS.map(m => ({ home: m.home.teamId, away: m.away.teamId, week: GAMES_PLAYED + 1 })),
   { home: 't1', away: 't4', week: 13 }, { home: 't2', away: 't3', week: 13 },
   { home: 't5', away: 't8', week: 13 }, { home: 't6', away: 't7', week: 13 },
   { home: 't9', away: 't12', week: 13 }, { home: 't10', away: 't11', week: 13 },
@@ -40,7 +23,7 @@ export function simGame(a, b) {
   return Math.random() < p ? a.id : b.id;
 }
 
-export function runSimulations(teams, overrides = {}) {
+export function runSimulations(teams, overrides = {}, simCount = SIMULATIONS) {
   const guard = checkSeasonGuard();
   if (guard.stale) {
     console.warn(`[playoffCalc] DATA_SEASON (${guard.dataSeason}) does not match current year (${guard.currentYear}). Update constants or switch to API-driven season data.`);
@@ -57,7 +40,7 @@ export function runSimulations(teams, overrides = {}) {
     byeCounts[t.id] = 0;
   });
 
-  for (let sim = 0; sim < SIMULATIONS; sim++) {
+  for (let sim = 0; sim < simCount; sim++) {
     const records = {}, pf = {};
     teams.forEach(t => {
       records[t.id] = { wins: t.wins, losses: t.losses };
@@ -116,10 +99,10 @@ export function runSimulations(teams, overrides = {}) {
 
   return teams.map(t => ({
     ...t,
-    playoffPct: (counts[t.id] / SIMULATIONS) * 100,
-    seedDist: seedCounts[t.id].map(c => (c / SIMULATIONS) * 100),
-    champPct: (champCounts[t.id] / SIMULATIONS) * 100,
-    byePct: (byeCounts[t.id] / SIMULATIONS) * 100,
+    playoffPct: (counts[t.id] / simCount) * 100,
+    seedDist: seedCounts[t.id].map(c => (c / simCount) * 100),
+    champPct: (champCounts[t.id] / simCount) * 100,
+    byePct: (byeCounts[t.id] / simCount) * 100,
   }));
 }
 

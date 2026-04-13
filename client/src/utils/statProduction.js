@@ -16,6 +16,99 @@
 
 import { PLAYER_DETAILED_STATS } from '../data/playerDetailedStats';
 import { HISTORICAL_STATS } from '../data/historicalStats';
+import { getPlayerAge } from '../data/playerAges';
+
+// ─── Fluke Protection ────────────────────────────────────────────────────────
+// Pedigree acts as a multiplier on fluke restoration: proven elite players get
+// near-full restoration toward their historical baseline, unproven players get
+// little. Age attenuates protection — prime-age players get full benefit,
+// post-cliff players get none. The ceiling is the player's historical median
+// (what their score would be if the fluke year didn't happen).
+
+const FLUKE_AGE_CURVES = {
+  QB:  { primeEnd: 34, cliff: 38 },
+  RB:  { primeEnd: 27, cliff: 29 },
+  WR:  { primeEnd: 30, cliff: 32 },
+  TE:  { primeEnd: 30, cliff: 32 },
+};
+
+const FLUKE_PEDIGREE_THRESHOLDS = {
+  QB:  { strong: 20, elite: 23, dominant: 25 },
+  RB:  { strong: 14, elite: 18, dominant: 22 },
+  WR:  { strong: 14, elite: 17, dominant: 20 },
+  TE:  { strong: 12, elite: 15, dominant: 18 },
+};
+
+function calcAgeProtection(playerId, pos) {
+  const age = getPlayerAge(playerId);
+  if (age === null) return 0.70;
+  const curve = FLUKE_AGE_CURVES[pos];
+  if (!curve) return 0.0;
+  if (age <= curve.primeEnd) return 1.0;
+  if (age > curve.cliff) return 0.0;
+  return 1.0 - (age - curve.primeEnd) / (curve.cliff - curve.primeEnd);
+}
+
+function calcPedigreeScore(playerId, pos) {
+  const thresholds = FLUKE_PEDIGREE_THRESHOLDS[pos];
+  if (!thresholds) return 0;
+
+  const history = HISTORICAL_STATS?.players?.[playerId];
+  if (!history) return 0;
+
+  const years = Object.keys(history).map(Number).sort((a, b) => a - b);
+  if (years.length === 0) return 0;
+
+  const { strong, elite, dominant } = thresholds;
+
+  // Elite Season Depth (weight: 0.40)
+  let depth = 0;
+  for (const y of years) {
+    const s = history[String(y)];
+    if (!s || s.gp < 10) continue;
+    const avg = s.avgPts || 0;
+    if (avg >= elite) depth += 0.30;
+    else if (avg >= strong) depth += 0.12;
+  }
+  depth = Math.min(1.0, depth);
+
+  // Consecutive Excellence (weight: 0.25)
+  let maxStreak = 0, currentStreak = 0;
+  for (const y of years) {
+    const s = history[String(y)];
+    if (s && s.gp >= 10 && (s.avgPts || 0) >= strong) {
+      currentStreak++;
+      maxStreak = Math.max(maxStreak, currentStreak);
+    } else {
+      currentStreak = 0;
+    }
+  }
+  const consecutiveBonus = Math.min(0.25, maxStreak * 0.08);
+
+  // Peak Dominance (weight: 0.35)
+  const peakAvg = Math.max(0, ...years
+    .map(y => history[String(y)])
+    .filter(s => s && s.gp >= 10)
+    .map(s => s.avgPts || 0));
+  const peakDominance = peakAvg >= strong
+    ? Math.min(1.0, (peakAvg - strong) / (dominant - strong))
+    : 0;
+
+  // Track Record dampener
+  const qualifyingSeasons = years.filter(y => {
+    const s = history[String(y)];
+    return s && s.gp >= 10;
+  }).length;
+  if (qualifyingSeasons === 0) return 0;
+  const trackRecord = Math.min(1.0, 0.38 + qualifyingSeasons * 0.16);
+
+  const rawPedigree =
+    (depth * 0.40) +
+    consecutiveBonus +
+    (peakDominance * 0.35);
+
+  return rawPedigree * trackRecord;
+}
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -563,11 +656,13 @@ export function calcStatProduction(player) {
   if (seasonScores.length === 0) return currentScore;
 
   // ─── Fluke dampener ───
-  // When the most recent qualifying season is anomalously low relative to an
-  // established track record, partially restore it toward the historical baseline.
-  // Only fires on large drops (30%+) and skips players showing a consistent
-  // downward trend — that's real regression, not a fluke.
+  // Pedigree-modulated restoration: when the most recent qualifying season is
+  // anomalously low relative to an established track record, restore it toward
+  // the historical baseline. Pedigree (track record quality) determines HOW MUCH
+  // to restore, and age attenuates the protection — prime-age players get full
+  // benefit, post-cliff players get none. Skips monotonic decline (real regression).
   let flukeDetected = false;
+  let flukeRestoreFraction = 0;
   if (seasonScores.length >= 3) {
     const recent = seasonScores[0];
     const declining = seasonScores[0] < seasonScores[1] && seasonScores[1] < seasonScores[2];
@@ -578,11 +673,15 @@ export function calcStatProduction(player) {
         const priorMedian = sorted[Math.floor(sorted.length / 2)];
         const dropPct = priorMedian > 0 ? Math.max(0, (priorMedian - recent) / priorMedian) : 0;
 
-        if (dropPct > 0.30) {
-          flukeDetected = true;
-          const trackStrength = Math.min(1.0, priorValid.length / 4);
-          const flukeConf = Math.min(1.0, dropPct / 0.50) * trackStrength;
-          seasonScores[0] = recent + (priorMedian - recent) * flukeConf * 0.30;
+        if (dropPct > 0.15) {
+          const pedigreeScore = calcPedigreeScore(player.id, pos);
+          const ageProtection = calcAgeProtection(player.id, pos);
+          flukeRestoreFraction = pedigreeScore * ageProtection;
+          if (flukeRestoreFraction > 0.05) {
+            flukeDetected = true;
+            seasonScores[0] = recent + (priorMedian - recent) * flukeRestoreFraction;
+            seasonScores[0] = Math.min(seasonScores[0], priorMedian);
+          }
         }
       }
     }
@@ -606,9 +705,8 @@ export function calcStatProduction(player) {
       const sorted = [...priorValid].sort((a, b) => a - b);
       const priorMedian = sorted[Math.floor(sorted.length / 2)];
       const currentDrop = priorMedian > 0 ? Math.max(0, (priorMedian - currentScore) / priorMedian) : 0;
-      if (currentDrop > 0.30) {
-        const trackStrength = Math.min(1.0, priorValid.length / 4);
-        const flukeShift = Math.min(0.08, currentDrop * trackStrength * 0.25);
+      if (currentDrop > 0.15) {
+        const flukeShift = Math.min(0.15, currentDrop * flukeRestoreFraction * 0.30);
         histWeight += flukeShift;
         currWeight -= flukeShift;
       }

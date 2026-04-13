@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HexScore Algorithm — HexMetrics</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    /* Shared */
+    --accent: #8B5CF6;
+    --gold: #FFB800;
+    --tertiary: #A78BFA;
+    --qb: #2563eb;
+    --rb: #16a34a;
+    --wr: #f59e0b;
+    --te: #dc2626;
+    --grade-s: #8B5CF6;
+    --grade-a: #16a34a;
+    --grade-b: #f59e0b;
+    --grade-c: #dc2626;
+    --grade-f: #991b1b;
+    --hex-mesh: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='96' viewBox='0 0 56 96'%3E%3Cpath d='M28 16L56 32L56 64L28 80L0 64L0 32ZM28 0L28 16M28 80L28 96' fill='none' stroke='%238B5CF6' stroke-width='8' opacity='0.03'/%3E%3C/svg%3E");
+    /* Light mode (default) */
+    --bg: #FAFAFA;
+    --surface: #FFFFFF;
+    --surface2: #F0F0F0;
+    --text: #171717;
+    --text-muted: #525252;
+    --border-subtle: rgba(139,92,246,0.12);
+    --grid-line: #E5E5E5;
+    --grid-text: #525252;
+    --banner-grad: rgba(139,92,246,0.05);
+    --injury-impact-bg: rgba(255,184,0,0.08);
+    --tier-text-shadow: none;
+  }
+  html.dark {
+    --bg: #111111;
+    --surface: #171717;
+    --surface2: #262626;
+    --text: #F5F5F5;
+    --text-muted: #A3A3A3;
+    --border-subtle: rgba(139,92,246,0.2);
+    --grid-line: #262626;
+    --grid-text: #A3A3A3;
+    --banner-grad: rgba(139,92,246,0.08);
+    --injury-impact-bg: rgba(255,184,0,0.1);
+    --tier-text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    background-image: var(--hex-mesh);
+    background-size: 56px 96px;
+    transition: background 0.3s, color 0.3s;
+  }
+
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  /* ── Section 1: Title Banner ── */
+  .banner {
+    position: relative;
+    padding: 64px 24px 48px;
+    text-align: center;
+    background: linear-gradient(180deg, var(--banner-grad) 0%, transparent 100%);
+    border-bottom: 1px solid rgba(139,92,246,0.15);
+    overflow: hidden;
+  }
+  .banner::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: var(--hex-mesh);
+    background-size: 56px 96px;
+    opacity: 0.6;
+    pointer-events: none;
+  }
+  .banner h1 {
+    position: relative;
+    font-size: clamp(2rem, 5vw, 3.2rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--tertiary) 50%, var(--gold) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 12px;
+  }
+  .banner p {
+    position: relative;
+    font-size: clamp(0.95rem, 2vw, 1.15rem);
+    color: var(--text-muted);
+    font-weight: 400;
+  }
+
+  /* ── Section Headers ── */
+  .section { padding: 48px 0; }
+  .section-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: var(--text);
+  }
+  .section-subtitle {
+    font-size: 0.95rem;
+    color: var(--text-muted);
+    margin-bottom: 32px;
+  }
+  .section-divider {
+    width: 48px;
+    height: 3px;
+    background: var(--accent);
+    border-radius: 2px;
+    margin-bottom: 32px;
+  }
+
+  /* ── Section 2: 8 Dimensions Grid ── */
+  .dim-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+  }
+  @media (max-width: 960px) { .dim-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 540px) { .dim-grid { grid-template-columns: 1fr; } }
+
+  .dim-card {
+    background: var(--surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    padding: 20px;
+    transition: border-color 0.2s, background 0.3s;
+  }
+  .dim-card:hover { border-color: var(--accent); }
+
+  .dim-rank {
+    display: inline-block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--gold);
+    margin-bottom: 6px;
+  }
+  .dim-name {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+    color: var(--text);
+  }
+  .dim-weight-bar {
+    position: relative;
+    height: 6px;
+    background: var(--surface2);
+    border-radius: 3px;
+    margin-bottom: 6px;
+    overflow: hidden;
+  }
+  .dim-weight-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--gold), var(--gold));
+    border-radius: 3px;
+    transition: width 0.6s ease;
+  }
+  .dim-weight-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--gold);
+    margin-bottom: 10px;
+  }
+  .dim-formula {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  /* ── Section 3: Pipeline ── */
+  .pipeline {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    overflow-x: auto;
+    padding-bottom: 8px;
+  }
+  .pipe-node {
+    flex: 1;
+    min-width: 160px;
+    background: var(--surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: 10px;
+    padding: 16px 14px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+  .pipe-node:not(:last-child) { margin-right: 28px; }
+  .pipe-node:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    right: -22px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 0; height: 0;
+    border-top: 8px solid transparent;
+    border-bottom: 8px solid transparent;
+    border-left: 12px solid var(--accent);
+  }
+  .pipe-step {
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+    margin-bottom: 6px;
+  }
+  .pipe-name {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 8px;
+  }
+  .pipe-formula {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    line-height: 1.45;
+    flex: 1;
+  }
+  .pipe-formula code {
+    background: var(--surface2);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 0.75rem;
+    color: var(--gold);
+    font-family: 'SF Mono', 'Fira Code', monospace;
+  }
+
+  @media (max-width: 768px) {
+    .pipeline { flex-direction: column; gap: 12px; }
+    .pipe-node { min-width: auto; }
+    .pipe-node:not(:last-child) { margin-right: 0; margin-bottom: 0; }
+    .pipe-node:not(:last-child)::after {
+      right: auto;
+      left: 50%;
+      top: auto;
+      bottom: -18px;
+      transform: translateX(-50%);
+      border-left: 8px solid transparent;
+      border-right: 8px solid transparent;
+      border-top: 12px solid var(--accent);
+      border-bottom: none;
+    }
+  }
+
+  /* ── Section 4: Injury Detail ── */
+  .injury-panel {
+    background: var(--surface);
+    border: 2px solid var(--gold);
+    border-radius: 14px;
+    padding: 28px;
+  }
+  .injury-panel h3 {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--gold);
+    margin-bottom: 4px;
+  }
+  .injury-panel .sub {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    margin-bottom: 20px;
+  }
+
+  .injury-formula {
+    background: var(--bg);
+    border: 1px solid rgba(255,184,0,0.2);
+    border-radius: 8px;
+    padding: 16px 20px;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 0.88rem;
+    color: var(--gold);
+    margin-bottom: 20px;
+    overflow-x: auto;
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+
+  .injury-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  @media (max-width: 640px) { .injury-grid { grid-template-columns: 1fr; } }
+
+  .injury-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+  }
+  .injury-table th {
+    text-align: left;
+    padding: 8px 12px;
+    border-bottom: 1px solid rgba(255,184,0,0.3);
+    color: var(--gold);
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .injury-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--surface2);
+    color: var(--text-muted);
+  }
+  .injury-table td:first-child { color: var(--text); font-weight: 500; }
+
+  .injury-example {
+    background: var(--bg);
+    border-radius: 8px;
+    padding: 16px;
+  }
+  .injury-example h4 {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 12px;
+  }
+  .injury-example-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--surface2);
+  }
+  .injury-example-row:last-child { border-bottom: none; }
+  .injury-pos { font-weight: 600; font-size: 0.85rem; }
+  .injury-impact {
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 0.82rem;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: var(--injury-impact-bg);
+    color: var(--gold);
+  }
+
+  /* ── Section 5: Age Curves ── */
+  .age-chart-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: 14px;
+    padding: 24px;
+    overflow-x: auto;
+  }
+  .age-chart-wrap svg { display: block; margin: 0 auto; }
+
+  .age-legend {
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+    margin-top: 16px;
+    flex-wrap: wrap;
+  }
+  .age-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+  .age-legend-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+  }
+
+  /* ── Section 6: Tier Bar ── */
+  .tier-bar-wrap { margin-top: 8px; }
+  .tier-bar {
+    display: flex;
+    border-radius: 8px;
+    overflow: hidden;
+    height: 48px;
+  }
+  .tier-seg {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: #fff;
+    text-shadow: var(--tier-text-shadow);
+    position: relative;
+    transition: flex 0.3s;
+  }
+  .tier-labels {
+    display: flex;
+    margin-top: 6px;
+  }
+  .tier-label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+  }
+
+  /* ── Theme Toggle ── */
+  .theme-toggle {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    z-index: 100;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    border: 1px solid var(--border-subtle);
+    background: var(--surface);
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.3s, border-color 0.3s;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+  .theme-toggle:hover { border-color: var(--accent); color: var(--accent); }
+  .theme-toggle svg { width: 20px; height: 20px; fill: currentColor; }
+  .theme-toggle .icon-moon { display: none; }
+  html.dark .theme-toggle .icon-sun { display: none; }
+  html.dark .theme-toggle .icon-moon { display: block; }
+
+  /* ── Full Formula Section ── */
+  .formula-card {
+    background: var(--surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: 14px;
+    padding: 28px;
+    overflow-x: auto;
+  }
+  .formula-block {
+    font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+    font-size: 0.88rem;
+    line-height: 1.8;
+    color: var(--text);
+  }
+  .formula-block .formula-row {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    padding: 4px 0;
+  }
+  .formula-block .formula-expr {
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+  }
+  .formula-block .formula-note {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .formula-block .dim-color { color: var(--accent); font-weight: 600; }
+  .formula-block .weight-color { color: var(--gold); font-weight: 700; }
+  .formula-block .op-color { color: var(--text-muted); }
+  .formula-part-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    margin: 24px 0 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--surface2);
+  }
+  .formula-part-label:first-child { margin-top: 0; }
+  .formula-conditional {
+    border-left: 3px solid var(--accent);
+    padding-left: 16px;
+    margin: 4px 0;
+  }
+  .formula-conditional.gold-border { border-left-color: var(--gold); }
+  .formula-weight-sum {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--surface2);
+    font-size: 0.82rem;
+    color: var(--text-muted);
+  }
+  @media (max-width: 768px) {
+    .formula-block .formula-row { flex-direction: column; gap: 2px; }
+    .formula-block .formula-note { padding-left: 20px; }
+  }
+
+  /* ── Footer ── */
+  .footer {
+    text-align: center;
+    padding: 40px 24px 32px;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    border-top: 1px solid var(--surface2);
+    margin-top: 24px;
+  }
+  .footer span { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<!-- Theme Toggle -->
+<button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
+  <svg class="icon-sun" viewBox="0 0 24 24"><path d="M12 3a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0V4a1 1 0 0 1 1-1zm0 15a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0v-1a1 1 0 0 1 1-1zm9-6a1 1 0 0 1-1 1h-1a1 1 0 1 1 0-2h1a1 1 0 0 1 1 1zM5 12a1 1 0 0 1-1 1H3a1 1 0 1 1 0-2h1a1 1 0 0 1 1 1zm14.07-5.66a1 1 0 0 1 0 1.41l-.71.71a1 1 0 1 1-1.41-1.41l.71-.71a1 1 0 0 1 1.41 0zM7.05 17.66a1 1 0 0 1 0 1.41l-.71.71a1 1 0 1 1-1.41-1.41l.71-.71a1 1 0 0 1 1.41 0zm11.9 0a1 1 0 0 1-1.41 0l-.71-.71a1 1 0 1 1 1.41-1.41l.71.71a1 1 0 0 1 0 1.41zM7.05 6.34a1 1 0 0 1-1.41 0l-.71-.71a1 1 0 0 1 1.41-1.41l.71.71a1 1 0 0 1 0 1.41zM12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm0 2a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"/></svg>
+  <svg class="icon-moon" viewBox="0 0 24 24"><path d="M12.1 22c-5.5 0-10-4.5-10-10 0-4.8 3.4-8.8 8-9.8.4-.1.8 0 1.1.3.3.3.3.7.2 1.1-.5 1.2-.7 2.5-.7 3.9 0 5 4 9 9 9 1.3 0 2.6-.3 3.8-.7.4-.2.9-.1 1.1.2.3.3.3.7.2 1.1-1 4.6-5 8-9.7 8z"/></svg>
+</button>
+
+<!-- ════════ SECTION 1: TITLE BANNER ════════ -->
+<div class="banner">
+  <h1>HexScore Algorithm</h1>
+  <p>Eight-Dimensional Player Valuation Engine (0&ndash;100)</p>
+</div>
+
+<div class="container">
+
+<!-- ════════ SECTION 2: THE 8 DIMENSIONS ════════ -->
+<div class="section">
+  <div class="section-divider"></div>
+  <h2 class="section-title">The Eight Dimensions</h2>
+  <p class="section-subtitle">Core valuation axes, ordered by weight. All eight dimensions weighted (sum 1.00).</p>
+
+  <div class="dim-grid" id="dimGrid"></div>
+</div>
+
+<!-- ════════ SECTION 2.5: FULL FORMULA ════════ -->
+<div class="section">
+  <div class="section-divider"></div>
+  <h2 class="section-title">Full Formula</h2>
+  <p class="section-subtitle">Complete equation breakdown — every weight, every conditional, and how they compose into the final 0&ndash;100 score.</p>
+
+  <div class="formula-card">
+    <div class="formula-block">
+
+      <div class="formula-part-label">Part A &mdash; Weighted Composite</div>
+      <div class="formula-row">
+        <span class="formula-expr"><span class="op-color">rawComposite =</span></span>
+        <span class="formula-note">always</span>
+      </div>
+      <div class="formula-row">
+        <span class="formula-expr">&nbsp;&nbsp;(<span class="dim-color">Production</span> &times; <span class="weight-color">0.24</span>)</span>
+        <span class="formula-note">4-yr weighted avg</span>
+      </div>
+      <div class="formula-row">
+        <span class="formula-expr"><span class="op-color">+</span> (<span class="dim-color">Situation</span> &times; <span class="weight-color">0.16</span>)</span>
+        <span class="formula-note">team context &amp; scheme</span>
+      </div>
+      <div class="formula-row">
+        <span class="formula-expr"><span class="op-color">+</span> (<span class="dim-color">Scarcity</span> &times; <span class="weight-color">0.14</span>)</span>
+        <span class="formula-note">positional rank percentile</span>
+      </div>
+      <div class="formula-row">
+        <span class="formula-expr"><span class="op-color">+</span> (<span class="dim-color">Durability</span> &times; <span class="weight-color">0.12</span>)</span>
+        <span class="formula-note">GP ratio + injury dampener</span>
+      </div>
+      <div class="formula-row">
+        <span class="formula-expr"><span class="op-color">+</span> (<span class="dim-color">Consistency</span> &times; <span class="weight-color">0.10</span>)</span>
+        <span class="formula-note">availability &amp; production CV</span>
+      </div>
+      <div class="formula-row">
+        <span class="formula-expr"><span class="op-color">+</span> (<span class="dim-color">Health</span> &times; <span class="weight-color">0.08</span>)</span>
+        <span class="formula-note">current injury status</span>
+      </div>
+      <div class="formula-row">
+        <span class="formula-expr"><span class="op-color">+</span> (<span class="dim-color">Age Factor</span> &times; <span class="weight-color">0.08</span>)</span>
+        <span class="formula-note">position career arc</span>
+      </div>
+      <div class="formula-row">
+        <span class="formula-expr"><span class="op-color">+</span> (<span class="dim-color">Slot Value</span> &times; <span class="weight-color">0.08</span>)</span>
+        <span class="formula-note">roster economics</span>
+      </div>
+      <div class="formula-weight-sum">All 8 weights: 0.24 + 0.16 + 0.14 + 0.12 + 0.10 + 0.08 + 0.08 + 0.08 = <strong>1.00</strong></div>
+
+      <div class="formula-part-label">Part B &mdash; Archetype Adjustments</div>
+      <div class="formula-conditional">
+        <div class="formula-row">
+          <span class="formula-expr"><span class="op-color">if</span> archetype has <span class="dim-color">fantasyPremium</span>:</span>
+          <span class="formula-note">conditional</span>
+        </div>
+        <div class="formula-row">
+          <span class="formula-expr">&nbsp;&nbsp;adjusted.<span class="dim-color">Production</span> <span class="op-color">&times;=</span> <span class="weight-color">fantasyPremium</span></span>
+          <span class="formula-note">e.g. elite pass-catchers</span>
+        </div>
+        <div class="formula-row">
+          <span class="formula-expr"><span class="op-color">if</span> archetype has <span class="dim-color">floorBoost</span>:</span>
+          <span class="formula-note">conditional</span>
+        </div>
+        <div class="formula-row">
+          <span class="formula-expr">&nbsp;&nbsp;adjusted.<span class="dim-color">Consistency</span> <span class="op-color">+=</span> <span class="weight-color">floorBoost</span></span>
+          <span class="formula-note">e.g. bellcow, workhorse</span>
+        </div>
+      </div>
+
+      <div class="formula-part-label">Part C &mdash; Format Multiplier (PPR / Half / Standard)</div>
+      <div class="formula-conditional gold-border">
+        <div class="formula-row">
+          <span class="formula-expr"><span class="op-color">formatMult =</span> 1 + (<span class="dim-color">formatWeight</span> &times; <span class="dim-color">receptionIndex</span> &times; <span class="dim-color">posCoeff</span>)</span>
+          <span class="formula-note">data-driven, not flat</span>
+        </div>
+        <div class="formula-row">
+          <span class="formula-expr">&nbsp;&nbsp;<span class="dim-color">formatWeight</span>: <span class="weight-color">0</span> (Std) | <span class="weight-color">0.5</span> (Half) | <span class="weight-color">1.0</span> (PPR)</span>
+          <span class="formula-note">league scoring format</span>
+        </div>
+        <div class="formula-row">
+          <span class="formula-expr">&nbsp;&nbsp;<span class="dim-color">receptionIndex</span>: norm(<span class="weight-color">tgt/gm</span>, <span class="weight-color">catchRate</span>, <span class="weight-color">airYdShare</span>)</span>
+          <span class="formula-note">player-specific volume</span>
+        </div>
+        <div class="formula-row">
+          <span class="formula-expr">&nbsp;&nbsp;<span class="dim-color">posCoeff</span>: historical Std&rarr;PPR scoring differential</span>
+          <span class="formula-note">position-level calibration</span>
+        </div>
+      </div>
+      <div class="formula-conditional" style="margin-top:8px;">
+        <div class="formula-row">
+          <span class="formula-expr" style="font-size:0.8rem"><span class="op-color">posCoeff reference (avg PPG delta, Full PPR vs Standard):</span></span>
+          <span class="formula-note"></span>
+        </div>
+        <div class="formula-row">
+          <span class="formula-expr">&nbsp;&nbsp;<span style="color:var(--rb)">RB</span>: <span class="weight-color">+3.8 &ndash; +8.2</span> ppg</span>
+          <span class="formula-note">widest variance &mdash; pass-catching vs. grinder</span>
+        </div>
+        <div class="formula-row">
+          <span class="formula-expr">&nbsp;&nbsp;<span style="color:var(--te)">TE</span>: <span class="weight-color">+2.4 &ndash; +5.6</span> ppg</span>
+          <span class="formula-note">receiving TE vs. blocking TE</span>
+        </div>
+        <div class="formula-row">
+          <span class="formula-expr">&nbsp;&nbsp;<span style="color:var(--wr)">WR</span>: <span class="weight-color">+3.2 &ndash; +5.0</span> ppg</span>
+          <span class="formula-note">slot/possession vs. deep threat</span>
+        </div>
+        <div class="formula-row">
+          <span class="formula-expr">&nbsp;&nbsp;<span style="color:var(--qb)">QB</span>: <span class="weight-color">+0.0</span> ppg</span>
+          <span class="formula-note">no reception-based scoring impact</span>
+        </div>
+      </div>
+
+      <div class="formula-part-label">Part D &mdash; Modifiers</div>
+      <div class="formula-conditional gold-border">
+        <div class="formula-row">
+          <span class="formula-expr"><span class="op-color">modified = adjusted</span></span>
+          <span class="formula-note">multiplicative chain</span>
+        </div>
+        <div class="formula-row">
+          <span class="formula-expr">&nbsp;&nbsp;<span class="op-color">&times;</span> <span class="dim-color">posWeight</span></span>
+          <span class="formula-note">position scoring-band compression</span>
+        </div>
+        <div class="formula-row">
+          <span class="formula-expr">&nbsp;&nbsp;<span class="op-color">&times;</span> <span class="dim-color">formatMult</span></span>
+          <span class="formula-note">from Part C above</span>
+        </div>
+        <div class="formula-row">
+          <span class="formula-expr">&nbsp;&nbsp;<span class="op-color">&times;</span> <span class="dim-color">xFactor</span>(<span class="weight-color">usageShare</span>)</span>
+          <span class="formula-note">range 0.85 &ndash; 1.10</span>
+        </div>
+        <div class="formula-row">
+          <span class="formula-expr">&nbsp;&nbsp;<span class="op-color">&times;</span> <span class="dim-color">draftValue</span>(<span class="weight-color">adpRank</span>)</span>
+          <span class="formula-note">range 0.05 &ndash; 1.00</span>
+        </div>
+      </div>
+      <div class="formula-conditional">
+        <div class="formula-row">
+          <span class="formula-expr"><span class="dim-color">posWeight</span>: <span style="color:var(--qb)">QB</span> = <span class="weight-color">1.00</span>, <span style="color:var(--rb)">RB</span> = <span class="weight-color">1.00</span>, <span style="color:var(--wr)">WR</span> = <span class="weight-color">1.00</span>, <span style="color:var(--te)">TE</span> = <span class="weight-color">1.00</span></span>
+          <span class="formula-note">full range positions</span>
+        </div>
+        <div class="formula-row">
+          <span class="formula-expr"><span class="dim-color">posWeight</span>: K = <span class="weight-color">0.72</span>, DEF = <span class="weight-color">0.68</span></span>
+          <span class="formula-note">compressed &mdash; ceiling ~67 / ~63</span>
+        </div>
+      </div>
+
+      <div class="formula-part-label">Part E &mdash; Sigmoid + Elite Floor</div>
+      <div class="formula-row">
+        <span class="formula-expr"><span class="op-color">shaped =</span> 1 / (1 + e<sup>&minus;8(modified &minus; 0.40)</sup>) <span class="op-color">&times;</span> <span class="weight-color">100</span></span>
+        <span class="formula-note">always &mdash; maps to 0&ndash;100</span>
+      </div>
+      <div class="formula-row">
+        <span class="formula-expr"><span class="op-color">final = clamp(</span>shaped, <span class="dim-color">eliteFloor</span><span class="op-color">)</span></span>
+        <span class="formula-note">always</span>
+      </div>
+      <div class="formula-conditional">
+        <div class="formula-row">
+          <span class="formula-expr"><span class="dim-color">eliteFloor</span> = peakScore &times; (<span class="weight-color">0.85</span> ^ yearsSincePeak)</span>
+          <span class="formula-note">historical peak decay 15%/yr</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ════════ SECTION 3: POST-PROCESSING PIPELINE ════════ -->
+<div class="section">
+  <div class="section-divider"></div>
+  <h2 class="section-title">Post-Processing Pipeline</h2>
+  <p class="section-subtitle">Dimension composite flows through seven stages to produce the final 0&ndash;100 HexScore.</p>
+
+  <div class="pipeline" id="pipeline"></div>
+</div>
+
+<!-- ════════ SECTION 4: INJURY SEVERITY DAMPENER ════════ -->
+<div class="section">
+  <div class="section-divider"></div>
+  <h2 class="section-title">Injury Severity Dampener</h2>
+  <p class="section-subtitle">Position-aware injury impact calculation within the Durability dimension.</p>
+
+  <div class="injury-panel">
+    <h3>Severity Calculation</h3>
+    <p class="sub">Each injury type carries a base severity, modified by position vulnerability, age, and recurrence history.</p>
+    <div class="injury-formula">
+      baseSeverity &times; posVulnerability + agePenalty + recurrence &rarr; capped by position
+    </div>
+    <div class="injury-grid">
+      <div>
+        <table class="injury-table">
+          <thead>
+            <tr><th>Position</th><th>Severity Cap</th><th>Vulnerability</th></tr>
+          </thead>
+          <tbody>
+            <tr><td style="color:var(--qb)">QB</td><td>0.45</td><td>Low &mdash; arm/shoulder focus</td></tr>
+            <tr><td style="color:var(--rb)">RB</td><td>0.65</td><td>High &mdash; contact volume</td></tr>
+            <tr><td style="color:var(--wr)">WR</td><td>0.55</td><td>Medium &mdash; soft tissue risk</td></tr>
+            <tr><td style="color:var(--te)">TE</td><td>0.55</td><td>Medium &mdash; hybrid role</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="injury-example">
+        <h4>Example: Same ACL Tear, Different Impact</h4>
+        <div class="injury-example-row">
+          <span class="injury-pos" style="color:var(--qb)">QB, Age 26</span>
+          <span class="injury-impact">-0.32 dampener</span>
+        </div>
+        <div class="injury-example-row">
+          <span class="injury-pos" style="color:var(--rb)">RB, Age 26</span>
+          <span class="injury-impact">-0.58 dampener</span>
+        </div>
+        <div class="injury-example-row">
+          <span class="injury-pos" style="color:var(--wr)">WR, Age 26</span>
+          <span class="injury-impact">-0.44 dampener</span>
+        </div>
+        <div class="injury-example-row">
+          <span class="injury-pos" style="color:var(--te)">TE, Age 26</span>
+          <span class="injury-impact">-0.47 dampener</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ SECTION 5: AGE CURVES ════════ -->
+<div class="section">
+  <div class="section-divider"></div>
+  <h2 class="section-title">Position Age Curves</h2>
+  <p class="section-subtitle">Position-specific career arcs showing prime plateau and cliff decline. Factor range 0&ndash;1.0.</p>
+
+  <div class="age-chart-wrap">
+    <svg id="ageSvg" viewBox="0 0 800 400" width="100%" preserveAspectRatio="xMidYMid meet"></svg>
+    <div class="age-legend">
+      <div class="age-legend-item"><div class="age-legend-dot" style="background:var(--qb)"></div>QB</div>
+      <div class="age-legend-item"><div class="age-legend-dot" style="background:var(--rb)"></div>RB</div>
+      <div class="age-legend-item"><div class="age-legend-dot" style="background:var(--wr)"></div>WR</div>
+      <div class="age-legend-item"><div class="age-legend-dot" style="background:var(--te)"></div>TE</div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ SECTION 6: TIER CLASSIFICATION ════════ -->
+<div class="section">
+  <div class="section-divider"></div>
+  <h2 class="section-title">Tier Classification</h2>
+  <p class="section-subtitle">Final HexScore maps to seven performance tiers.</p>
+
+  <div class="tier-bar-wrap">
+    <div class="tier-bar" id="tierBar"></div>
+    <div class="tier-labels" id="tierLabels"></div>
+  </div>
+</div>
+
+</div><!-- .container -->
+
+<div class="footer">
+  <span>HexMetrics</span> &mdash; HexScore Algorithm Reference &mdash; v1.0
+</div>
+
+<script>
+(function() {
+  // ── Theme Toggle ──
+  const toggle = document.getElementById('themeToggle');
+  function applyTheme(dark) {
+    document.documentElement.classList.toggle('dark', dark);
+    localStorage.setItem('hexmetrics-theme', dark ? 'dark' : 'light');
+    drawAgeChart(); // rebuild SVG with new colors
+  }
+  // Init: check localStorage
+  if (localStorage.getItem('hexmetrics-theme') === 'dark') {
+    document.documentElement.classList.add('dark');
+  }
+  toggle.addEventListener('click', function() {
+    applyTheme(!document.documentElement.classList.contains('dark'));
+  });
+
+  // ── Dimensions Data ──
+  const dims = [
+    { name: 'Production', weight: 0.24, formula: '4-yr weighted avg (65/20/10/5%), fluke dampener, SOS adjust, min-max norm' },
+    { name: 'Situation', weight: 0.16, formula: 'Position-specific team context: scheme fit, QB quality, O-line grade, pace/tempo' },
+    { name: 'Scarcity', weight: 0.14, formula: 'Pure rank percentile: (count \u2212 rank) / (count \u2212 1)' },
+    { name: 'Durability', weight: 0.12, formula: '3-yr GP ratio + trend \u00b1 injury severity dampener (position-aware)' },
+    { name: 'Consistency', weight: 0.10, formula: '50/50 blend: availability CV + production CV, age-mitigated' },
+    { name: 'Health', weight: 0.08, formula: 'Status multiplier: healthy=1.0, questionable=0.75, out=0.25, IR=0.05' },
+    { name: 'Age Factor', weight: 0.08, formula: 'Position-specific career arc: prime plateau \u2192 cliff decline' },
+    { name: 'Slot Value', weight: 0.08, formula: 'Roster economics: eligibility + demand + attrition + production replaceability' },
+  ];
+
+  const maxWeight = 0.24;
+  const grid = document.getElementById('dimGrid');
+  dims.forEach((d, i) => {
+    const pct = Math.round(d.weight * 100);
+    const barW = (d.weight / maxWeight * 100).toFixed(1);
+    const card = document.createElement('div');
+    card.className = 'dim-card';
+    card.innerHTML = `
+      <div class="dim-rank">#${i + 1} Weight</div>
+      <div class="dim-name">${d.name}</div>
+      <div class="dim-weight-bar"><div class="dim-weight-fill" style="width:${barW}%"></div></div>
+      <div class="dim-weight-label">${pct}%</div>
+      <div class="dim-formula">${d.formula}</div>
+    `;
+    grid.appendChild(card);
+  });
+
+  // ── Pipeline Data ──
+  const steps = [
+    { step: 'Step 1', name: 'Weighted Composite', formula: '<code>\u03A3(dim \u00d7 weight)</code> &mdash; all 8 dimensions' },
+    { step: 'Step 2', name: 'Archetype Adjust', formula: 'production \u00d7 <code>fantasyPremium</code>, consistency + <code>floorBoost</code>' },
+    { step: 'Step 3', name: 'Format Multiplier', formula: '<code>1 + (fmtWt \u00d7 recIdx \u00d7 posCoeff)</code><br>Targets, catch rate, air yards \u2192 position-calibrated' },
+    { step: 'Step 4', name: 'X-Factor', formula: 'Usage/target share multiplier<br><code>\u00d70.85 \u2013 1.10</code> range' },
+    { step: 'Step 5', name: 'Draft Value', formula: 'Rank-based multiplier: top-5 = <code>1.0</code>, beyond draftable = exponential dropoff <code>\u00d70.05\u20131.0</code>' },
+    { step: 'Step 6', name: 'Sigmoid Shaping', formula: '<code>1/(1+e^(-8(x-0.40)))</code><br>\u00d7 100' },
+    { step: 'Step 7', name: 'Elite Floor', formula: 'Elite floor: historical peak decay <code>15%/yr</code>' },
+  ];
+
+  const pipeline = document.getElementById('pipeline');
+  steps.forEach(s => {
+    const node = document.createElement('div');
+    node.className = 'pipe-node';
+    node.innerHTML = `
+      <div class="pipe-step">${s.step}</div>
+      <div class="pipe-name">${s.name}</div>
+      <div class="pipe-formula">${s.formula}</div>
+    `;
+    pipeline.appendChild(node);
+  });
+
+  // ── Age Curves SVG (extracted to function for theme rebuild) ──
+  const ns = 'http://www.w3.org/2000/svg';
+  const pad = { top: 30, right: 30, bottom: 50, left: 55 };
+  const W = 800, H = 400;
+  const cw = W - pad.left - pad.right;
+  const ch = H - pad.top - pad.bottom;
+
+  function x(age) { return pad.left + ((age - 20) / 20) * cw; }
+  function y(val) { return pad.top + (1 - val) * ch; }
+
+  const curves = {
+    QB:  { color: '#2563eb', pts: [[20,0.55],[22,0.72],[24,0.85],[25,0.92],[26,0.96],[27,0.98],[28,1.0],[29,1.0],[30,0.99],[31,0.97],[32,0.94],[33,0.90],[34,0.85],[35,0.78],[36,0.70],[37,0.60],[38,0.48],[39,0.35],[40,0.22]] },
+    RB:  { color: '#16a34a', pts: [[20,0.60],[21,0.75],[22,0.88],[23,0.95],[24,1.0],[25,0.99],[26,0.95],[27,0.88],[28,0.78],[29,0.65],[30,0.50],[31,0.38],[32,0.27],[33,0.18],[34,0.12],[35,0.08],[36,0.05],[37,0.03],[38,0.02],[39,0.01],[40,0.01]] },
+    WR:  { color: '#f59e0b', pts: [[20,0.45],[21,0.58],[22,0.72],[23,0.82],[24,0.90],[25,0.95],[26,0.98],[27,1.0],[28,0.99],[29,0.96],[30,0.91],[31,0.84],[32,0.74],[33,0.62],[34,0.48],[35,0.35],[36,0.23],[37,0.14],[38,0.08],[39,0.04],[40,0.02]] },
+    TE:  { color: '#dc2626', pts: [[20,0.40],[21,0.52],[22,0.65],[23,0.76],[24,0.85],[25,0.92],[26,0.97],[27,1.0],[28,0.99],[29,0.96],[30,0.90],[31,0.82],[32,0.72],[33,0.60],[34,0.46],[35,0.33],[36,0.22],[37,0.13],[38,0.07],[39,0.03],[40,0.01]] },
+  };
+  const primeWindows = [
+    { pos: 'QB', start: 26, end: 32, color: '#2563eb' },
+    { pos: 'RB', start: 22, end: 26, color: '#16a34a' },
+    { pos: 'WR', start: 25, end: 29, color: '#f59e0b' },
+    { pos: 'TE', start: 25, end: 29, color: '#dc2626' },
+  ];
+  const cliffs = [
+    { age: 35, color: '#2563eb' },
+    { age: 28, color: '#16a34a' },
+    { age: 31, color: '#f59e0b' },
+    { age: 31, color: '#dc2626' },
+  ];
+
+  function drawAgeChart() {
+    const svg = document.getElementById('ageSvg');
+    svg.innerHTML = '';
+    const style = getComputedStyle(document.documentElement);
+    const gridLine = style.getPropertyValue('--grid-line').trim();
+    const gridText = style.getPropertyValue('--grid-text').trim();
+
+    // Grid lines
+    for (let a = 20; a <= 40; a += 2) {
+      const line = document.createElementNS(ns, 'line');
+      Object.entries({ x1: x(a), y1: pad.top, x2: x(a), y2: H - pad.bottom, stroke: gridLine, 'stroke-width': 1 }).forEach(([k,v]) => line.setAttribute(k, v));
+      svg.appendChild(line);
+      const txt = document.createElementNS(ns, 'text');
+      txt.setAttribute('x', x(a)); txt.setAttribute('y', H - pad.bottom + 20);
+      txt.setAttribute('text-anchor', 'middle'); txt.setAttribute('fill', gridText); txt.setAttribute('font-size', '12');
+      txt.textContent = a;
+      svg.appendChild(txt);
+    }
+    for (let v = 0; v <= 1; v += 0.2) {
+      const line = document.createElementNS(ns, 'line');
+      Object.entries({ x1: pad.left, y1: y(v), x2: W - pad.right, y2: y(v), stroke: gridLine, 'stroke-width': 1 }).forEach(([k,val]) => line.setAttribute(k, val));
+      svg.appendChild(line);
+      const txt = document.createElementNS(ns, 'text');
+      txt.setAttribute('x', pad.left - 12); txt.setAttribute('y', y(v) + 4);
+      txt.setAttribute('text-anchor', 'end'); txt.setAttribute('fill', gridText); txt.setAttribute('font-size', '12');
+      txt.textContent = v.toFixed(1);
+      svg.appendChild(txt);
+    }
+
+    // Axis labels
+    const xLabel = document.createElementNS(ns, 'text');
+    xLabel.setAttribute('x', pad.left + cw / 2); xLabel.setAttribute('y', H - 5);
+    xLabel.setAttribute('text-anchor', 'middle'); xLabel.setAttribute('fill', gridText); xLabel.setAttribute('font-size', '13');
+    xLabel.textContent = 'Age';
+    svg.appendChild(xLabel);
+
+    const yLabel = document.createElementNS(ns, 'text');
+    yLabel.setAttribute('x', 14); yLabel.setAttribute('y', pad.top + ch / 2);
+    yLabel.setAttribute('text-anchor', 'middle'); yLabel.setAttribute('fill', gridText); yLabel.setAttribute('font-size', '13');
+    yLabel.setAttribute('transform', `rotate(-90, 14, ${pad.top + ch / 2})`);
+    yLabel.textContent = 'Age Factor';
+    svg.appendChild(yLabel);
+
+    // Prime window shading
+    primeWindows.forEach(pw => {
+      const rect = document.createElementNS(ns, 'rect');
+      rect.setAttribute('x', x(pw.start));
+      rect.setAttribute('y', pad.top);
+      rect.setAttribute('width', x(pw.end) - x(pw.start));
+      rect.setAttribute('height', ch);
+      rect.setAttribute('fill', pw.color);
+      rect.setAttribute('opacity', '0.04');
+      svg.appendChild(rect);
+    });
+
+    // Draw curves
+    Object.entries(curves).forEach(([pos, data]) => {
+      const path = document.createElementNS(ns, 'path');
+      const d = data.pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(p[0]).toFixed(1)},${y(p[1]).toFixed(1)}`).join(' ');
+      path.setAttribute('d', d);
+      path.setAttribute('fill', 'none');
+      path.setAttribute('stroke', data.color);
+      path.setAttribute('stroke-width', '2.5');
+      path.setAttribute('stroke-linecap', 'round');
+      path.setAttribute('stroke-linejoin', 'round');
+      svg.appendChild(path);
+    });
+
+    // Cliff markers
+    cliffs.forEach(c => {
+      const line = document.createElementNS(ns, 'line');
+      Object.entries({ x1: x(c.age), y1: pad.top, x2: x(c.age), y2: H - pad.bottom, stroke: c.color, 'stroke-width': 1, 'stroke-dasharray': '4,4', opacity: 0.4 }).forEach(([k,v]) => line.setAttribute(k, v));
+      svg.appendChild(line);
+    });
+  }
+
+  // Initial draw
+  drawAgeChart();
+
+  // ── Tier Bar ──
+  const tiers = [
+    { name: 'Elite', range: '\u226585', min: 85, max: 100, color: '#8B5CF6' },
+    { name: 'Starter+', range: '75\u201384', min: 75, max: 84, color: '#16a34a' },
+    { name: 'Starter', range: '60\u201374', min: 60, max: 74, color: '#22c55e' },
+    { name: 'Flex', range: '45\u201359', min: 45, max: 59, color: '#f59e0b' },
+    { name: 'Bench', range: '35\u201344', min: 35, max: 44, color: '#f97316' },
+    { name: 'Depth', range: '20\u201334', min: 20, max: 34, color: '#dc2626' },
+    { name: 'Waiver', range: '<20', min: 0, max: 19, color: '#991b1b' },
+  ];
+
+  const tierBar = document.getElementById('tierBar');
+  const tierLabels = document.getElementById('tierLabels');
+  const totalRange = 100;
+  tiers.forEach(t => {
+    const span = t.max - t.min + 1;
+    const pct = (span / totalRange * 100).toFixed(1);
+    const seg = document.createElement('div');
+    seg.className = 'tier-seg';
+    seg.style.flex = `${span}`;
+    seg.style.background = t.color;
+    seg.textContent = t.name;
+    tierBar.appendChild(seg);
+
+    const label = document.createElement('div');
+    label.className = 'tier-label';
+    label.style.flex = `${span}`;
+    label.textContent = t.range;
+    tierLabels.appendChild(label);
+  });
+})();
+</script>
+
+</body>
+</html>

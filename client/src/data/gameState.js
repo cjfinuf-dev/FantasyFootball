@@ -1,5 +1,5 @@
-// SEASON: Update DATA_SEASON each year — used to detect stale static data at runtime
-export const DATA_SEASON = 2024;
+// Season constants centralized in seasonConfig.js
+export { DATA_SEASON } from './seasonConfig';
 
 // Live game state — maps player IDs to their current-week scoring status.
 // Empty by default (pre-game / no live data). Populated by a live feed when available.
@@ -11,3 +11,9 @@ export const DATA_SEASON = 2024;
 //   }
 
 export const gameState = {};
+
+export function clearGameState() {
+  for (const key of Object.keys(gameState)) {
+    delete gameState[key];
+  }
+}

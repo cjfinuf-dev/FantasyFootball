@@ -17,8 +17,8 @@ const POS_COLORS = {
 };
 
 const POS_BG = {
-  QB: 'rgba(59,130,246,0.12)', RB: 'rgba(34,197,94,0.12)', WR: 'rgba(245,158,11,0.12)',
-  TE: 'rgba(239,68,68,0.12)', K: 'rgba(168,85,247,0.12)', DEF: 'rgba(100,116,139,0.12)',
+  QB: 'var(--pos-qb-bg)', RB: 'var(--pos-rb-bg)', WR: 'var(--pos-wr-bg)',
+  TE: 'var(--pos-te-bg)', K: 'var(--pos-k-bg)', DEF: 'var(--pos-def-bg)',
 };
 
 const PLAYER_MAP = {};
@@ -45,6 +45,38 @@ function shuffleArray(arr) {
 }
 
 const STARTER_NEEDS = { QB: 1, RB: 2, WR: 2, TE: 1, DST: 1, K: 1 };
+
+const NON_STARTER_SLOTS = new Set(['BN', 'IR', 'TAXI']);
+const FLEX_SLOTS = new Set(['FLEX', 'SFLEX']);
+
+function deriveStarterNeeds(rosterConfig) {
+  const needs = {};
+  for (const [pos, count] of Object.entries(rosterConfig)) {
+    if (NON_STARTER_SLOTS.has(pos)) continue;
+    if (count > 0) needs[pos] = count;
+  }
+  return needs;
+}
+
+function getMustPickPositions(picks, teamId, rounds, rosterConfig) {
+  const starterNeeds = deriveStarterNeeds(rosterConfig);
+  const { needs } = getTeamNeeds(picks, teamId, starterNeeds);
+  const teamPickCount = picks.filter(p => p.teamId === teamId).length;
+  const remainingPicks = rounds - teamPickCount;
+  const unfilledCount = Object.values(needs).reduce((s, n) => s + n, 0);
+
+  if (remainingPicks > unfilledCount) return null;
+
+  const mustPick = new Set();
+  for (const [pos, count] of Object.entries(needs)) {
+    if (count <= 0) continue;
+    if (pos === 'FLEX') { mustPick.add('RB'); mustPick.add('WR'); mustPick.add('TE'); }
+    else if (pos === 'SFLEX') { mustPick.add('QB'); mustPick.add('RB'); mustPick.add('WR'); mustPick.add('TE'); }
+    else if (pos === 'DST') { mustPick.add('DEF'); }
+    else { mustPick.add(pos); }
+  }
+  return mustPick;
+}
 
 // --- Bot Draft Archetypes ---
 const BOT_ARCHETYPES = {
@@ -88,7 +120,7 @@ function getPositionMultiplier(pos, scoringPreset) {
   return (mults[scoringPreset] || mults.ppr)[pos] || 1.0;
 }
 
-function getTeamNeeds(picks, teamId) {
+function getTeamNeeds(picks, teamId, starterNeeds = STARTER_NEEDS) {
   const counts = {};
   picks.forEach(p => {
     if (p.teamId !== teamId) return;
@@ -96,17 +128,37 @@ function getTeamNeeds(picks, teamId) {
     if (player) counts[player.pos] = (counts[player.pos] || 0) + 1;
   });
   const needs = {};
-  Object.entries(STARTER_NEEDS).forEach(([pos, needed]) => {
-    const have = counts[pos] || 0;
+  // Handle non-flex starter slots
+  Object.entries(starterNeeds).forEach(([pos, needed]) => {
+    if (FLEX_SLOTS.has(pos)) return; // flex handled below
+    const have = counts[pos === 'DST' ? 'DEF' : pos] || 0;
     if (have < needed) needs[pos] = needed - have;
   });
 
-  // FLEX slot: filled by excess RB/WR/TE beyond starter needs
-  const rbExcess = Math.max(0, (counts['RB'] || 0) - (STARTER_NEEDS.RB || 0));
-  const wrExcess = Math.max(0, (counts['WR'] || 0) - (STARTER_NEEDS.WR || 0));
-  const teExcess = Math.max(0, (counts['TE'] || 0) - (STARTER_NEEDS.TE || 0));
-  const flexFilled = rbExcess + wrExcess + teExcess >= 1;
-  if (!flexFilled) needs['FLEX'] = 1;
+  // Compute excess for flex-eligible positions (RB/WR/TE beyond their starter needs)
+  const rbExcess = Math.max(0, (counts['RB'] || 0) - (starterNeeds.RB || 0));
+  const wrExcess = Math.max(0, (counts['WR'] || 0) - (starterNeeds.WR || 0));
+  const teExcess = Math.max(0, (counts['TE'] || 0) - (starterNeeds.TE || 0));
+  const qbExcess = Math.max(0, (counts['QB'] || 0) - (starterNeeds.QB || 0));
+  const flexExcess = rbExcess + wrExcess + teExcess;
+
+  // FLEX slots
+  const flexNeeded = starterNeeds.FLEX || 0;
+  if (flexNeeded > 0) {
+    const unfilledFlex = Math.max(0, flexNeeded - flexExcess);
+    if (unfilledFlex > 0) needs['FLEX'] = unfilledFlex;
+  }
+
+  // SFLEX slots (QB + RB/WR/TE eligible)
+  const sflexNeeded = starterNeeds.SFLEX || 0;
+  if (sflexNeeded > 0) {
+    const sflexPool = Math.max(0, flexExcess - (flexNeeded > 0 ? Math.max(0, flexExcess - Math.max(0, flexNeeded - flexExcess)) : 0)) + qbExcess;
+    // Simpler: total excess across all sflex-eligible minus what FLEX consumed
+    const flexConsumed = flexNeeded > 0 ? Math.min(flexExcess, flexNeeded) : 0;
+    const sflexAvailable = (flexExcess - flexConsumed) + qbExcess;
+    const unfilledSflex = Math.max(0, sflexNeeded - sflexAvailable);
+    if (unfilledSflex > 0) needs['SFLEX'] = unfilledSflex;
+  }
 
   return { needs, counts };
 }
@@ -135,12 +187,22 @@ function weightedRandomPick(candidates) {
   return topN[0].id;
 }
 
-function getBestAvailable(state, teamId, scoringPreset = 'ppr', archetypes = {}, teamCount = 12) {
+function getBestAvailable(state, teamId, scoringPreset = 'ppr', archetypes = {}, teamCount = 12, rounds = TOTAL_ROUNDS, rosterConfig = null) {
   const pickedSet = new Set(state.picks.map(p => p.playerId));
-  const available = PLAYERS.filter(p => !pickedSet.has(p.id));
+  let available = PLAYERS.filter(p => !pickedSet.has(p.id));
   if (available.length === 0) return null;
 
-  const { needs, counts } = getTeamNeeds(state.picks, teamId);
+  // Hard-filter: if remaining picks <= unfilled starters, restrict to needed positions
+  if (rosterConfig) {
+    const mustPick = getMustPickPositions(state.picks, teamId, rounds, rosterConfig);
+    if (mustPick) {
+      const forced = available.filter(p => mustPick.has(p.pos));
+      if (forced.length > 0) available = forced;
+    }
+  }
+
+  const starterNeeds = rosterConfig ? deriveStarterNeeds(rosterConfig) : STARTER_NEEDS;
+  const { needs, counts } = getTeamNeeds(state.picks, teamId, starterNeeds);
   const neededPositions = Object.keys(needs);
   const round = Math.floor(state.currentPick / teamCount);
   const archetype = archetypes[teamId] || 'balanced';
@@ -148,7 +210,7 @@ function getBestAvailable(state, teamId, scoringPreset = 'ppr', archetypes = {},
 
   // Score each available player with format-aware, archetype-aware valuation
   const scored = available.map(p => {
-    let score = getHexScore(p.id);
+    let score = getHexScore(p.id, scoringPreset);
 
     // Apply scoring format multiplier
     score *= getPositionMultiplier(p.pos, scoringPreset);
@@ -256,27 +318,33 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
 
   const pickedIds = useMemo(() => new Set(state.picks.map(p => p.playerId)), [state.picks]);
 
-  const availablePlayers = useMemo(() => {
-    let list = PLAYERS.filter(p => !pickedIds.has(p.id));
-    if (posFilter !== 'ALL') list = list.filter(p => p.pos === posFilter);
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      list = list.filter(p => p.name.toLowerCase().includes(q) || p.team.toLowerCase().includes(q));
-    }
-    if (sortBy === 'hex') {
-      list.sort((a, b) => getHexScore(b.id) - getHexScore(a.id));
-    } else {
-      list.sort((a, b) => b[sortBy] - a[sortBy]);
-    }
-    return list;
-  }, [pickedIds, posFilter, searchQuery, sortBy]);
-
   const currentTeamId = useMemo(
     () => state.phase === 'active' ? getTeamForPick(state.currentPick, state.draftOrder, TOTAL_TEAMS) : null,
     [state.currentPick, state.draftOrder, state.phase]
   );
 
   const isUserTurn = currentTeamId === USER_TEAM_ID && !state.autoDraft;
+
+  const userMustPick = useMemo(() => {
+    if (state.phase !== 'active' || !isUserTurn) return null;
+    return getMustPickPositions(state.picks, USER_TEAM_ID, rounds, rosterConfig);
+  }, [state.picks, state.phase, isUserTurn, rounds, rosterConfig]);
+
+  const availablePlayers = useMemo(() => {
+    let list = PLAYERS.filter(p => !pickedIds.has(p.id));
+    if (userMustPick) list = list.filter(p => userMustPick.has(p.pos));
+    if (posFilter !== 'ALL') list = list.filter(p => p.pos === posFilter);
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      list = list.filter(p => p.name.toLowerCase().includes(q) || p.team.toLowerCase().includes(q));
+    }
+    if (sortBy === 'hex') {
+      list.sort((a, b) => getHexScore(b.id, selectedPreset) - getHexScore(a.id, selectedPreset));
+    } else {
+      list.sort((a, b) => b[sortBy] - a[sortBy]);
+    }
+    return list;
+  }, [pickedIds, posFilter, searchQuery, sortBy, userMustPick]);
 
   const userRoster = useMemo(() => {
     return state.picks.filter(p => p.teamId === USER_TEAM_ID).map(p => ({
@@ -330,7 +398,7 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
         playerId = prev.pickQueue.find(pid => !pickedSet.has(pid));
       }
       if (!playerId) {
-        playerId = getBestAvailable(prev, teamId, scoringPreset, botArchetypes, TOTAL_TEAMS);
+        playerId = getBestAvailable(prev, teamId, scoringPreset, botArchetypes, TOTAL_TEAMS, rounds, rosterConfig);
       }
     }
 
@@ -357,7 +425,7 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
         ...prev.announcements.slice(0, 4),
       ],
     };
-  }, [scoringPreset, botArchetypes, rounds]);
+  }, [scoringPreset, botArchetypes, rounds, rosterConfig]);
 
   // Timer effect
   useEffect(() => {
@@ -436,6 +504,11 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
   const handleUserPick = (playerId) => {
     if (!isUserTurn || state.phase !== 'active') return;
     if (pickingRef.current) return;
+    // Enforce must-pick restriction
+    if (userMustPick) {
+      const player = PLAYER_MAP[playerId];
+      if (player && !userMustPick.has(player.pos)) return;
+    }
     pickingRef.current = true;
     clearInterval(timerRef.current);
     setState(prev => executePick(prev, playerId));
@@ -799,10 +872,10 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
   if (state.phase === 'complete') {
     // Compute draft grade for user's team
     const userRosterComplete = teamRostersMap[USER_TEAM_ID] || [];
-    const userTotalHex = userRosterComplete.reduce((sum, p) => sum + getHexScore(p.playerId), 0);
+    const userTotalHex = userRosterComplete.reduce((sum, p) => sum + getHexScore(p.playerId, selectedPreset), 0);
     const allTeamTotals = state.draftOrder.map(tid => ({
       teamId: tid,
-      total: (teamRostersMap[tid] || []).reduce((sum, p) => sum + getHexScore(p.playerId), 0),
+      total: (teamRostersMap[tid] || []).reduce((sum, p) => sum + getHexScore(p.playerId, selectedPreset), 0),
     })).sort((a, b) => b.total - a.total);
     const userRank = allTeamTotals.findIndex(t => t.teamId === USER_TEAM_ID) + 1;
     const maxHex = allTeamTotals[0]?.total || 1;
@@ -888,10 +961,10 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
                     const teamPosTotals = state.draftOrder.map(tid => {
                       const roster = teamRostersMap[tid] || [];
                       const posPlayers = roster.filter(p => p.player?.pos === pos)
-                        .sort((a, b) => getHexScore(b.playerId) - getHexScore(a.playerId));
+                        .sort((a, b) => getHexScore(b.playerId, selectedPreset) - getHexScore(a.playerId, selectedPreset));
                       let total = 0;
                       posPlayers.forEach((p, i) => {
-                        total += getHexScore(p.playerId) * (i < starters ? 1.0 : 0.25);
+                        total += getHexScore(p.playerId, selectedPreset) * (i < starters ? 1.0 : 0.25);
                       });
                       return { teamId: tid, total, best: posPlayers[0], count: posPlayers.length };
                     }).sort((a, b) => b.total - a.total);
@@ -939,7 +1012,7 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
                     const pos = pick.player?.pos;
                     if (!pos) return;
                     if (!allDraftedByPos[pos]) allDraftedByPos[pos] = [];
-                    allDraftedByPos[pos].push({ playerId: pick.playerId, hex: getHexScore(pick.playerId), teamId: tid });
+                    allDraftedByPos[pos].push({ playerId: pick.playerId, hex: getHexScore(pick.playerId, selectedPreset), teamId: tid });
                   });
                 });
                 Object.values(allDraftedByPos).forEach(arr => arr.sort((a, b) => b.hex - a.hex));
@@ -994,7 +1067,7 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
                           <span style={{ fontWeight: 600, color: 'var(--text)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pick.player?.name}</span>
                           <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>{pick.player?.team}</span>
                           <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>R{pick.round + 1}</span>
-                          <span style={{ color: 'var(--hex-purple)', fontSize: 14, fontWeight: 700, minWidth: 34, textAlign: 'right' }} className="tabular-nums">{formatHex(getHexScore(pick.playerId))}</span>
+                          <span style={{ color: 'var(--hex-purple)', fontSize: 14, fontWeight: 700, minWidth: 34, textAlign: 'right' }} className="tabular-nums">{formatHex(getHexScore(pick.playerId, selectedPreset))}</span>
                           {pg && (
                             <span className="hex-grade-badge" style={{ background: pg.c }}>{pg.g}</span>
                           )}
@@ -1084,27 +1157,27 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
       {/* Compact Draft Header Bar */}
       <div className={`ff-draft-header${isUserTurn ? ' user-turn' : ''}`}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <button style={{ background: 'none', border: 'none', color: 'var(--di-text-muted, #999)', fontSize: 14, cursor: 'pointer' }} onClick={() => window.history.back()}>{'\u2190'} Exit</button>
-          <span style={{ color: 'var(--di-text-faint, #666)', fontSize: 14 }}>|</span>
-          <span style={{ fontSize: 14, color: 'var(--di-text-muted, #888)', fontWeight: 600 }}>Rd {currentRound} &middot; Pick {overallPick}</span>
+          <button style={{ background: 'none', border: 'none', color: 'var(--di-text-muted)', fontSize: 14, cursor: 'pointer' }} onClick={() => window.history.back()}>{'\u2190'} Exit</button>
+          <span style={{ color: 'var(--di-text-faint)', fontSize: 14 }}>|</span>
+          <span style={{ fontSize: 14, color: 'var(--di-text-muted)', fontWeight: 600 }}>Rd {currentRound} &middot; Pick {overallPick}</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 17, fontWeight: 700, color: 'var(--di-text, #e5e5e5)' }}>{currentTeam?.name}</span>
+          <span style={{ fontSize: 17, fontWeight: 700, color: 'var(--di-text)' }}>{currentTeam?.name}</span>
           {isUserTurn && <span className="ff-inline-badge" style={{ background: 'var(--accent)', color: '#fff' }}>YOUR PICK</span>}
-          {!isUserTurn && <span style={{ fontSize: 12, color: 'var(--di-text-muted, #888)' }}>on the clock</span>}
+          {!isUserTurn && <span style={{ fontSize: 12, color: 'var(--di-text-muted)' }}>on the clock</span>}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <div style={{ background: 'var(--di-border, #333)', borderRadius: 4, height: 4, width: 80 }}>
+            <div style={{ background: 'var(--di-border)', borderRadius: 4, height: 4, width: 80 }}>
               <div style={{ background: 'var(--accent)', borderRadius: 4, height: '100%', width: `${(state.picks.length / TOTAL_PICKS) * 100}%`, transition: 'width 0.3s' }} />
             </div>
-            <span style={{ fontSize: 12, color: 'var(--di-text-muted, #888)' }}>{state.picks.length}/{TOTAL_PICKS}</span>
+            <span style={{ fontSize: 12, color: 'var(--di-text-muted)' }}>{state.picks.length}/{TOTAL_PICKS}</span>
           </div>
           <div style={{
             fontSize: 30, fontWeight: 900, fontFamily: 'monospace', lineHeight: 1,
             minWidth: 64, textAlign: 'center',
             color: timerColor,
-            background: 'rgba(0,0,0,0.5)',
+            background: 'var(--di-surface)',
             border: `2px solid ${timerColor}`,
             borderRadius: 8,
             padding: '6px 12px',
@@ -1125,8 +1198,8 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
           <div className="ff-draft-toast" key={ann.timestamp}>
             <div style={{ width: 4, height: 28, borderRadius: 2, background: POS_COLORS[ann.player?.pos] || 'var(--accent)', flexShrink: 0 }} />
             <div>
-              <div style={{ fontWeight: 700, color: '#fff', fontSize: 15 }}>{team?.abbr}: <span style={{ color: POS_COLORS[ann.player?.pos] }}>{ann.player?.name}</span></div>
-              <div style={{ color: 'var(--di-text-muted, #888)', fontSize: 12 }}>Rd {ann.round + 1}, Pick {ann.pickInRound + 1}</div>
+              <div style={{ fontWeight: 700, color: 'var(--di-text)', fontSize: 15 }}>{team?.abbr}: <span style={{ color: POS_COLORS[ann.player?.pos] }}>{ann.player?.name}</span></div>
+              <div style={{ color: 'var(--di-text-muted)', fontSize: 12 }}>Rd {ann.round + 1}, Pick {ann.pickInRound + 1}</div>
             </div>
           </div>
         );
@@ -1162,10 +1235,10 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
                         {cell.pick ? (
                           <div>
                             <div style={{ fontSize: 12, fontWeight: 700, color: POS_COLORS[cell.pick.player?.pos] }}>{cell.pick.player?.pos}</div>
-                            <div style={{ fontSize: 15, lineHeight: 1.2, color: 'var(--di-text, #ddd)' }}>
+                            <div style={{ fontSize: 15, lineHeight: 1.2, color: 'var(--di-text)' }}>
                               {cell.pick.player?.name?.split(' ')[0]}
                             </div>
-                            <div style={{ fontWeight: 700, fontSize: 15, lineHeight: 1.2, wordBreak: 'break-word', color: 'var(--di-text, #ddd)' }}>
+                            <div style={{ fontWeight: 700, fontSize: 15, lineHeight: 1.2, wordBreak: 'break-word', color: 'var(--di-text)' }}>
                               {cell.pick.player?.name?.split(' ').slice(1).join(' ')}
                             </div>
                           </div>
@@ -1185,8 +1258,18 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
         <div className="ff-draft-panel-center">
           <div className="ff-card">
             <div className="ff-card-header" style={{ padding: '10px 16px' }}>
-              <h2 style={{ fontSize: 16 }}>Available Players <span style={{ fontWeight: 400, color: 'var(--di-text-muted, #888)', fontSize: 14 }}>({availablePlayers.length})</span></h2>
+              <h2 style={{ fontSize: 16 }}>Available Players <span style={{ fontWeight: 400, color: 'var(--di-text-muted)', fontSize: 14 }}>({availablePlayers.length})</span></h2>
             </div>
+            {userMustPick && (
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px',
+                background: 'rgba(239,68,68,0.12)', borderBottom: '1px solid rgba(239,68,68,0.3)',
+                fontSize: 13, fontWeight: 600, color: '#ef4444',
+              }}>
+                <span style={{ fontSize: 16 }}>{'\u26A0'}</span>
+                Must fill starting slots: {[...userMustPick].sort().join(', ')}
+              </div>
+            )}
             <div className="ff-tm-filter-bar" style={{ padding: '0 12px 8px' }}>
               {['ALL','QB','RB','WR','TE','K','DEF'].map(pos => (
                 <button key={pos} onClick={() => setPosFilter(pos)}
@@ -1215,7 +1298,7 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
                 </thead>
                 <tbody>
                   {availablePlayers.length === 0 && (
-                    <tr><td colSpan={4} style={{ textAlign: 'center', color: 'var(--di-text-muted, #888)', padding: 16, fontSize: 14 }}>No players available</td></tr>
+                    <tr><td colSpan={4} style={{ textAlign: 'center', color: 'var(--di-text-muted)', padding: 16, fontSize: 14 }}>No players available</td></tr>
                   )}
                   {availablePlayers.map(player => {
                     const inQueue = state.pickQueue.includes(player.id);
@@ -1226,11 +1309,11 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
                             <PlayerHeadshot espnId={getEspnId(player.name)} name={player.name} size="xxs" pos={player.pos} team={player.team} />
                             <PosBadge pos={player.pos} />
                             <span style={{ fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: '1 1 0' }}>{player.name}</span>
-                            <span style={{ color: 'var(--di-text-faint, var(--text-muted))', fontSize: 12, flexShrink: 0 }}>{player.team}</span>
+                            <span style={{ color: 'var(--di-text-faint)', fontSize: 12, flexShrink: 0 }}>{player.team}</span>
                           </div>
                         </td>
                         <td style={{ textAlign: 'right', fontWeight: 600 }} className="tabular-nums">{player.proj}</td>
-                        <td style={{ textAlign: 'right', fontWeight: 600, color: 'var(--hex-purple)' }} className="tabular-nums">{formatHex(getHexScore(player.id))}</td>
+                        <td style={{ textAlign: 'right', fontWeight: 600, color: 'var(--hex-purple)' }} className="tabular-nums">{formatHex(getHexScore(player.id, selectedPreset))}</td>
                         <td style={{ textAlign: 'center' }}>
                           {isUserTurn ? (
                             <button className="ff-btn ff-btn-primary ff-btn-sm" onClick={() => handleUserPick(player.id)}>Draft</button>
@@ -1253,7 +1336,7 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
         <div className="ff-draft-panel-right">
           {/* My Team — Two Views */}
           <div className="ff-card">
-            <div style={{ display: 'flex', borderBottom: '1px solid var(--di-border, var(--gray-700))' }}>
+            <div style={{ display: 'flex', borderBottom: '1px solid var(--di-border)' }}>
               {[{ id: 'roster', label: 'Roster' }, { id: 'picks', label: 'Picks' }].map(tab => (
                 <button key={tab.id} onClick={() => setRosterView(tab.id)} style={{
                   flex: 1, padding: '8px 0', background: 'none', border: 'none',
@@ -1262,7 +1345,7 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
                   fontSize: 14, fontWeight: 700, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.04em',
                 }}>{tab.label}</button>
               ))}
-              <span style={{ fontSize: 12, color: 'var(--di-text-faint, #666)', padding: '8px 10px', display: 'flex', alignItems: 'center' }}>{userRoster.length}/{rounds}</span>
+              <span style={{ fontSize: 12, color: 'var(--di-text-faint)', padding: '8px 10px', display: 'flex', alignItems: 'center' }}>{userRoster.length}/{rounds}</span>
             </div>
             <div style={{ padding: '0 10px 10px', maxHeight: 480, overflowY: 'auto' }}>
               {rosterView === 'roster' ? (
@@ -1287,18 +1370,18 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
                     return (
                       <div key={idx} style={{
                         display: 'flex', alignItems: 'center', gap: 6, padding: '4px 0',
-                        borderBottom: '1px solid var(--di-border, var(--gray-700))', fontSize: 14,
+                        borderBottom: '1px solid var(--di-border)', fontSize: 14,
                         opacity: !isStarter && !match ? 0.4 : 1,
                       }}>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: POS_COLORS[slot.pos] || '#888', minWidth: 32, textTransform: 'uppercase' }}>{slot.pos}</span>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: POS_COLORS[slot.pos] || 'var(--di-text-muted)', minWidth: 32, textTransform: 'uppercase' }}>{slot.pos}</span>
                         {match ? (
                           <>
                             <PosBadge pos={match.player?.pos} />
-                            <span style={{ fontWeight: 500, color: 'var(--di-text, #ddd)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{match.player?.name}</span>
-                            <span style={{ color: 'var(--di-text-faint, #666)', fontSize: 12 }}>{match.player?.team}</span>
+                            <span style={{ fontWeight: 500, color: 'var(--di-text)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{match.player?.name}</span>
+                            <span style={{ color: 'var(--di-text-faint)', fontSize: 12 }}>{match.player?.team}</span>
                           </>
                         ) : (
-                          <span style={{ color: isStarter ? 'var(--accent)' : '#444', fontStyle: 'italic', fontSize: 12 }}>{isStarter ? 'Need' : '-'}</span>
+                          <span style={{ color: isStarter ? 'var(--accent)' : 'var(--di-text-dim)', fontStyle: 'italic', fontSize: 12 }}>{isStarter ? 'Need' : '-'}</span>
                         )}
                       </div>
                     );
@@ -1307,18 +1390,18 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
               ) : (
                 /* Draft Order View */
                 userRoster.length === 0 ? (
-                  <div style={{ textAlign: 'center', color: 'var(--di-text-faint, #666)', fontSize: 14, padding: 16 }}>No picks yet</div>
+                  <div style={{ textAlign: 'center', color: 'var(--di-text-faint)', fontSize: 14, padding: 16 }}>No picks yet</div>
                 ) : (
                   userRoster.map((pick, i) => (
                     <div key={i} style={{
                       display: 'flex', alignItems: 'center', gap: 6, padding: '4px 0',
-                      borderBottom: '1px solid var(--di-border, var(--gray-700))', fontSize: 14,
+                      borderBottom: '1px solid var(--di-border)', fontSize: 14,
                     }}>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--di-text-dim, #555)', minWidth: 28 }}>R{pick.round + 1}</span>
-                      <span style={{ fontSize: 11, color: 'var(--di-text-dim, #555)', minWidth: 22 }}>{pick.pickInRound + 1}</span>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--di-text-dim)', minWidth: 28 }}>R{pick.round + 1}</span>
+                      <span style={{ fontSize: 11, color: 'var(--di-text-dim)', minWidth: 22 }}>{pick.pickInRound + 1}</span>
                       <PosBadge pos={pick.player?.pos} />
-                      <span style={{ fontWeight: 500, color: 'var(--di-text, #ddd)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pick.player?.name}</span>
-                      <span style={{ color: 'var(--hex-purple)', fontSize: 12, fontWeight: 700 }} className="tabular-nums">{formatHex(getHexScore(pick.playerId))}</span>
+                      <span style={{ fontWeight: 500, color: 'var(--di-text)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pick.player?.name}</span>
+                      <span style={{ color: 'var(--hex-purple)', fontSize: 12, fontWeight: 700 }} className="tabular-nums">{formatHex(getHexScore(pick.playerId, selectedPreset))}</span>
                     </div>
                   ))
                 )
@@ -1331,7 +1414,7 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
             onClick={() => setState(prev => ({ ...prev, autoDraft: !prev.autoDraft }))}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px' }}>
               <input type="checkbox" checked={state.autoDraft} readOnly style={{ width: 14, height: 14, accentColor: '#22c55e', pointerEvents: 'none' }} />
-              <span style={{ fontSize: 14, fontWeight: 600, color: state.autoDraft ? 'var(--success-green, #22c55e)' : 'var(--di-text-muted, #aaa)' }}>
+              <span style={{ fontSize: 14, fontWeight: 600, color: state.autoDraft ? 'var(--success-green, #22c55e)' : 'var(--di-text-muted)' }}>
                 Auto-Draft {state.autoDraft ? 'ON' : 'OFF'}
               </span>
             </div>
@@ -1341,11 +1424,11 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
           <div className="ff-card">
             <div className="ff-card-header" style={{ padding: '8px 12px' }}>
               <h3 style={{ fontSize: 14 }}>Queue</h3>
-              <span style={{ fontSize: 12, color: 'var(--di-text-muted, #888)' }}>{state.pickQueue.length}</span>
+              <span style={{ fontSize: 12, color: 'var(--di-text-muted)' }}>{state.pickQueue.length}</span>
             </div>
             <div style={{ padding: '0 10px 10px', maxHeight: 200, overflowY: 'auto' }}>
               {state.pickQueue.length === 0 ? (
-                <div style={{ textAlign: 'center', color: 'var(--di-text-faint, #666)', fontSize: 14, padding: 12 }}>
+                <div style={{ textAlign: 'center', color: 'var(--di-text-faint)', fontSize: 14, padding: 12 }}>
                   Queue players for auto-pick
                 </div>
               ) : state.pickQueue.map((pid, i) => {
@@ -1354,14 +1437,14 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
                 return (
                   <div key={pid} style={{
                     display: 'flex', alignItems: 'center', gap: 6, padding: '3px 0',
-                    borderBottom: '1px solid var(--di-border, var(--gray-700))', fontSize: 14,
+                    borderBottom: '1px solid var(--di-border)', fontSize: 14,
                     opacity: taken ? 0.3 : 1, textDecoration: taken ? 'line-through' : 'none',
                   }}>
-                    <span style={{ color: 'var(--di-text-faint, #666)', fontSize: 12, minWidth: 20 }}>{i + 1}</span>
+                    <span style={{ color: 'var(--di-text-faint)', fontSize: 12, minWidth: 20 }}>{i + 1}</span>
                     <PosBadge pos={player?.pos} />
-                    <span style={{ fontWeight: 500, color: 'var(--di-text, #ddd)' }}>{player?.name}</span>
+                    <span style={{ fontWeight: 500, color: 'var(--di-text)' }}>{player?.name}</span>
                     <button onClick={() => removeFromQueue(pid)} style={{
-                      marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--di-text-faint, #666)', fontSize: 14,
+                      marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--di-text-faint)', fontSize: 14,
                     }}>{'\u2715'}</button>
                   </div>
                 );

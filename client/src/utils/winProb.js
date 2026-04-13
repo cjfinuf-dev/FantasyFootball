@@ -3,6 +3,9 @@ import { gameState } from '../data/gameState';
 // Average per-player score variance (points). Used to estimate standard
 // deviation of remaining team score based on remaining player count.
 const AVG_PLAYER_VARIANCE = 6;
+const POSITION_VARIANCE_MULT = {
+  QB: 1.4, RB: 1.1, WR: 1.15, TE: 1.0, K: 0.5, DEF: 0.6,
+};
 
 /**
  * Error function approximation (Abramowitz & Stegun, formula 7.1.26).
@@ -40,7 +43,7 @@ function normalCDF(x) {
  * Mid-game:  weights lead/deficit by remaining uncertainty
  * Game over: hard 0 / 0.5 / 1
  */
-export function calcWinProb(myActual, myRemaining, oppActual, oppRemaining, myRemainingPlayers = 0, oppRemainingPlayers = 0) {
+export function calcWinProb(myActual, myRemaining, oppActual, oppRemaining, myRemainingPlayers = 0, oppRemainingPlayers = 0, varianceSum = 0) {
   const totalRemaining = myRemaining + oppRemaining;
 
   // Game over — all players finished. Only now can we snap to hard 0 / 0.5 / 1.
@@ -52,11 +55,14 @@ export function calcWinProb(myActual, myRemaining, oppActual, oppRemaining, myRe
   const spread = (myActual + myRemaining) - (oppActual + oppRemaining);
 
   // Uncertainty-weighted path: estimate standard deviation from remaining
-  // player counts using a simple model.
+  // player counts using a simple model. When position-weighted varianceSum
+  // is provided, use it for more accurate per-position uncertainty.
   const totalRemainingPlayers = myRemainingPlayers + oppRemainingPlayers;
-  const stdDev = totalRemainingPlayers > 0
-    ? Math.sqrt(totalRemainingPlayers) * AVG_PLAYER_VARIANCE
-    : 0;
+  const stdDev = varianceSum > 0
+    ? Math.sqrt(varianceSum)
+    : totalRemainingPlayers > 0
+      ? Math.sqrt(totalRemainingPlayers) * AVG_PLAYER_VARIANCE
+      : 0;
 
   let raw;
   if (stdDev > 0) {
@@ -79,6 +85,7 @@ export function getTeamScoreSplit(starterIds, playerMap) {
   let actual = 0;
   let remaining = 0;
   let remainingPlayers = 0;
+  let varianceSum = 0;
 
   for (const pid of starterIds) {
     const player = playerMap[pid];
@@ -89,17 +96,21 @@ export function getTeamScoreSplit(starterIds, playerMap) {
     if (!gs || gs.status === 'scheduled') {
       remaining += player.proj;
       remainingPlayers++;
+      const posMult = POSITION_VARIANCE_MULT[player.pos] || 1.0;
+      varianceSum += (AVG_PLAYER_VARIANCE * posMult) ** 2;
     } else if (gs.status === 'playing') {
       actual += gs.actual;
-      remaining += Math.max(player.proj * 0.15, player.proj - gs.actual);
+      remaining += Math.max(0, player.proj - gs.actual);
       remainingPlayers++;
+      const posMult = POSITION_VARIANCE_MULT[player.pos] || 1.0;
+      varianceSum += (AVG_PLAYER_VARIANCE * posMult) ** 2;
     } else if (gs.status === 'final') {
       actual += gs.actual;
     }
     // 'bye' contributes nothing
   }
 
-  return { actual, remaining, remainingPlayers };
+  return { actual, remaining, remainingPlayers, varianceSum };
 }
 
 /**
@@ -160,5 +171,6 @@ export function getMatchupWinProb(homeRosterIds, awayRosterIds, playerMap) {
   const awayStarters = getStarterIds(awayRosterIds, playerMap);
   const home = getTeamScoreSplit(homeStarters, playerMap);
   const away = getTeamScoreSplit(awayStarters, playerMap);
-  return calcWinProb(home.actual, home.remaining, away.actual, away.remaining, home.remainingPlayers, away.remainingPlayers);
+  const combinedVariance = home.varianceSum + away.varianceSum;
+  return calcWinProb(home.actual, home.remaining, away.actual, away.remaining, home.remainingPlayers, away.remainingPlayers, combinedVariance);
 }

@@ -1,5 +1,5 @@
-// SEASON: Update DATA_SEASON each year — used to detect stale static data at runtime
-export const DATA_SEASON = 2024;
+// Season constants centralized in seasonConfig.js
+export { DATA_SEASON } from './seasonConfig';
 
 export const PLAYERS = [
   // ===== QBS (32) =====
@@ -307,3 +307,5 @@ export const PLAYERS = [
   { id:'p292', name:'Carolina Panthers D/ST', team:'CAR', pos:'DEF', pts:4.5, proj:4.3, avg:4.1, status:'healthy', gp:17, sacks:23, ints:7, fumRec:5, defTd:0, stTd:0, safety:0, blkKick:0, ptsAllowPerG:27.5 },
 
 ];
+
+export const PLAYERS_LAST_UPDATED = { week: 11, season: 2024, date: '2024-11-19' };

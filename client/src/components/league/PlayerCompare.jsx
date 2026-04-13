@@ -827,9 +827,14 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, color: 'var(--text-muted)' }}>
                 <PosBadge pos={filled[0].player.pos} /> {filled[0].player.team}
               </div>
-              <span className="hex-grade-badge-xl" style={{ background: getHexTier(getHexScore(filled[0].player.id, scoringPreset)).tier === 'Elite' ? 'var(--grade-s)' : getGrade(getHexScore(filled[0].player.id, scoringPreset) / 100).color }}>
-                {formatHex(getHexScore(filled[0].player.id, scoringPreset))}
-              </span>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                <span className="hex-grade-badge-xl" style={{ background: getHexTier(getHexScore(filled[0].player.id, scoringPreset)).tier === 'Elite' ? 'var(--grade-s)' : getGrade(getHexScore(filled[0].player.id, scoringPreset) / 100).color }}>
+                  {getGrade(getHexScore(filled[0].player.id, scoringPreset) / 100).letter}
+                </span>
+                <span className="tabular-nums" style={{ color: 'var(--hex-purple)', fontSize: 16, fontWeight: 800 }}>
+                  {formatHex(getHexScore(filled[0].player.id, scoringPreset))}
+                </span>
+              </div>
               <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--hex-purple)' }}>{getHexTier(getHexScore(filled[0].player.id, scoringPreset)).tier}</div>
               <div style={{ fontSize: 13, color: 'var(--text-muted)', textAlign: 'center' }}>{classifyArchetype(filled[0].player, filled[0].player.pos).description}</div>
             </div>
@@ -842,9 +847,14 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, color: 'var(--text-muted)' }}>
                 <PosBadge pos={filled[1].player.pos} /> {filled[1].player.team}
               </div>
-              <span className="hex-grade-badge-xl" style={{ background: getHexTier(getHexScore(filled[1].player.id, scoringPreset)).tier === 'Elite' ? 'var(--grade-s)' : getGrade(getHexScore(filled[1].player.id, scoringPreset) / 100).color }}>
-                {formatHex(getHexScore(filled[1].player.id, scoringPreset))}
-              </span>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                <span className="hex-grade-badge-xl" style={{ background: getHexTier(getHexScore(filled[1].player.id, scoringPreset)).tier === 'Elite' ? 'var(--grade-s)' : getGrade(getHexScore(filled[1].player.id, scoringPreset) / 100).color }}>
+                  {getGrade(getHexScore(filled[1].player.id, scoringPreset) / 100).letter}
+                </span>
+                <span className="tabular-nums" style={{ color: 'var(--hex-purple)', fontSize: 16, fontWeight: 800 }}>
+                  {formatHex(getHexScore(filled[1].player.id, scoringPreset))}
+                </span>
+              </div>
               <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--hex-purple)' }}>{getHexTier(getHexScore(filled[1].player.id, scoringPreset)).tier}</div>
               <div style={{ fontSize: 13, color: 'var(--text-muted)', textAlign: 'center' }}>{classifyArchetype(filled[1].player, filled[1].player.pos).description}</div>
             </div>
@@ -864,7 +874,10 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
                   <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, color: 'var(--text-muted)' }}>
                     <PosBadge pos={pd.player.pos} /> {pd.player.team}
                   </div>
-                  <span className="hex-grade-badge-lg" style={{ background: getGrade(s.hex / 100).color }}>{formatHex(s.hex)}</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                    <span className="hex-grade-badge-lg" style={{ background: getGrade(s.hex / 100).color }}>{getGrade(s.hex / 100).letter}</span>
+                    <span className="tabular-nums" style={{ color: 'var(--hex-purple)', fontSize: 14, fontWeight: 800 }}>{formatHex(s.hex)}</span>
+                  </div>
                   <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--hex-purple)' }}>{s.tier}</div>
                 </div>
               );
@@ -1014,7 +1027,10 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
                     <PlayerHeadshot espnId={getEspnId(pd.player.name)} name={pd.player.name} size="md" pos={pd.player.pos} team={pd.player.team} />
                     <div style={{ fontSize: 18, fontWeight: 800 }}>{pd.player.name}</div>
                     <div style={{ fontSize: 13, color: 'var(--text-muted)' }}><PosBadge pos={pd.player.pos} /> {pd.player.team}</div>
-                    <span className="hex-grade-badge-lg" style={{ background: getGrade(hex / 100).color }}>{formatHex(hex)}</span>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                      <span className="hex-grade-badge-lg" style={{ background: getGrade(hex / 100).color }}>{getGrade(hex / 100).letter}</span>
+                      <span className="tabular-nums" style={{ color: 'var(--hex-purple)', fontSize: 14, fontWeight: 800 }}>{formatHex(hex)}</span>
+                    </div>
                     <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--hex-purple)' }}>{tier.tier} \u2014 {arch.description}</div>
                   </div>
                   {/* Position Depth Chart */}
@@ -1069,7 +1085,10 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
                     <PlayerHeadshot espnId={getEspnId(pd.player.name)} name={pd.player.name} size="md" pos={pd.player.pos} team={pd.player.team} />
                     <div style={{ fontSize: 18, fontWeight: 800 }}>{pd.player.name}</div>
                     <div style={{ fontSize: 13, color: 'var(--text-muted)' }}><PosBadge pos={pd.player.pos} /> {pd.player.team}</div>
-                    <span className="hex-grade-badge-lg" style={{ background: getGrade(hex / 100).color }}>{formatHex(hex)}</span>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                      <span className="hex-grade-badge-lg" style={{ background: getGrade(hex / 100).color }}>{getGrade(hex / 100).letter}</span>
+                      <span className="tabular-nums" style={{ color: 'var(--hex-purple)', fontSize: 14, fontWeight: 800 }}>{formatHex(hex)}</span>
+                    </div>
                     <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--hex-purple)' }}>{tier.tier} \u2014 {arch.description}</div>
                   </div>
                   {depth.length > 0 && (
@@ -1233,7 +1252,7 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
                       <div style={{ fontWeight: 700, fontSize: 14 }}>{p.name}</div>
                       <div style={{ fontSize: 12, color: 'var(--text-muted)' }}><PosBadge pos={p.pos} /> {tier.tier}</div>
                     </div>
-                    <span className="hex-grade-badge" style={{ background: getGrade(hex / 100).color, transform: 'scale(0.8)' }}>{formatHex(hex)}</span>
+                    <span className="tabular-nums" style={{ color: 'var(--hex-purple)', fontSize: 13, fontWeight: 700 }}>{formatHex(hex)}</span>
                   </div>
                 );
               })}
@@ -1270,7 +1289,7 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
                       <div style={{ fontWeight: 700, fontSize: 14 }}>{p.name}</div>
                       <div style={{ fontSize: 12, color: 'var(--text-muted)' }}><PosBadge pos={p.pos} /> {tier.tier}</div>
                     </div>
-                    <span className="hex-grade-badge" style={{ background: getGrade(hex / 100).color, transform: 'scale(0.8)' }}>{formatHex(hex)}</span>
+                    <span className="tabular-nums" style={{ color: 'var(--hex-purple)', fontSize: 13, fontWeight: 700 }}>{formatHex(hex)}</span>
                   </div>
                 );
               })}

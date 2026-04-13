@@ -8,7 +8,7 @@ const router = express.Router();
 // Public endpoint — no auth required
 router.get('/', async (req, res, next) => {
   try {
-    const limit = Math.min(Number(req.query.limit) || 15, 50);
+    const limit = Math.min(parseInt(req.query.limit, 10) || 15, 50);
     const before = req.query.before || null;
     const category = req.query.category || null;
     const result = await getNews({ limit, before, category });

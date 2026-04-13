@@ -1,8 +1,9 @@
-import { useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { TEAMS, USER_TEAM_ID } from '../../data/teams';
 import { PLAYERS } from '../../data/players';
 import { getHexScore } from '../../utils/hexScore';
 import Sparkline from '../ui/Sparkline';
+import AnimatedNumber from '../ui/AnimatedNumber';
 
 const PLAYER_MAP = {};
 PLAYERS.forEach(p => { PLAYER_MAP[p.id] = p; });
@@ -92,7 +93,10 @@ const GRADE_COLORS = {
   D: 'var(--red)', F: 'var(--red)',
 };
 
-export default function PowerRankingsCard({ expanded = false, rosters, scoringPreset }) {
+export default function PowerRankingsCard({ expanded: expandedProp = false, rosters, scoringPreset }) {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const expanded = expandedProp || sidebarOpen;
+  const showToggle = !expandedProp;
   const rankings = useMemo(() => {
     const hasDraft = rosters && Object.values(rosters).some(r => r.length > 0);
 
@@ -131,11 +135,15 @@ export default function PowerRankingsCard({ expanded = false, rosters, scoringPr
 
   return (
     <div className={`ff-sidebar-card${expanded ? ' expanded' : ''}`}>
-      <div className="ff-sidebar-card-header">
+      <div className={`ff-sidebar-card-header${showToggle ? ' toggleable' : ''}`}
+        onClick={showToggle ? () => setSidebarOpen(prev => !prev) : undefined}>
         <h3>Power Rankings</h3>
-        <span className="ff-mono" style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-          {hasDraftData ? 'HexScore' : 'Pre-Draft'}
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span className="ff-mono text-muted-sm" style={{ fontSize: 12 }}>
+            {hasDraftData ? 'HexScore' : 'Pre-Draft'}
+          </span>
+          {showToggle && <svg className={`ff-sidebar-card-toggle${expanded ? ' open' : ''}`} viewBox="0 0 10 6" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><polyline points="1,1 5,5 9,1"/></svg>}
+        </div>
       </div>
       <div className="ff-sidebar-card-body" style={{ padding: 0 }}>
         {!hasDraftData ? (
@@ -171,7 +179,7 @@ export default function PowerRankingsCard({ expanded = false, rosters, scoringPr
                     <div className={`ff-power-bar-fill ${isUser ? 'user' : ''}`} style={{ width: `${(team.power / maxPower) * 100}%` }} />
                     <div className="ff-power-bar-avg" style={{ left: `${(avgPower / maxPower) * 100}%` }} title={`Avg: ${Math.round(avgPower)}`} />
                   </div>
-                  <span className="ff-power-score tabular-nums ff-mono" style={{ color: 'var(--text)', fontSize: 13 }}>{team.power}</span>
+                  <span className="ff-power-score tabular-nums ff-mono" style={{ color: 'var(--text)', fontSize: 13 }}><AnimatedNumber value={team.power} decimals={0} /></span>
                 </div>
               );
             })}
@@ -179,7 +187,7 @@ export default function PowerRankingsCard({ expanded = false, rosters, scoringPr
             {/* User position grades */}
             {userGrades && (
               <div style={{ padding: '12px 14px', borderTop: '1px solid var(--border)', background: 'var(--surface)', borderRadius: '0 0 var(--radius-lg) var(--radius-lg)' }}>
-                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                <div className="text-muted-sm" style={{ fontSize: 12, marginBottom: 8, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                   Your Position Grades
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
@@ -191,7 +199,7 @@ export default function PowerRankingsCard({ expanded = false, rosters, scoringPr
                     }}>
                       <div style={{ fontSize: 12, fontWeight: 600, color: `var(--pos-${pos.toLowerCase()})`, marginBottom: 6 }}>{pos}</div>
                       <div style={{ fontSize: 20, fontWeight: 800, color: GRADE_COLORS[data.grade], lineHeight: 1 }}>{data.grade}</div>
-                      <div className="ff-mono" style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{data.count} players</div>
+                      <div className="ff-mono text-muted-sm" style={{ fontSize: 12, marginTop: 2 }}>{data.count} players</div>
                     </div>
                   ))}
                 </div>

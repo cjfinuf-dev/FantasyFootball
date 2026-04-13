@@ -83,11 +83,11 @@ export const SITUATION_CHANGES = [
   { playerId: 'p116', impact: +0.05, note: 'Consistent alpha role in high-tempo offense' },    // Amon-Ra St. Brown (DET WR)
 
   // Negative shifts
-  { playerId: 'p117', impact: -0.20, note: 'ACL recovery, target share uncertain' },           // Rashee Rice (KC WR)
-  { playerId: 'p26',  impact: -0.25, note: 'Age decline, limited mobility' },                  // Aaron Rodgers (PIT QB)
-  { playerId: 'p182', impact: -0.12, note: 'Chronic soft tissue injuries, reduced role' },     // Cooper Kupp (LA WR)
-  { playerId: 'p138', impact: -0.10, note: 'Aging, traded to less productive offense' },       // Stefon Diggs (NE WR)
-  { playerId: 'p90',  impact: -0.18, note: 'Devastating knee injury recovery' },               // Nick Chubb (CLE RB)
-  { playerId: 'p120', impact: -0.12, note: 'Concussion history, snap count concerns' },        // Chris Olave (NO WR)
-  { playerId: 'p221', impact: -0.15, note: 'Second ACL recovery' },                            // T.J. Hockenson (MIN TE)
+  { playerId: 'p117', impact: -0.20, note: 'ACL recovery, target share uncertain', injuryType: 'acl' },           // Rashee Rice (KC WR)
+  { playerId: 'p26',  impact: -0.25, note: 'Age decline, limited mobility' },                                     // Aaron Rodgers (PIT QB)
+  { playerId: 'p182', impact: -0.12, note: 'Chronic soft tissue injuries, reduced role', injuryType: 'calf' },    // Cooper Kupp (LA WR)
+  { playerId: 'p138', impact: -0.10, note: 'Aging, traded to less productive offense' },                          // Stefon Diggs (NE WR)
+  { playerId: 'p90',  impact: -0.18, note: 'Devastating knee injury recovery', injuryType: 'acl' },              // Nick Chubb (CLE RB)
+  { playerId: 'p120', impact: -0.12, note: 'Concussion history, snap count concerns', injuryType: 'concussion' },// Chris Olave (NO WR)
+  { playerId: 'p221', impact: -0.15, note: 'Second ACL recovery', injuryType: 'acl' },                           // T.J. Hockenson (MIN TE)
 ];

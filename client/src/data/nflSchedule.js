@@ -1,3 +1,9 @@
+import { DATA_SEASON, NFL_SCHEDULE_SEASON } from './seasonConfig';
+
+if (NFL_SCHEDULE_SEASON !== DATA_SEASON) {
+  console.warn(`[nflSchedule] Schedule season (${NFL_SCHEDULE_SEASON}) does not match DATA_SEASON (${DATA_SEASON}). Matchup-based valuations may be inaccurate.`);
+}
+
 // 2026 NFL Week 1 Schedule (projected)
 // Season opens Thursday Sep 10, 2026
 export const NFL_WEEK1 = [
@@ -12,7 +18,7 @@ export const NFL_WEEK1 = [
   { away: 'JAX', home: 'TEN', date: 'Sun Sep 13', time: '1:00 PM ET' },
   { away: 'CHI', home: 'DET', date: 'Sun Sep 13', time: '1:00 PM ET' },
   { away: 'ARI', home: 'WAS', date: 'Sun Sep 13', time: '4:05 PM ET' },
-  { away: 'MIN', home: 'LAR', date: 'Sun Sep 13', time: '4:25 PM ET' },
+  { away: 'MIN', home: 'LA', date: 'Sun Sep 13', time: '4:25 PM ET' },
   { away: 'DEN', home: 'SEA', date: 'Sun Sep 13', time: '4:25 PM ET' },
   { away: 'TB', home: 'SF', date: 'Sun Sep 13', time: '4:25 PM ET' },
   { away: 'NYJ', home: 'LAC', date: 'Sun Sep 13', time: '8:20 PM ET' },

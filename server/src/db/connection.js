@@ -24,7 +24,6 @@ async function getDb() {
     db = new SQL.Database();
   }
 
-  db.run('PRAGMA journal_mode = WAL');
   db.run('PRAGMA foreign_keys = ON');
 
   return db;
@@ -34,28 +33,25 @@ async function getDb() {
 // Concurrent writes from multiple processes or rapid sequential calls can cause data loss
 // or a torn write (partial file). This architecture is intentional for single-process dev
 // use; do NOT run multiple server instances against the same DB file.
+let _saving = Promise.resolve();
+
 function saveDb() {
-  if (db && dbPath) {
-    const data = db.export();
-    const buffer = Buffer.from(data);
-    const tmpPath = dbPath + '.tmp';
-    fs.writeFileSync(tmpPath, buffer);
-    fs.renameSync(tmpPath, dbPath);
-  }
+  _saving = _saving.then(() => {
+    if (db && dbPath) {
+      const data = db.export();
+      const buffer = Buffer.from(data);
+      const tmpPath = dbPath + '.tmp';
+      fs.writeFileSync(tmpPath, buffer);
+      fs.renameSync(tmpPath, dbPath);
+    }
+  }).catch(err => {
+    console.error('[db] Save failed:', err);
+  });
 }
 
 // Graceful shutdown — persist in-memory DB to disk before exit
-function registerShutdownHandlers() {
-  const shutdown = (signal) => {
-    console.log(`[db] Received ${signal}, saving database...`);
-    saveDb();
-    process.exit(0);
-  };
-  process.on('SIGTERM', () => shutdown('SIGTERM'));
-  process.on('SIGINT', () => shutdown('SIGINT'));
-}
-
-// Register after module load so db ref is available when signals fire
-registerShutdownHandlers();
+// Shutdown persistence is handled by server/src/index.js's graceful shutdown.
+// Do NOT register SIGTERM/SIGINT here — it races with the server's handler
+// and calls process.exit() before the HTTP server finishes draining.
 
 module.exports = { getDb, saveDb };

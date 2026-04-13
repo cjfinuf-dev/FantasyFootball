@@ -259,19 +259,19 @@ export default function NewsFeed({ onPlayerClick }) {
     <div className="ff-card">
       <div className="ff-card-top-accent" style={{ background: 'var(--charcoal-slate)' }} />
 
-      <div style={{ maxHeight: 'min(680px, 75vh)', overflowY: 'auto' }}>
+      <div className="ff-news-scroll">
         {/* Two-column header: tabs left, "Players" label right */}
         <div className="ff-news-sticky-header">
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ padding: '12px 20px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <h2 style={{ fontSize: 17, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div className="ff-news-tabs-col">
+            <div className="ff-news-header-row">
+              <h2>
                 News Feed
                 {unreadCounts.all > 0 && (
                   <span className="ff-badge-count">{unreadCounts.all > 99 ? '99+' : unreadCounts.all}</span>
                 )}
               </h2>
             </div>
-            <div className="ff-tabs" style={{ borderBottom: 'none' }}>
+            <div className="ff-tabs">
               {TABS.map(tab => {
                 const count = unreadCounts[tab] || 0;
                 return (
@@ -279,9 +279,7 @@ export default function NewsFeed({ onPlayerClick }) {
                     onClick={() => setActiveTab(tab)}>
                     {tab.charAt(0).toUpperCase() + tab.slice(1)}
                     {count > 0 && (
-                      <span style={{
-                        marginLeft: 6, fontSize: 12, fontWeight: 700, padding: '3px 7px',
-                        borderRadius: 'var(--radius-full)',
+                      <span className="ff-tab-badge" style={{
                         background: tab === 'all' ? 'var(--accent)' : 'var(--tan-10)',
                         color: tab === 'all' ? 'var(--on-accent)' : 'var(--copper)',
                       }}>
@@ -293,21 +291,21 @@ export default function NewsFeed({ onPlayerClick }) {
               })}
             </div>
           </div>
-          <div className="ff-news-players" style={{ justifyContent: 'flex-end', padding: '0 16px 10px' }}>
-            <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)' }}>
+          <div className="ff-news-players">
+            <span className="ff-news-players-label">
               Impacted Players
             </span>
           </div>
         </div>
         {loading && (
-          <div style={{ padding: '8px 0' }}>
+          <div className="ff-news-skeleton">
             {[1,2,3,4].map(i => (
-              <div key={i} style={{ display: 'flex', gap: 12, padding: '12px 20px', borderBottom: '1px solid var(--border)' }}>
-                <div className="skeleton" style={{ width: 80, height: 56, borderRadius: 8, flexShrink: 0 }} />
-                <div style={{ flex: 1 }}>
-                  <div className="skeleton" style={{ width: '70%', height: 20, marginBottom: 6, borderRadius: 4 }} />
-                  <div className="skeleton" style={{ width: '90%', height: 18, marginBottom: 4, borderRadius: 4 }} />
-                  <div className="skeleton" style={{ width: '40%', height: 16, borderRadius: 4 }} />
+              <div key={i} className="ff-news-skeleton-row">
+                <div className="skeleton ff-news-skeleton-thumb" />
+                <div className="ff-news-skeleton-lines">
+                  <div className="skeleton ff-news-skeleton-line-1" />
+                  <div className="skeleton ff-news-skeleton-line-2" />
+                  <div className="skeleton ff-news-skeleton-line-3" />
                 </div>
               </div>
             ))}
@@ -315,8 +313,8 @@ export default function NewsFeed({ onPlayerClick }) {
         )}
 
         {error && (
-          <div style={{ padding: 20, textAlign: 'center', fontSize: 14 }}>
-            <div style={{ color: 'var(--red)', marginBottom: 8 }}>{error}</div>
+          <div className="ff-news-empty">
+            <div className="ff-news-empty-error">{error}</div>
             <button className="ff-btn ff-btn-secondary ff-btn-sm" onClick={() => {
               setError(null);
               setLoading(true);
@@ -329,7 +327,7 @@ export default function NewsFeed({ onPlayerClick }) {
         )}
 
         {!loading && articles.length === 0 && (
-          <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)', fontSize: 15 }}>
+          <div className="ff-news-empty-msg">
             No news articles yet. The feed updates at 10 AM, 2 PM, and 6 PM ET.
           </div>
         )}
@@ -347,14 +345,14 @@ export default function NewsFeed({ onPlayerClick }) {
           return (
           <div key={article.id} className={`ff-news-item${isRead ? ' ff-news-read' : ''}`}>
             <a href={article.source_url?.startsWith('http') ? article.source_url : '#'} target="_blank" rel="noopener noreferrer"
-              className="ff-news-article" style={{ textDecoration: 'none', color: 'inherit', display: 'flex', flex: 1, minWidth: 0, gap: 12 }}
+              className="ff-news-article"
               onClick={() => handleArticleClick(article.id)}>
               {article.image_url ? (
                 <div className="ff-news-thumb">
                   <img src={article.image_url} alt="" loading="lazy" />
                 </div>
               ) : (
-                <div className="ff-news-thumb" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div className="ff-news-thumb ff-news-thumb-fallback">
                   <svg viewBox="0 0 48 52" width="32" height="34" opacity="0.25">
                     <polygon points="24,2 46,14 46,38 24,50 2,38 2,14" fill="none" stroke="var(--hex-purple)" strokeWidth="2"/>
                     <text x="24" y="30" textAnchor="middle" fontSize="16" fontWeight="700" fill="var(--hex-purple)">H</text>
@@ -364,20 +362,16 @@ export default function NewsFeed({ onPlayerClick }) {
               <div className="ff-news-content">
                 <div className="ff-news-title">{cleanText(article.title)}</div>
                 <div className="ff-news-body">{cleanText(article.summary)}</div>
-                <div className="ff-news-meta" style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
-                  <span style={{
-                    fontSize: 12, fontWeight: 600, padding: '3px 8px', borderRadius: 'var(--radius-full)',
-                    background: 'var(--tan-10)', color: 'var(--copper)', textTransform: 'uppercase',
-                  }}>{article.source_name}</span>
+                <div className="ff-news-meta">
+                  <span className="ff-news-source-badge">{article.source_name}</span>
                   {article.source_count > 1 && (
-                    <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                    <span className="ff-news-source-count">
                       Reported by {article.source_count} sources
                     </span>
                   )}
                   <span className="ff-news-time">{timeAgo(article.published_at)}</span>
                   {impact && (
-                    <span style={{
-                      fontSize: 12, fontWeight: 700, padding: '3px 8px', borderRadius: 'var(--radius-full)',
+                    <span className="ff-news-impact-badge" style={{
                       background: impact.impact > 0 ? 'var(--green-light)' : 'var(--red-light)',
                       color: impact.impact > 0 ? 'var(--success-green)' : 'var(--red)',
                     }}>
@@ -400,7 +394,7 @@ export default function NewsFeed({ onPlayerClick }) {
         })}
 
         {nextCursor && (
-          <div style={{ padding: '12px 20px', textAlign: 'center' }}>
+          <div className="ff-news-load-more">
             <button className="ff-btn ff-btn-secondary" onClick={loadMore} disabled={loadingMore}>
               {loadingMore ? 'Loading...' : 'Load More'}
             </button>
