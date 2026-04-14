@@ -589,9 +589,9 @@ function calcPositionProduction(stats, gp, pos) {
 // Computes stat-based production for each available season, then applies
 // year weights (65/20/10/5). Blends 60% historical + 40% current season.
 
-const YEAR_WEIGHTS_4 = [0.65, 0.20, 0.10, 0.05];
-const YEAR_WEIGHTS_3 = [0.65, 0.25, 0.10];
-const YEAR_WEIGHTS_2 = [0.70, 0.30];
+const YEAR_WEIGHTS_4 = [0.50, 0.30, 0.15, 0.05];
+const YEAR_WEIGHTS_3 = [0.55, 0.30, 0.15];
+const YEAR_WEIGHTS_2 = [0.60, 0.40];
 
 function getYearWeights(count) {
   if (count >= 4) return YEAR_WEIGHTS_4;
@@ -676,7 +676,24 @@ export function calcStatProduction(player) {
         if (dropPct > 0.15) {
           const pedigreeScore = calcPedigreeScore(player.id, pos);
           const ageProtection = calcAgeProtection(player.id, pos);
-          flukeRestoreFraction = pedigreeScore * ageProtection;
+          // Volatility attenuation: volatile careers get less downside protection.
+          // Use raw avgPts from ALL qualifying seasons (not the 4-season cap) so
+          // career-long boom-bust patterns like Lamar's are captured accurately.
+          const qualAvgs = years
+            .map(yr => history[String(yr)])
+            .filter(s => s && s.gp >= 8)
+            .map(s => s.avgPts || 0)
+            .filter(v => v > 0);
+          let volatilityAttenuator = 1.0;
+          if (qualAvgs.length >= 3) {
+            const cvMean = qualAvgs.reduce((a, b) => a + b, 0) / qualAvgs.length;
+            const cvVar = qualAvgs.reduce((a, b) => a + (b - cvMean) ** 2, 0) / qualAvgs.length;
+            const cv = cvMean > 0 ? Math.sqrt(cvVar) / cvMean : 0;
+            volatilityAttenuator = cv <= 0.08 ? 1.0
+              : cv >= 0.28 ? 0.15
+              : 1.0 - (cv - 0.08) / (0.28 - 0.08) * 0.85;
+          }
+          flukeRestoreFraction = pedigreeScore * ageProtection * volatilityAttenuator;
           if (flukeRestoreFraction > 0.05) {
             flukeDetected = true;
             seasonScores[0] = recent + (priorMedian - recent) * flukeRestoreFraction;
@@ -687,11 +704,52 @@ export function calcStatProduction(player) {
     }
   }
 
+  // ─── Spike dampener ───
+  // Symmetric upside counterpart: when the most recent season spikes well above
+  // the prior median, dampen it. Uses inverse pedigree (unproven = more dampening)
+  // and depth penalty (fewer prior seasons = more skepticism).
+  // Skips monotonically ascending careers (real development, not a fluke).
+  let spikeDetected = false;
+  if (seasonScores.length >= 2) {
+    const recent = seasonScores[0];
+    const priorValid = seasonScores.slice(1).filter(v => v > 0);
+    if (priorValid.length >= 1) {
+      const sorted = [...priorValid].sort((a, b) => a - b);
+      const priorMedian = sorted[Math.floor(sorted.length / 2)];
+      const spikePct = priorMedian > 0 ? Math.max(0, (recent - priorMedian) / priorMedian) : 0;
+
+      if (spikePct > 0.20) {
+        // Skip if monotonically ascending across 3+ seasons (real development)
+        const ascending = seasonScores.length >= 3 &&
+          seasonScores[0] > seasonScores[1] && seasonScores[1] > seasonScores[2];
+        if (!ascending) {
+          const spikePosPedigree = calcPedigreeScore(player.id, pos);
+          const inversePedigree = 1.0 - spikePosPedigree;
+          const depthPenalty = priorValid.length === 1 ? 0.35
+            : priorValid.length === 2 ? 0.15 : 0;
+          const spikeSkepticism = Math.min(1.0, inversePedigree + depthPenalty);
+          const spikeDampen = Math.min(0.60, spikeSkepticism * 0.60);
+          seasonScores[0] = recent - (recent - priorMedian) * spikeDampen;
+          seasonScores[0] = Math.max(seasonScores[0], priorMedian); // never pull below median
+          if (spikeDampen > 0.05) spikeDetected = true;
+        }
+      }
+    }
+  }
+
   // Apply year weights
   const weights = getYearWeights(seasonScores.length);
   let weightedHistorical = 0;
   for (let i = 0; i < seasonScores.length; i++) {
     weightedHistorical += seasonScores[i] * weights[i];
+  }
+
+  // ─── Ascension throttle ───
+  // For thin track records, regress toward neutral baseline to prevent one
+  // breakout season from over-inflating the historical score.
+  if (seasonScores.length <= 2) {
+    const regressionRate = seasonScores.length === 1 ? 0.30 : 0.15;
+    weightedHistorical = weightedHistorical * (1 - regressionRate) + 0.45 * regressionRate;
   }
 
   // Blend historical with current season.
@@ -711,6 +769,14 @@ export function calcStatProduction(player) {
         currWeight -= flukeShift;
       }
     }
+  }
+
+  // ─── Spike blend adjustment ───
+  // When a spike is detected on a thin track record, shift blend toward history
+  // (now dampened/regressed) to prevent current-season weight from re-inflating.
+  if (spikeDetected && seasonScores.length <= 2) {
+    histWeight += 0.10;
+    currWeight -= 0.10;
   }
 
   return (weightedHistorical * histWeight) + (currentScore * currWeight);
