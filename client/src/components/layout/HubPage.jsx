@@ -165,7 +165,7 @@ export default function HubPage() {
 
       {activeTab === 'compare' && (
         <div className="ff-hub-tabs">
-          <div className="ff-tab-content ff-tab-content-wide">
+          <div className="ff-tab-content ff-tab-content-full">
             <div className="ff-hub-upsell">
               <p>Side-by-side stats are just the start. In a league, Compare layers in your scoring settings, roster context, and trade value so you can see exactly who wins the deal — not just who has better numbers.</p>
               <button className="ff-btn ff-btn-copper ff-btn-sm" onClick={() => leagues.length > 0 ? navigate(`/league/${leagues[0].id}/compare`) : onCreateLeague()}>

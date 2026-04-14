@@ -50,6 +50,103 @@ function getDimensionValue(dims, key) {
 
 const getDimGrade = getGrade;
 
+// --- Position-specific stat configs for trade analysis ---
+const POS_STATS = {
+  QB: [
+    { key: 'avg', label: 'Points/Game', fmt: '1f', group: 'Scoring' },
+    { key: 'passTd', label: 'Passing TD', fmt: '0f', group: 'Scoring' },
+    { key: 'rushTd', label: 'Rushing TD', fmt: '0f', group: 'Scoring' },
+    { key: 'passYds', label: 'Pass Yards', fmt: '0f', group: 'Volume' },
+    { key: 'rushYds', label: 'Rush Yards', fmt: '0f', group: 'Volume' },
+    { key: '_cmpPct', label: 'Completion %', fmt: 'pct', compute: p => p.att > 0 ? p.cmp / p.att : 0, group: 'Efficiency' },
+    { key: 'passEpa', label: 'Pass EPA', fmt: '1f', group: 'Efficiency' },
+    { key: 'cpoe', label: 'CPOE', fmt: '+1f', group: 'Efficiency' },
+    { key: 'int', label: 'Interceptions', fmt: '0f', lower: true, group: 'Risk' },
+    { key: 'sacks', label: 'Sacks Taken', fmt: '0f', lower: true, group: 'Risk' },
+  ],
+  RB: [
+    { key: 'avg', label: 'Points/Game', fmt: '1f', group: 'Scoring' },
+    { key: 'rushTd', label: 'Rush TD', fmt: '0f', group: 'Scoring' },
+    { key: 'carries', label: 'Carries', fmt: '0f', group: 'Volume' },
+    { key: 'rushYds', label: 'Rush Yards', fmt: '0f', group: 'Volume' },
+    { key: 'tgt', label: 'Targets', fmt: '0f', group: 'Volume' },
+    { key: 'rec', label: 'Receptions', fmt: '0f', group: 'Volume' },
+    { key: '_ypc', label: 'Yards/Carry', fmt: '1f', compute: p => p.carries > 0 ? p.rushYds / p.carries : 0, group: 'Efficiency' },
+    { key: 'rushEpa', label: 'Rush EPA', fmt: '1f', group: 'Efficiency' },
+    { key: 'tgtShare', label: 'Target Share', fmt: 'pct', group: 'Efficiency' },
+    { key: 'recYds', label: 'Rec Yards', fmt: '0f', group: 'Receiving' },
+  ],
+  WR: [
+    { key: 'avg', label: 'Points/Game', fmt: '1f', group: 'Scoring' },
+    { key: 'recTd', label: 'Rec TD', fmt: '0f', group: 'Scoring' },
+    { key: 'tgt', label: 'Targets', fmt: '0f', group: 'Volume' },
+    { key: 'rec', label: 'Receptions', fmt: '0f', group: 'Volume' },
+    { key: 'recYds', label: 'Rec Yards', fmt: '0f', group: 'Volume' },
+    { key: 'tgtShare', label: 'Target Share', fmt: 'pct', group: 'Efficiency' },
+    { key: 'airShare', label: 'Air Yard Share', fmt: 'pct', group: 'Efficiency' },
+    { key: 'racr', label: 'RACR', fmt: '3f', group: 'Efficiency' },
+    { key: 'wopr', label: 'WOPR', fmt: '3f', group: 'Efficiency' },
+    { key: 'recEpa', label: 'Rec EPA', fmt: '1f', group: 'Efficiency' },
+  ],
+  TE: [
+    { key: 'avg', label: 'Points/Game', fmt: '1f', group: 'Scoring' },
+    { key: 'recTd', label: 'Rec TD', fmt: '0f', group: 'Scoring' },
+    { key: 'tgt', label: 'Targets', fmt: '0f', group: 'Volume' },
+    { key: 'rec', label: 'Receptions', fmt: '0f', group: 'Volume' },
+    { key: 'recYds', label: 'Rec Yards', fmt: '0f', group: 'Volume' },
+    { key: 'tgtShare', label: 'Target Share', fmt: 'pct', group: 'Efficiency' },
+    { key: 'racr', label: 'RACR', fmt: '3f', group: 'Efficiency' },
+    { key: 'recEpa', label: 'Rec EPA', fmt: '1f', group: 'Efficiency' },
+  ],
+};
+
+const KEY_STATS = {
+  QB: [{ key: 'avg', label: 'PPG', fmt: '1f' }, { key: 'passTd', label: 'TD', fmt: '0f' }, { key: 'passYds', label: 'Yds', fmt: '0f' }],
+  RB: [{ key: 'avg', label: 'PPG', fmt: '1f' }, { key: 'rushYds', label: 'Yds', fmt: '0f' }, { key: 'rec', label: 'Rec', fmt: '0f' }],
+  WR: [{ key: 'avg', label: 'PPG', fmt: '1f' }, { key: 'recYds', label: 'Yds', fmt: '0f' }, { key: 'tgt', label: 'Tgt', fmt: '0f' }],
+  TE: [{ key: 'avg', label: 'PPG', fmt: '1f' }, { key: 'recYds', label: 'Yds', fmt: '0f' }, { key: 'tgt', label: 'Tgt', fmt: '0f' }],
+};
+
+function getStatVal(player, stat) {
+  if (stat.compute) return stat.compute(player);
+  return player[stat.key] || 0;
+}
+
+function formatStatVal(val, fmt) {
+  if (fmt === 'pct') return `${(val * 100).toFixed(1)}%`;
+  if (fmt === '0f') return Math.round(val).toLocaleString();
+  if (fmt === '1f') return val.toFixed(1);
+  if (fmt === '2f') return val.toFixed(2);
+  if (fmt === '3f') return val.toFixed(3);
+  if (fmt === '+1f') return (val >= 0 ? '+' : '') + val.toFixed(1);
+  return String(val);
+}
+
+function getPctileColor(p) {
+  if (p >= 90) return '#059669';
+  if (p >= 75) return '#16a34a';
+  if (p >= 50) return '#6b7280';
+  if (p >= 25) return '#d97706';
+  return '#dc2626';
+}
+
+function ordinal(n) {
+  if (n >= 11 && n <= 13) return n + 'th';
+  switch (n % 10) {
+    case 1: return n + 'st';
+    case 2: return n + 'nd';
+    case 3: return n + 'rd';
+    default: return n + 'th';
+  }
+}
+
+const hexFontSize = (hex, base) => {
+  const s = formatHex(hex);
+  if (s.length > 6) return Math.round(base * 0.7);
+  if (s.length > 4) return Math.round(base * 0.85);
+  return base;
+};
+
 function generateAnalysis(playerData, scoringPreset) {
   const filled = playerData.filter(Boolean);
   if (filled.length < 2) return null;
@@ -72,13 +169,13 @@ function generateAnalysis(playerData, scoringPreset) {
   if (filled.length === 2) {
     if (gap > 8) verdict = `${top.name} has a clear edge over ${second.name}`;
     else if (gap >= 4) verdict = `${top.name} holds an advantage over ${second.name}`;
-    else verdict = `${top.name} and ${second.name} are neck-and-neck — both are strong options`;
+    else verdict = `${top.name} and ${second.name} are neck-and-neck - both are strong options`;
   } else {
     const bottom = sorted[sorted.length - 1];
     const totalGap = top.hex - bottom.hex;
     if (totalGap > 8) verdict = `${top.name} leads the group with a clear edge`;
     else if (totalGap >= 4) verdict = `${top.name} holds a slight advantage over the field`;
-    else verdict = `This group is incredibly tight — hard to go wrong with any of them`;
+    else verdict = `This group is incredibly tight - hard to go wrong with any of them`;
   }
 
   // Per-dimension breakdown
@@ -110,7 +207,7 @@ function generateAnalysis(playerData, scoringPreset) {
     };
   });
 
-  // Key advantages — each player's biggest winning margin
+  // Key advantages - each player's biggest winning margin
   const advantages = filled.map(pd => {
     const wins = dimBreakdown
       .filter(d => d.winner === pd.player.name && !d.isTie)
@@ -130,9 +227,9 @@ function generateAnalysis(playerData, scoringPreset) {
 
   // Bottom line
   let bottomLine;
-  if (gap > 8) bottomLine = `Go with ${top.name} — the gap is significant.`;
+  if (gap > 8) bottomLine = `Go with ${top.name} - the gap is significant.`;
   else if (gap >= 4) bottomLine = `${top.name} is the stronger pick, but ${second.name} isn't far behind.`;
-  else bottomLine = `You can't go wrong here — pick the one that fits your roster needs.`;
+  else bottomLine = `You can't go wrong here - pick the one that fits your roster needs.`;
 
   return { verdict, dimBreakdown, advantages, archetypeLines, bottomLine, scores: sorted };
 }
@@ -348,26 +445,43 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
     if (!showResults || compareMode !== 'trade' || !rosters) return null;
     const filled = playerData.filter(Boolean);
     if (filled.length < 2) return null;
-    const yours = [], opponents = {};
+    // Group selected players by team ownership
+    const byTeam = {};
     for (const pd of filled) {
       const owner = getOwnerTeam(pd.player.id, rosters);
       if (!owner) continue;
-      if (owner.id === USER_TEAM_ID) yours.push(pd.player.id);
-      else {
-        if (!opponents[owner.id]) opponents[owner.id] = [];
-        opponents[owner.id].push(pd.player.id);
-      }
+      if (!byTeam[owner.id]) byTeam[owner.id] = [];
+      byTeam[owner.id].push(pd.player.id);
     }
-    const opponentTeamIds = Object.keys(opponents);
-    if (yours.length === 0 || opponentTeamIds.length !== 1) return null;
-    const partnerId = opponentTeamIds[0];
-    const partnerTeam = TEAMS.find(t => t.id === partnerId);
-    const sendIds = yours;
-    const receiveIds = opponents[partnerId];
-    const userRoster = rosters[USER_TEAM_ID] || [];
-    const partnerRoster = rosters[partnerId] || [];
-    const tier = computeTradeTier(sendIds, receiveIds, userRoster, partnerRoster, scoringPreset);
-    return { sendIds, receiveIds, partnerId, partnerTeamName: partnerTeam?.name || 'Opponent', tier };
+    const teamIds = Object.keys(byTeam);
+    // Need exactly 2 distinct teams
+    if (teamIds.length !== 2) return null;
+    // Determine perspective: if user's team is involved, they're teamA (send side)
+    const userInvolved = teamIds.includes(USER_TEAM_ID);
+    let teamAId, teamBId;
+    if (userInvolved) {
+      teamAId = USER_TEAM_ID;
+      teamBId = teamIds.find(id => id !== USER_TEAM_ID);
+    } else {
+      // Third-party trade - alphabetical by team name for stable ordering
+      const sorted = teamIds.map(id => ({ id, name: (TEAMS.find(t => t.id === id)?.name || id) })).sort((a, b) => a.name.localeCompare(b.name));
+      teamAId = sorted[0].id;
+      teamBId = sorted[1].id;
+    }
+    const teamA = TEAMS.find(t => t.id === teamAId);
+    const teamB = TEAMS.find(t => t.id === teamBId);
+    const sendIds = byTeam[teamAId];
+    const receiveIds = byTeam[teamBId];
+    const teamARoster = rosters[teamAId] || [];
+    const teamBRoster = rosters[teamBId] || [];
+    const tier = computeTradeTier(sendIds, receiveIds, teamARoster, teamBRoster, scoringPreset);
+    return {
+      sendIds, receiveIds, teamAId, teamBId,
+      teamAName: teamA?.name || 'Team A', teamBName: teamB?.name || 'Team B',
+      // Keep partnerId/partnerTeamName for backward compat in tips
+      partnerId: teamBId, partnerTeamName: teamB?.name || 'Team B',
+      userInvolved, tier,
+    };
   }, [showResults, compareMode, playerData, rosters, scoringPreset]);
 
   // --- Position depth chart helper ---
@@ -429,24 +543,24 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
   // --- Opponent Perspective (Trade mode) ---
   const opponentPerspective = useMemo(() => {
     if (!tradePartition || !rosters) return null;
-    const { sendIds, receiveIds, partnerId } = tradePartition;
-    const partnerRoster = rosters[partnerId] || [];
-    const userRoster = rosters[USER_TEAM_ID] || [];
-    // Flip: from opponent's view, they send receiveIds and receive sendIds
-    const oppTier = computeTradeTier(receiveIds, sendIds, partnerRoster, userRoster, scoringPreset);
+    const { sendIds, receiveIds, teamAId, teamBId, teamBName } = tradePartition;
+    const teamBRoster = rosters[teamBId] || [];
+    const teamARoster = rosters[teamAId] || [];
+    // From Team B's view, they send receiveIds and receive sendIds
+    const oppTier = computeTradeTier(receiveIds, sendIds, teamBRoster, teamARoster, scoringPreset);
     let likelihood, likelihoodClass, reason;
     if (oppTier.ratio >= 0.15) {
       likelihood = 'Likely'; likelihoodClass = 'likely';
-      reason = `This trade looks favorable from ${tradePartition.partnerTeamName}'s perspective — they're getting good value.`;
+      reason = `This trade looks favorable from ${teamBName}'s perspective - they're getting good value.`;
     } else if (oppTier.ratio >= 0.0) {
       likelihood = 'Possible'; likelihoodClass = 'possible';
-      reason = `The deal is roughly even from ${tradePartition.partnerTeamName}'s side — it could go either way.`;
+      reason = `The deal is roughly even from ${teamBName}'s side - it could go either way.`;
     } else if (oppTier.ratio >= -0.15) {
       likelihood = 'Unlikely'; likelihoodClass = 'unlikely';
-      reason = `${tradePartition.partnerTeamName} would be giving up more value than they receive — expect pushback.`;
+      reason = `${teamBName} would be giving up more value than they receive - expect pushback.`;
     } else {
       likelihood = 'Very Unlikely'; likelihoodClass = 'very-unlikely';
-      reason = `This is heavily lopsided against ${tradePartition.partnerTeamName} — they'd almost certainly decline.`;
+      reason = `This is heavily lopsided against ${teamBName} - they'd almost certainly decline.`;
     }
     return { tier: oppTier, likelihood, likelihoodClass, reason };
   }, [tradePartition, rosters, scoringPreset]);
@@ -454,9 +568,9 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
   // --- Post-Trade Rosters (Trade mode) ---
   const postTradeRosters = useMemo(() => {
     if (!tradePartition || !rosters) return null;
-    const { sendIds, receiveIds, partnerId } = tradePartition;
-    const userBefore = [...(rosters[USER_TEAM_ID] || [])];
-    const partnerBefore = [...(rosters[partnerId] || [])];
+    const { sendIds, receiveIds, teamAId, teamBId } = tradePartition;
+    const userBefore = [...(rosters[teamAId] || [])];
+    const partnerBefore = [...(rosters[teamBId] || [])];
 
     const computeAvg = (roster) => {
       const hexes = roster.map(id => getHexScore(id, scoringPreset)).filter(h => h > 0);
@@ -518,7 +632,7 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
       tips.push({ icon: '\u26A0\uFE0F', text: 'Consider adding a bench piece to make this more appealing.' });
     }
     if (opponentPerspective && opponentPerspective.likelihoodClass === 'very-unlikely') {
-      tips.push({ icon: '\u26A0\uFE0F', text: `This deal heavily favors you — ${tradePartition.partnerTeamName} is unlikely to bite.` });
+      tips.push({ icon: '\u26A0\uFE0F', text: `This deal heavily favors ${tradePartition.userInvolved ? 'you' : tradePartition.teamAName} - ${tradePartition.partnerTeamName} is unlikely to bite.` });
     }
 
     // Position-group insights
@@ -526,20 +640,22 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
     const receivePlayers = receiveIds.map(id => PLAYER_MAP[id]).filter(Boolean);
     const sendPositions = [...new Set(sendPlayers.map(p => p.pos))];
     const receivePositions = [...new Set(receivePlayers.map(p => p.pos))];
+    const teamALabel = tradePartition.userInvolved ? 'your' : tradePartition.teamAName + "'s";
+    const teamARoster = rosters[tradePartition.teamAId] || [];
 
     // Check if filling a gap
     for (const pos of receivePositions) {
-      const userPosGroup = (rosters[USER_TEAM_ID] || []).map(id => PLAYER_MAP[id]).filter(p => p && p.pos === pos);
-      if (userPosGroup.length <= 1) {
-        tips.push({ icon: '\uD83D\uDCA1', text: `This fills your ${pos} depth — you only have ${userPosGroup.length} rostered.` });
+      const posGroup = teamARoster.map(id => PLAYER_MAP[id]).filter(p => p && p.pos === pos);
+      if (posGroup.length <= 1) {
+        tips.push({ icon: '\uD83D\uDCA1', text: `This fills ${teamALabel} ${pos} depth - only ${posGroup.length} rostered.` });
       }
     }
 
     // Check if already deep at position being received
     for (const pos of receivePositions) {
-      const userPosGroup = (rosters[USER_TEAM_ID] || []).map(id => PLAYER_MAP[id]).filter(p => p && p.pos === pos);
-      if (userPosGroup.length >= 4) {
-        tips.push({ icon: '\u2139\uFE0F', text: `You're already deep at ${pos} (${userPosGroup.length} players) — do you need another?` });
+      const posGroup = teamARoster.map(id => PLAYER_MAP[id]).filter(p => p && p.pos === pos);
+      if (posGroup.length >= 4) {
+        tips.push({ icon: '\u2139\uFE0F', text: `${tradePartition.userInvolved ? "You're" : tradePartition.teamAName + " is"} already deep at ${pos} (${posGroup.length} players) - ${tradePartition.userInvolved ? 'do you need another?' : 'worth it?'}` });
       }
     }
 
@@ -547,14 +663,14 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
     if (sendPositions.length > 0 && receivePositions.length > 0 && !sendPositions.some(p => receivePositions.includes(p))) {
       const partnerPosGroup = (rosters[partnerId] || []).map(id => PLAYER_MAP[id]).filter(p => p && sendPositions.includes(p?.pos));
       if (partnerPosGroup.length <= 2) {
-        tips.push({ icon: '\uD83D\uDCA1', text: `This fills ${tradePartition.partnerTeamName}'s ${sendPositions.join('/')} need while strengthening your ${receivePositions.join('/')}.` });
+        tips.push({ icon: '\uD83D\uDCA1', text: `This fills ${tradePartition.partnerTeamName}'s ${sendPositions.join('/')} need while strengthening ${teamALabel} ${receivePositions.join('/')}.` });
       }
     }
 
     return tips.slice(0, 4);
   }, [tradePartition, postTradeRosters, opponentPerspective, rosters, scoringPreset]);
 
-  // Chart geometry — large hex with rich label pills outside
+  // Chart geometry - large hex with rich label pills outside
   const maxR = 300;
   const pillW = 125, pillH = 64, pillGap = 22;
   const maxOffset = maxR + pillGap + Math.max(pillW / 2, pillH / 2) + pillH / 2;
@@ -569,7 +685,7 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
 
   // --- Shared chart SVG (used in both layouts) ---
   const hexChart = (
-    <svg width={svgSize} height={svgSize} viewBox={`0 0 ${svgSize} ${svgSize}`} style={{ display: 'block', maxWidth: '540px' }}
+    <svg width={svgSize} height={svgSize} viewBox={`0 0 ${svgSize} ${svgSize}`} style={{ display: 'block', width: '100%' }}
       role="img" aria-label="Player comparison HexChart">
 
       {/* Grade bands */}
@@ -622,7 +738,7 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
           strokeLinejoin="round" strokeDasharray={idx === 0 ? 'none' : '8,4'} />;
       })}
 
-      {/* Dimension labels — rich pills with grade badges */}
+      {/* Dimension labels - rich pills with grade badges */}
       {DIMS.map((dim, i) => {
         const angle = angleOffset + (i * 2 * Math.PI) / 6;
         const dx = Math.cos(angle), dy = Math.sin(angle);
@@ -656,7 +772,7 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
         );
       })}
 
-      {/* Hover tooltip — show all player values */}
+      {/* Hover tooltip - show all player values */}
       {hoveredDim !== null && filledCount > 0 && (
         <foreignObject x={cx - 100} y={cy - 30} width="200" height={filledCount * 24 + 20} style={{ overflow: 'visible' }}>
           <div style={{
@@ -793,7 +909,7 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
   );
 
   // =============================================
-  // MODE 1: Basic — "The Verdict"
+  // MODE 1: Basic - "The Verdict"
   // =============================================
   const renderBasicResults = () => {
     if (!analysis) return null;
@@ -813,7 +929,7 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
       const otherStrengths = topWins.length > 0 ? topWins.slice(0, 2).join(' & ') : 'key areas';
       verdictText = `${top.name} holds the edge, but ${second.name} has strengths in ${otherStrengths}`;
     } else {
-      verdictText = `Too close to call \u2014 both grade as ${top.tier} options`;
+      verdictText = `Too close to call - both grade as ${top.tier} options`;
     }
 
     return (
@@ -832,7 +948,7 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
                 <span className="hex-grade-badge-xl" style={{ background: getHexTier(getHexScore(filled[0].player.id, scoringPreset)).tier === 'Elite' ? 'var(--grade-s)' : getGrade(getHexScore(filled[0].player.id, scoringPreset) / 100).color }}>
                   {getGrade(getHexScore(filled[0].player.id, scoringPreset) / 100).letter}
                 </span>
-                <span className="tabular-nums" style={{ color: 'var(--hex-purple)', fontSize: 16, fontWeight: 800 }}>
+                <span className="tabular-nums" style={{ color: 'var(--hex-purple)', fontSize: hexFontSize(getHexScore(filled[0].player.id, scoringPreset), 16), fontWeight: 800 }}>
                   {formatHex(getHexScore(filled[0].player.id, scoringPreset))}
                 </span>
               </div>
@@ -852,7 +968,7 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
                 <span className="hex-grade-badge-xl" style={{ background: getHexTier(getHexScore(filled[1].player.id, scoringPreset)).tier === 'Elite' ? 'var(--grade-s)' : getGrade(getHexScore(filled[1].player.id, scoringPreset) / 100).color }}>
                   {getGrade(getHexScore(filled[1].player.id, scoringPreset) / 100).letter}
                 </span>
-                <span className="tabular-nums" style={{ color: 'var(--hex-purple)', fontSize: 16, fontWeight: 800 }}>
+                <span className="tabular-nums" style={{ color: 'var(--hex-purple)', fontSize: hexFontSize(getHexScore(filled[1].player.id, scoringPreset), 16), fontWeight: 800 }}>
                   {formatHex(getHexScore(filled[1].player.id, scoringPreset))}
                 </span>
               </div>
@@ -877,7 +993,7 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
                     <span className="hex-grade-badge-lg" style={{ background: getGrade(s.hex / 100).color }}>{getGrade(s.hex / 100).letter}</span>
-                    <span className="tabular-nums" style={{ color: 'var(--hex-purple)', fontSize: 14, fontWeight: 800 }}>{formatHex(s.hex)}</span>
+                    <span className="tabular-nums" style={{ color: 'var(--hex-purple)', fontSize: hexFontSize(s.hex, 14), fontWeight: 800 }}>{formatHex(s.hex)}</span>
                   </div>
                   <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--hex-purple)' }}>{s.tier}</div>
                 </div>
@@ -891,8 +1007,8 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
           <h3>{verdictText}</h3>
         </div>
 
-        {/* Radar Chart — full width, centered */}
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
+        {/* Radar Chart - full width, centered */}
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8, maxWidth: 720, margin: '0 auto 8px' }}>
           {hexChart}
         </div>
         {legendRow}
@@ -958,7 +1074,7 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
           {analysis.archetypeLines.map((a, i) => (
             <div key={i} className="compare-basic-profile-card">
               <div className="name">{a.name}</div>
-              <div className="archetype">{a.archKey} \u2014 {a.desc}</div>
+              <div className="archetype">{a.archKey} - {a.desc}</div>
             </div>
           ))}
         </div>
@@ -976,7 +1092,7 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
   };
 
   // =============================================
-  // MODE 2: League — "Roster Impact"
+  // MODE 2: League - "Roster Impact"
   // =============================================
   const renderLeagueResults = () => {
     if (!analysis) return null;
@@ -1030,9 +1146,9 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
                     <div style={{ fontSize: 13, color: 'var(--text-muted)' }}><PosBadge pos={pd.player.pos} /> {pd.player.team}</div>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
                       <span className="hex-grade-badge-lg" style={{ background: getGrade(hex / 100).color }}>{getGrade(hex / 100).letter}</span>
-                      <span className="tabular-nums" style={{ color: 'var(--hex-purple)', fontSize: 14, fontWeight: 800 }}>{formatHex(hex)}</span>
+                      <span className="tabular-nums" style={{ color: 'var(--hex-purple)', fontSize: hexFontSize(hex, 14), fontWeight: 800 }}>{formatHex(hex)}</span>
                     </div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--hex-purple)' }}>{tier.tier} \u2014 {arch.description}</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--hex-purple)' }}>{tier.tier}</div>
                   </div>
                   {/* Position Depth Chart */}
                   {depth.length > 0 && (
@@ -1044,7 +1160,7 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
                           <div className="bar-track">
                             <div className="bar-fill" style={{ width: `${Math.min(100, dp.hex)}%`, background: dp.id === pd.player.id ? 'var(--hex-purple)' : 'var(--border)' }} />
                           </div>
-                          <span className="tabular-nums" style={{ fontSize: 12, fontWeight: 700, width: 32, textAlign: 'right' }}>{formatHex(dp.hex)}</span>
+                          <span className="tabular-nums" style={{ fontSize: hexFontSize(dp.hex, 12), fontWeight: 700, width: 32, textAlign: 'right' }}>{formatHex(dp.hex)}</span>
                         </div>
                       ))}
                     </div>
@@ -1059,7 +1175,7 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
                 <div key={`fa-${i}`} style={{ width: '100%', textAlign: 'center', padding: '8px 0' }}>
                   <PlayerHeadshot espnId={getEspnId(pd.player.name)} name={pd.player.name} size="sm" pos={pd.player.pos} team={pd.player.team} />
                   <div style={{ fontSize: 16, fontWeight: 700, marginTop: 4 }}>{pd.player.name}</div>
-                  <div style={{ fontSize: 13, color: '#3b82f6', fontWeight: 600 }}>Free Agent \u2014 {formatHex(hex)} Hex</div>
+                  <div style={{ fontSize: 13, color: '#3b82f6', fontWeight: 600 }}>Free Agent - {formatHex(hex)} Hex</div>
                 </div>
               );
             })}
@@ -1088,9 +1204,9 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
                     <div style={{ fontSize: 13, color: 'var(--text-muted)' }}><PosBadge pos={pd.player.pos} /> {pd.player.team}</div>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
                       <span className="hex-grade-badge-lg" style={{ background: getGrade(hex / 100).color }}>{getGrade(hex / 100).letter}</span>
-                      <span className="tabular-nums" style={{ color: 'var(--hex-purple)', fontSize: 14, fontWeight: 800 }}>{formatHex(hex)}</span>
+                      <span className="tabular-nums" style={{ color: 'var(--hex-purple)', fontSize: hexFontSize(hex, 14), fontWeight: 800 }}>{formatHex(hex)}</span>
                     </div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--hex-purple)' }}>{tier.tier} \u2014 {arch.description}</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--hex-purple)' }}>{tier.tier}</div>
                   </div>
                   {depth.length > 0 && (
                     <div className="compare-league-depth">
@@ -1101,7 +1217,7 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
                           <div className="bar-track">
                             <div className="bar-fill" style={{ width: `${Math.min(100, dp.hex)}%`, background: dp.id === pd.player.id ? 'var(--hex-purple)' : 'var(--border)' }} />
                           </div>
-                          <span className="tabular-nums" style={{ fontSize: 12, fontWeight: 700, width: 32, textAlign: 'right' }}>{formatHex(dp.hex)}</span>
+                          <span className="tabular-nums" style={{ fontSize: hexFontSize(dp.hex, 12), fontWeight: 700, width: 32, textAlign: 'right' }}>{formatHex(dp.hex)}</span>
                         </div>
                       ))}
                     </div>
@@ -1134,7 +1250,7 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
                         <div style={{ flex: 1, height: 10, background: 'var(--surface)', borderRadius: 3, overflow: 'hidden' }}>
                           <div style={{ height: '100%', width: `${Math.min(100, p.hex)}%`, background: 'var(--border)', borderRadius: 3 }} />
                         </div>
-                        <span className="tabular-nums" style={{ fontSize: 11, width: 28, textAlign: 'right' }}>{formatHex(p.hex)}</span>
+                        <span className="tabular-nums" style={{ fontSize: hexFontSize(p.hex, 11), width: 28, textAlign: 'right' }}>{formatHex(p.hex)}</span>
                       </div>
                     ))}
                   </div>
@@ -1146,7 +1262,7 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
                         <div style={{ flex: 1, height: 10, background: 'var(--surface)', borderRadius: 3, overflow: 'hidden' }}>
                           <div style={{ height: '100%', width: `${Math.min(100, p.hex)}%`, background: p.name === swap.player.name ? 'var(--hex-purple)' : 'var(--border)', borderRadius: 3 }} />
                         </div>
-                        <span className="tabular-nums" style={{ fontSize: 11, width: 28, textAlign: 'right' }}>{formatHex(p.hex)}</span>
+                        <span className="tabular-nums" style={{ fontSize: hexFontSize(p.hex, 11), width: 28, textAlign: 'right' }}>{formatHex(p.hex)}</span>
                       </div>
                     ))}
                   </div>
@@ -1200,21 +1316,23 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
   };
 
   // =============================================
-  // MODE 3: Trade — "The Deal"
+  // MODE 3: Trade - "The Deal"
   // =============================================
   const renderTradeResults = () => {
     if (!analysis) return null;
     const filled = playerData.filter(Boolean);
 
-    // No valid trade partition — show guidance
-    if (!tradePartition) {
+    // Position gate - trade analysis requires same position for deep stat comparison
+    const positions = [...new Set(filled.map(pd => pd.player.pos))];
+    if (positions.length !== 1) {
       return (
         <>
-          <div style={{ padding: '24px', textAlign: 'center' }}>
+          <div style={{ padding: '32px 24px', textAlign: 'center' }}>
             <div style={{ fontSize: 48, marginBottom: 12 }}>{'\u2696\uFE0F'}</div>
-            <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>Set Up Your Trade</div>
-            <div style={{ fontSize: 15, color: 'var(--text-muted)', maxWidth: 420, margin: '0 auto', lineHeight: 1.5 }}>
-              Select players from <strong>your team</strong> and <strong>one opponent's team</strong> to analyze this trade. Free agents and multi-team trades aren't supported yet.
+            <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>Same Position Required</div>
+            <div style={{ fontSize: 15, color: 'var(--text-muted)', maxWidth: 460, margin: '0 auto', lineHeight: 1.5 }}>
+              Trade analysis compares players at the <strong>same position</strong> for deep stat-level evaluation.
+              You've selected: <strong>{[...positions].join(', ')}</strong>. Use Basic or League mode for cross-position comparisons.
             </div>
           </div>
           {comparisonTable}
@@ -1222,102 +1340,421 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
       );
     }
 
-    const sendPlayers = tradePartition.sendIds.map(id => PLAYER_MAP[id]).filter(Boolean);
-    const receivePlayers = tradePartition.receiveIds.map(id => PLAYER_MAP[id]).filter(Boolean);
-    const userTeam = TEAMS.find(t => t.id === USER_TEAM_ID);
-    const partnerTeam = TEAMS.find(t => t.id === tradePartition.partnerId);
-    const gradeClass = tradePartition.tier.css === 'fair' ? 'favorable' : tradePartition.tier.css === 'uneven' ? 'neutral' : 'unfavorable';
-    const ratioPercent = Math.round(Math.abs(tradePartition.tier.ratio) * 100);
+    const pos = positions[0];
+    const posStats = POS_STATS[pos] || [];
+
+    // Compute stat values for each player
+    const statValues = filled.map(pd => {
+      const vals = {};
+      posStats.forEach(stat => { vals[stat.key] = getStatVal(pd.player, stat); });
+      return vals;
+    });
+
+    // Determine stat winner per row
+    const statWinners = {};
+    posStats.forEach(stat => {
+      let bestIdx = 0;
+      filled.forEach((_, i) => {
+        const curr = statValues[i][stat.key];
+        const best = statValues[bestIdx][stat.key];
+        if (stat.lower ? curr < best : curr > best) bestIdx = i;
+      });
+      statWinners[stat.key] = bestIdx;
+    });
+
+    // Rank each player against ACTIVE players at this position
+    const allAtPos = ALL_PLAYERS.filter(p => p.pos === pos && p.status === 'healthy' && (p.gp || 0) > 0);
+    const totalAtPos = allAtPos.length;
+    const rankings = {};
+    posStats.forEach(stat => {
+      const sorted = allAtPos.map(p => getStatVal(p, stat)).sort((a, b) => stat.lower ? a - b : b - a);
+      rankings[stat.key] = filled.map(pd => {
+        const val = getStatVal(pd.player, stat);
+        const betterCount = sorted.filter(v => stat.lower ? v < val : v > val).length;
+        const rank = betterCount + 1;
+        const pctile = Math.round(((totalAtPos - rank) / Math.max(totalAtPos - 1, 1)) * 100);
+        return { rank, total: totalAtPos, pctile };
+      });
+    });
+
+    // Group stats by category for visual rendering
+    const statGroups = [];
+    let currentStatGroup = null;
+    posStats.forEach(stat => {
+      if (!currentStatGroup || currentStatGroup.label !== stat.group) {
+        currentStatGroup = { label: stat.group, stats: [] };
+        statGroups.push(currentStatGroup);
+      }
+      currentStatGroup.stats.push(stat);
+    });
+
+    // Dimension rankings: all players ranked per dimension
+    const dimRankings = DIMS.map(dim => {
+      const ranked = filled.map((pd, fi) => ({
+        player: pd.player,
+        val: getDimensionValue(pd.hex.dimensions, dim.key),
+        idx: playerData.indexOf(pd),
+      })).sort((a, b) => b.val - a.val);
+      const margin = ranked.length >= 2 ? (ranked[0].val - ranked[1].val) * 100 : 0;
+      return { dim, ranked, margin };
+    });
+
+    // Head-to-head matrix: dimension wins for each pair
+    const h2h = filled.map((pdA) =>
+      filled.map((pdB) => {
+        if (pdA === pdB) return null;
+        let wins = 0;
+        DIMS.forEach(dim => {
+          const a = getDimensionValue(pdA.hex.dimensions, dim.key);
+          const b = getDimensionValue(pdB.hex.dimensions, dim.key);
+          if (a > b + 0.02) wins++;
+        });
+        return wins;
+      })
+    );
+
+    // Trade-specific variables (only when valid 2-team trade)
+    const hasTrade = !!tradePartition;
+    let sendPlayers, receivePlayers, teamA, teamB, isUser, teamALabel, teamBLabel, gradeClass, ratioPercent;
+    if (hasTrade) {
+      sendPlayers = tradePartition.sendIds.map(id => PLAYER_MAP[id]).filter(Boolean);
+      receivePlayers = tradePartition.receiveIds.map(id => PLAYER_MAP[id]).filter(Boolean);
+      teamA = TEAMS.find(t => t.id === tradePartition.teamAId);
+      teamB = TEAMS.find(t => t.id === tradePartition.teamBId);
+      isUser = tradePartition.userInvolved;
+      teamALabel = isUser ? 'You' : tradePartition.teamAName;
+      teamBLabel = tradePartition.teamBName;
+      gradeClass = tradePartition.tier.css === 'fair' ? 'favorable' : tradePartition.tier.css === 'uneven' ? 'neutral' : 'unfavorable';
+      ratioPercent = Math.round(Math.abs(tradePartition.tier.ratio) * 100);
+    }
 
     return (
       <>
-        {/* Deal Header */}
-        <div className="compare-trade-header">
-          <h3>Trade Proposal</h3>
-          <div className="teams">{userTeam?.name || 'Your Team'} {'\u2194'} {partnerTeam?.name || tradePartition.partnerTeamName}</div>
-        </div>
-
-        {/* Deal Cards Row */}
-        <div className="compare-trade-deal-row">
-          {/* You Send */}
-          <div className="compare-trade-side-card">
-            <div className="side-header send">You Send</div>
-            <div className="side-body">
-              {sendPlayers.map((p, i) => {
-                const hex = getHexScore(p.id, scoringPreset);
-                const tier = getHexTier(hex);
-                return (
-                  <div key={i} className="player-row">
-                    <PlayerHeadshot espnId={getEspnId(p.name)} name={p.name} size="tiny" pos={p.pos} team={p.team} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 700, fontSize: 14 }}>{p.name}</div>
-                      <div style={{ fontSize: 12, color: 'var(--text-muted)' }}><PosBadge pos={p.pos} /> {tier.tier}</div>
-                    </div>
-                    <span className="tabular-nums" style={{ color: 'var(--hex-purple)', fontSize: 13, fontWeight: 700 }}>{formatHex(hex)}</span>
-                  </div>
-                );
-              })}
+        {/* ═══ TRADE STRUCTURE (when valid 2-team trade) ═══ */}
+        {hasTrade && (
+          <>
+            <div className="compare-trade-header">
+              <h3>Trade {isUser ? 'Proposal' : 'Analysis'}</h3>
+              <div className="teams">{teamA?.name || tradePartition.teamAName} {'\u2194'} {teamB?.name || tradePartition.teamBName}</div>
             </div>
-            <div className="total">Total: {formatHex(tradePartition.tier.sendTotal)} Hex</div>
-          </div>
 
-          {/* Balance Bridge */}
-          <div className="compare-trade-bridge">
-            <span className="hex-grade-badge-xl" style={{
-              background: gradeClass === 'favorable' ? 'var(--success-green)' : gradeClass === 'neutral' ? '#d97706' : '#dc2626',
-            }}>
-              {tradePartition.tier.delta >= 0 ? '+' : ''}{formatHex(tradePartition.tier.delta)}
-            </span>
-            <div className="scale-bar">
-              <div className="scale-fill" style={{
-                height: `${Math.min(100, Math.max(10, 50 + tradePartition.tier.ratio * 100))}%`,
-                background: gradeClass === 'favorable' ? 'var(--success-green)' : gradeClass === 'neutral' ? '#d97706' : '#dc2626',
-              }} />
+            <div className="compare-trade-deal-row">
+              <div className="compare-trade-side-card">
+                <div className="side-header send">{teamALabel} Send{isUser ? '' : 's'}</div>
+                <div className="side-body">
+                  {sendPlayers.map((p, i) => {
+                    const hex = getHexScore(p.id, scoringPreset);
+                    const tier = getHexTier(hex);
+                    return (
+                      <div key={i} className="player-row">
+                        <PlayerHeadshot espnId={getEspnId(p.name)} name={p.name} size="tiny" pos={p.pos} team={p.team} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: 700, fontSize: 14 }}>{p.name}</div>
+                          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}><PosBadge pos={p.pos} /> {tier.tier}</div>
+                        </div>
+                        <span className="tabular-nums" style={{ color: 'var(--hex-purple)', fontSize: 13, fontWeight: 700 }}>{formatHex(hex)}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="total">Total: {formatHex(tradePartition.tier.sendTotal)} Hex</div>
+              </div>
+
+              <div className="compare-trade-bridge">
+                <span className="hex-grade-badge-xl" style={{
+                  background: gradeClass === 'favorable' ? 'var(--success-green)' : gradeClass === 'neutral' ? '#d97706' : '#dc2626',
+                }}>
+                  {tradePartition.tier.delta >= 0 ? '+' : ''}{formatHex(tradePartition.tier.delta)}
+                </span>
+                <div className="scale-bar">
+                  <div className="scale-fill" style={{
+                    height: `${Math.min(100, Math.max(10, 50 + tradePartition.tier.ratio * 100))}%`,
+                    background: gradeClass === 'favorable' ? 'var(--success-green)' : gradeClass === 'neutral' ? '#d97706' : '#dc2626',
+                  }} />
+                </div>
+              </div>
+
+              <div className="compare-trade-side-card">
+                <div className="side-header receive">{teamALabel} Receive{isUser ? '' : 's'}</div>
+                <div className="side-body">
+                  {receivePlayers.map((p, i) => {
+                    const hex = getHexScore(p.id, scoringPreset);
+                    const tier = getHexTier(hex);
+                    return (
+                      <div key={i} className="player-row">
+                        <PlayerHeadshot espnId={getEspnId(p.name)} name={p.name} size="tiny" pos={p.pos} team={p.team} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: 700, fontSize: 14 }}>{p.name}</div>
+                          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}><PosBadge pos={p.pos} /> {tier.tier}</div>
+                        </div>
+                        <span className="tabular-nums" style={{ color: 'var(--hex-purple)', fontSize: 13, fontWeight: 700 }}>{formatHex(hex)}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="total">Total: {formatHex(tradePartition.tier.receiveTotal)} Hex</div>
+              </div>
             </div>
-          </div>
 
-          {/* You Receive */}
-          <div className="compare-trade-side-card">
-            <div className="side-header receive">You Receive</div>
-            <div className="side-body">
-              {receivePlayers.map((p, i) => {
-                const hex = getHexScore(p.id, scoringPreset);
-                const tier = getHexTier(hex);
-                return (
-                  <div key={i} className="player-row">
-                    <PlayerHeadshot espnId={getEspnId(p.name)} name={p.name} size="tiny" pos={p.pos} team={p.team} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 700, fontSize: 14 }}>{p.name}</div>
-                      <div style={{ fontSize: 12, color: 'var(--text-muted)' }}><PosBadge pos={p.pos} /> {tier.tier}</div>
-                    </div>
-                    <span className="tabular-nums" style={{ color: 'var(--hex-purple)', fontSize: 13, fontWeight: 700 }}>{formatHex(hex)}</span>
-                  </div>
-                );
-              })}
+            <div className={`compare-trade-grade-banner ${gradeClass}`}>
+              {tradePartition.tier.label} {ratioPercent > 0 && `- ${ratioPercent}% ${tradePartition.tier.delta >= 0 ? `favors ${teamALabel.toLowerCase()}` : `favors ${teamBLabel}`}`}
             </div>
-            <div className="total">Total: {formatHex(tradePartition.tier.receiveTotal)} Hex</div>
-          </div>
-        </div>
 
-        {/* Trade Grade Banner */}
-        <div className={`compare-trade-grade-banner ${gradeClass}`}>
-          {tradePartition.tier.label} {ratioPercent > 0 && `\u2014 ${ratioPercent}% ${tradePartition.tier.delta >= 0 ? 'in your favor' : 'against you'}`}
-        </div>
-
-        {/* "Would They Accept?" Card */}
-        {opponentPerspective && (
-          <div className="compare-trade-acceptance">
-            <div className="title">Would They Accept?</div>
-            <span className={`likelihood ${opponentPerspective.likelihoodClass}`}>{opponentPerspective.likelihood}</span>
-            <div className="reason">{opponentPerspective.reason}</div>
-          </div>
+            {opponentPerspective && (
+              <div className="compare-trade-acceptance">
+                <div className="title">{isUser ? 'Would They Accept?' : `Would ${teamBLabel} Accept?`}</div>
+                <span className={`likelihood ${opponentPerspective.likelihoodClass}`}>{opponentPerspective.likelihood}</span>
+                <div className="reason">{opponentPerspective.reason}</div>
+              </div>
+            )}
+          </>
         )}
 
+        {/* ═══ DEEP POSITION ANALYSIS ═══ */}
+
+        {/* Player Profiles with Hex Rings */}
+        <div className="compare-trade-section-header">
+          <h3><PosBadge pos={pos} /> Scouting Report</h3>
+          <span className="section-badge">{filled.length} Players</span>
+        </div>
+
+        {(() => {
+          const hexRanks = filled
+            .map((pd, fi) => ({ fi, hex: getHexScore(pd.player.id, scoringPreset) }))
+            .sort((a, b) => b.hex - a.hex)
+            .map((entry, ri) => ({ ...entry, rank: ri + 1 }))
+            .reduce((m, e) => { m[e.fi] = e.rank; return m; }, {});
+          const podiumMode = filled.length <= 3;
+          return (
+        <div className="trade-scout-row">
+          {filled.map((pd, fi) => {
+            const hex = getHexScore(pd.player.id, scoringPreset);
+            const tier = getHexTier(hex);
+            const grade = getGrade(hex / 100);
+            const idx = playerData.indexOf(pd);
+            const ringC = 276.46;
+            const keyStatDefs = KEY_STATS[pos] || KEY_STATS.WR;
+            return (
+              <div key={fi} className="trade-scout-card" style={{ '--player-color': COLORS[idx] }}>
+                <div className="scout-top">
+                  <div className="scout-left">
+                    <PlayerHeadshot espnId={getEspnId(pd.player.name)} name={pd.player.name} size="sm" pos={pd.player.pos} team={pd.player.team} />
+                    <div className="scout-name">{pd.player.name}</div>
+                    <div className="scout-meta"><PosBadge pos={pd.player.pos} /> {pd.player.team}</div>
+                    <div className={`scout-rank ${podiumMode ? `podium-${hexRanks[fi]}` : ''}`}>
+                      {podiumMode
+                        ? ['🥇','🥈','🥉'][hexRanks[fi] - 1]
+                        : `#${hexRanks[fi]} of ${filled.length}`}
+                    </div>
+                  </div>
+                  <div className="scout-right">
+                    <div className="scout-ring">
+                      <svg viewBox="0 0 104 104">
+                        <circle cx="52" cy="52" r="44" fill="none" stroke="var(--surface)" strokeWidth="5" />
+                        <circle cx="52" cy="52" r="44" fill="none" stroke={grade.color} strokeWidth="5"
+                          strokeDasharray={`${(hex / 100) * ringC} ${ringC}`}
+                          strokeLinecap="round" transform="rotate(-90, 52, 52)"
+                          style={{ transition: 'stroke-dasharray 0.8s ease-out' }} />
+                      </svg>
+                      <div className="ring-center">
+                        <span className="hex-grade-badge" style={{ background: grade.color }}>{grade.letter}</span>
+                        <span className="ring-score tabular-nums" style={{ fontSize: hexFontSize(hex, 16) }}>{formatHex(hex)}</span>
+                      </div>
+                    </div>
+                    <div className="scout-tier">{tier.tier}</div>
+                  </div>
+                </div>
+                <div className="scout-keystats">
+                  {keyStatDefs.map(ks => (
+                    <div key={ks.key} className="keystat">
+                      <div className="keystat-val tabular-nums">{formatStatVal(pd.player[ks.key] || 0, ks.fmt)}</div>
+                      <div className="keystat-lbl">{ks.label}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+          );
+        })()}
+
+        {/* Stat Comparison - Visual Bars with League Percentiles */}
+        {posStats.length > 0 && (
+          <>
+            <div className="compare-trade-section-header">
+              <h3>{pos} Stat Comparison</h3>
+              <span className="section-badge">vs. All {pos}s</span>
+            </div>
+            <div className="trade-stats-visual">
+              {statGroups.map(g => (
+                <div key={g.label} className="trade-stat-group">
+                  <div className="trade-stat-group-label">{g.label}</div>
+                  {g.stats.map(stat => {
+                    const vals = filled.map((_, fi) => statValues[fi][stat.key]);
+                    const maxVal = Math.max(...vals.map(Math.abs));
+                    const minVal = Math.min(...vals);
+                    return (
+                      <div key={stat.key} className="trade-stat-row">
+                        <div className="trade-stat-name">{stat.label}</div>
+                        <div className="trade-stat-bars">
+                          {filled.map((pd, fi) => {
+                            const val = vals[fi];
+                            let barW;
+                            if (stat.lower) {
+                              barW = val === 0 ? 100 : Math.max(15, (minVal / val) * 100);
+                            } else {
+                              barW = maxVal > 0 ? Math.max(15, (Math.abs(val) / maxVal) * 100) : 50;
+                            }
+                            const isWinner = statWinners[stat.key] === fi;
+                            const idx = playerData.indexOf(pd);
+                            const rankInfo = rankings[stat.key]?.[fi] ?? { rank: 1, total: 1, pctile: 50 };
+                            const pColor = getPctileColor(rankInfo.pctile);
+                            return (
+                              <div key={fi} className={`trade-stat-bar${isWinner ? ' winner' : ''}`}>
+                                <div className="bar-id">
+                                  <div className="bar-dot" style={{ background: COLORS[idx] }} />
+                                  <span className="bar-name">{pd.player.name.split(' ').pop()}</span>
+                                </div>
+                                <div className="bar-track">
+                                  <div className="bar-fill" style={{ width: `${barW}%`, background: COLORS[idx], opacity: isWinner ? 0.85 : 0.3 }} />
+                                </div>
+                                <span className="bar-val tabular-nums">{formatStatVal(val, stat.fmt)}</span>
+                                <span className="bar-pctile" style={{ background: `${pColor}18`, color: pColor }}>#{rankInfo.rank}<small>/{rankInfo.total}</small></span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* Dimension Breakdown - all players ranked per dimension */}
+        <div className="compare-trade-section-header">
+          <h3>Dimension Breakdown</h3>
+        </div>
+        <div className="compare-trade-dim-breakdown">
+          {dimRankings.map(({ dim, ranked, margin }) => (
+            <div key={dim.key} className="dim-group">
+              <div className="dim-group-header">
+                <span className="dim-group-label">{dim.label}</span>
+                {margin >= 5 && <span className="dim-group-edge">Edge: {ranked[0].player.name.split(' ').pop()} (+{margin.toFixed(0)})</span>}
+                {margin < 5 && <span className="dim-group-even">Even</span>}
+              </div>
+              {ranked.map((r, ri) => (
+                <div key={ri} className={`dim-player-bar${ri === 0 ? ' leader' : ''}`}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, width: 90, flexShrink: 0 }}>
+                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: COLORS[r.idx], flexShrink: 0 }} />
+                    <span className="player-name">{r.player.name.split(' ').pop()}</span>
+                  </div>
+                  <div className="bar-track">
+                    <div className="bar-fill" style={{ width: `${r.val * 100}%`, background: COLORS[r.idx], opacity: ri === 0 ? 0.9 : 0.35 }} />
+                  </div>
+                  <span className="dim-score tabular-nums">{(r.val * 100).toFixed(1)}</span>
+                  <span className="hex-grade-badge" style={{ background: getDimGrade(r.val).color, transform: 'scale(0.7)', display: 'inline-flex', flexShrink: 0 }}>
+                    {getDimGrade(r.val).letter}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+
+        {/* Head-to-Head Matrix (3+ players) */}
+        {filled.length >= 3 && (
+          <>
+            <div className="compare-trade-section-header">
+              <h3>Head-to-Head</h3>
+              <span className="section-badge">{DIMS.length} Dimensions</span>
+            </div>
+            <div className="ff-card" style={{ marginBottom: 24 }}>
+              <div className="ff-table-wrap">
+                <table className="ff-table">
+                  <thead>
+                    <tr>
+                      <th></th>
+                      {filled.map((pd, fi) => {
+                        const idx = playerData.indexOf(pd);
+                        return (
+                          <th key={fi} style={{ textAlign: 'center' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                              <div style={{ width: 8, height: 8, borderRadius: '50%', background: COLORS[idx], flexShrink: 0 }} />
+                              <span>{pd.player.name.split(' ').pop()}</span>
+                            </div>
+                          </th>
+                        );
+                      })}
+                      <th style={{ textAlign: 'center' }}>Record</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filled.map((pdA, iA) => {
+                      const idx = playerData.indexOf(pdA);
+                      let totalWins = 0, totalLosses = 0;
+                      filled.forEach((_, iB) => {
+                        if (iA !== iB) { totalWins += h2h[iA][iB] || 0; totalLosses += h2h[iB][iA] || 0; }
+                      });
+                      return (
+                        <tr key={iA}>
+                          <td style={{ fontWeight: 600 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <div style={{ width: 6, height: 6, borderRadius: '50%', background: COLORS[idx], flexShrink: 0 }} />
+                              {pdA.player.name.split(' ').pop()}
+                            </div>
+                          </td>
+                          {filled.map((pdB, iB) => {
+                            if (iA === iB) return <td key={iB} style={{ textAlign: 'center', background: 'var(--surface)', color: 'var(--text-muted)' }}>{'-'}</td>;
+                            const wins = h2h[iA][iB] || 0;
+                            const losses = h2h[iB][iA] || 0;
+                            return (
+                              <td key={iB} style={{ textAlign: 'center', padding: '6px 8px' }}>
+                                <div className="h2h-cell">
+                                  <div className="h2h-bar">
+                                    <div style={{ width: `${(wins / DIMS.length) * 100}%`, background: 'var(--success-green)' }} />
+                                    <div style={{ width: `${(losses / DIMS.length) * 100}%`, background: '#dc2626' }} />
+                                  </div>
+                                  <span className="tabular-nums" style={{ fontWeight: 700, fontSize: 13, color: wins > losses ? 'var(--success-green)' : wins < losses ? '#dc2626' : 'var(--text-muted)' }}>
+                                    {wins}{'\u2013'}{losses}
+                                  </span>
+                                </div>
+                              </td>
+                            );
+                          })}
+                          <td style={{ textAlign: 'center', fontWeight: 900, fontSize: 14 }}>
+                            <span className="tabular-nums" style={{ color: totalWins > totalLosses ? 'var(--success-green)' : totalWins < totalLosses ? '#dc2626' : 'var(--text-muted)' }}>
+                              {totalWins}{'\u2013'}{totalLosses}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Hex Radar Chart */}
+        <div className="ff-card" style={{ marginBottom: 16, padding: 16 }}>
+          <div style={{ maxWidth: 720, margin: '0 auto' }}>
+            {hexChart}
+          </div>
+          {legendRow}
+        </div>
+
+        {/* ═══ TRADE-SPECIFIC DETAILS (when valid 2-team trade) ═══ */}
+
         {/* Roster Impact Split */}
-        {postTradeRosters && (
+        {hasTrade && postTradeRosters && (
           <div className="compare-trade-impact-row">
             <div className="compare-trade-impact-card">
-              <div className="card-title">Your Roster After</div>
+              <div className="card-title">{isUser ? 'Your Roster After' : `${tradePartition.teamAName}'s Roster After`}</div>
               <div className="delta-row">
                 <span>Overall Avg</span>
                 <span className={`delta-badge ${postTradeRosters.user.delta > 0.5 ? 'gain' : postTradeRosters.user.delta < -0.5 ? 'loss' : 'neutral'}`}>
@@ -1353,14 +1790,6 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
           </div>
         )}
 
-        {/* Radar Chart */}
-        <div className="ff-card" style={{ marginBottom: 16, padding: 16 }}>
-          <div style={{ display: 'flex', justifyContent: 'center' }}>
-            {hexChart}
-          </div>
-          {legendRow}
-        </div>
-
         {/* Trade Tips */}
         {tradeTips.length > 0 && (
           <div className="compare-trade-tips">
@@ -1373,8 +1802,8 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
           </div>
         )}
 
-        {/* CTA Row */}
-        {onOpenTrade && (
+        {/* CTA Row - only when user is part of the trade */}
+        {onOpenTrade && hasTrade && isUser && (
           <div className="compare-trade-cta-row">
             <button className="primary-btn" onClick={() => onOpenTrade(tradePartition.sendIds, tradePartition.receiveIds)}>
               Open in Trade Center {'\u2192'}
@@ -1383,7 +1812,7 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
           </div>
         )}
 
-        {/* Comparison Table */}
+        {/* Full Dimension Comparison Table */}
         {comparisonTable}
       </>
     );
@@ -1428,11 +1857,11 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
                 <PlayerSlot player={slots[2]} color={COLORS[2]} onSelect={p => setSlot(2, p)} onRemove={() => clearSlot(2)} excludeIds={excludeIds} scoringPreset={scoringPreset} rosters={compareMode !== 'basic' ? rosters : null} />
               </div>
 
-              {/* Compare button — always visible, inactive until 2+ players selected */}
+              {/* Compare button - always visible, inactive until 2+ players selected */}
               <div style={{ display: 'flex', justifyContent: 'center', margin: '20px 0' }}>
                 <button onClick={filledCount >= 2 ? handleCompare : undefined} disabled={filledCount < 2} style={{
                   background: filledCount >= 2 ? 'var(--hex-purple)' : 'var(--text-muted)',
-                  color: '#fff', border: 'none', borderRadius: 10,
+                  color: 'var(--on-accent)', border: 'none', borderRadius: 10,
                   padding: '12px 40px', fontSize: 17, fontWeight: 800,
                   cursor: filledCount >= 2 ? 'pointer' : 'not-allowed',
                   letterSpacing: '0.04em',
@@ -1455,20 +1884,20 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
             </>
           )}
 
-          {/* --- RESULTS MODE — mode dispatcher --- */}
+          {/* --- RESULTS MODE - mode dispatcher --- */}
           {showResults && (
-            <>
-              {/* Compact player row + edit button — shared across all modes */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
+            <div className={filledCount >= 4 ? 'compare-dense' : ''}>
+              {/* Compact player row + edit button - shared across all modes */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: filledCount >= 4 ? 6 : 10, marginBottom: 20, flexWrap: 'wrap' }}>
                 {slots.map((p, idx) => p && (
                   <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
                     <div style={{
-                      display: 'flex', alignItems: 'center', gap: 6, background: 'var(--bg-white)',
-                      border: `1.5px solid ${COLORS[idx]}`, borderRadius: 8, padding: '5px 10px',
+                      display: 'flex', alignItems: 'center', gap: filledCount >= 4 ? 4 : 6, background: 'var(--bg-white)',
+                      border: `1.5px solid ${COLORS[idx]}`, borderRadius: 8, padding: filledCount >= 4 ? '3px 7px' : '5px 10px',
                     }}>
-                      <div style={{ width: 3, height: 20, borderRadius: 2, background: COLORS[idx], flexShrink: 0 }} />
+                      <div style={{ width: 3, height: filledCount >= 4 ? 16 : 20, borderRadius: 2, background: COLORS[idx], flexShrink: 0 }} />
                       <PlayerHeadshot espnId={getEspnId(p.name)} name={p.name} size="tiny" pos={p.pos} team={p.team} />
-                      <span style={{ fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap' }}>{p.name}</span>
+                      <span style={{ fontSize: filledCount >= 4 ? 12 : 14, fontWeight: 700, whiteSpace: 'nowrap' }}>{p.name}</span>
                     </div>
                     {compareMode === 'trade' && tradePartition && (
                       <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em',
@@ -1490,7 +1919,7 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
               {compareMode === 'basic' && renderBasicResults()}
               {compareMode === 'league' && renderLeagueResults()}
               {compareMode === 'trade' && renderTradeResults()}
-            </>
+            </div>
           )}
         </div>
       </div>

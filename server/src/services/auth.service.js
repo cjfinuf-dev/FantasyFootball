@@ -7,14 +7,16 @@ const SALT_ROUNDS = 12;
 async function signup({ name, email, password }) {
   const db = await getDb();
 
+  // Hash first to prevent timing oracle — bcrypt takes ~300ms, so running it
+  // before the email-exists check ensures both paths take the same time
+  const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+
   const existing = db.exec('SELECT id FROM users WHERE email = ?', [email]);
   if (existing.length > 0 && existing[0].values.length > 0) {
     const err = new Error('Signup failed. Please check your details.');
     err.status = 409;
     throw err;
   }
-
-  const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
   try {
     db.run('INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)', [name, email, passwordHash]);
   } catch (e) {

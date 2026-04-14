@@ -90,8 +90,8 @@ export default function TradeAnalyzer({ sendIds, receiveIds, userRoster, partner
   const glowClass = ratio >= 0.35 ? ' hex-glow-elite' : ratio >= 0.25 ? ' hex-glow-strong' : '';
 
   // Roster impact
-  const userBefore = userRoster ? computeTradeValue(userRoster) : null;
-  const partnerBefore = partnerRoster ? computeTradeValue(partnerRoster) : null;
+  const userBefore = userRoster ? computeTradeValue(userRoster, scoringPreset) : null;
+  const partnerBefore = partnerRoster ? computeTradeValue(partnerRoster, scoringPreset) : null;
   const userAfter = userBefore !== null ? userBefore - sendTotal + receiveTotal : null;
   const partnerAfter = partnerBefore !== null ? partnerBefore - receiveTotal + sendTotal : null;
 

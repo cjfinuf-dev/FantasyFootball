@@ -1,4 +1,8 @@
-import { getPlayerArchetype } from '../../data/playerArchetypes';
+import { classifyArchetype } from '../../utils/archetypeClassifier';
+import { PLAYERS } from '../../data/players';
+
+const PLAYER_MAP = {};
+PLAYERS.forEach(p => { PLAYER_MAP[p.id] = p; });
 
 const BADGE_CONFIG = {
   // QB
@@ -31,7 +35,9 @@ const BADGE_CONFIG = {
 };
 
 export default function ArchetypeBadge({ playerId, pos, size = 'sm' }) {
-  const archetype = getPlayerArchetype(playerId, pos);
+  const player = PLAYER_MAP[playerId];
+  if (!player) return null;
+  const archetype = classifyArchetype(player, pos);
   const config = BADGE_CONFIG[archetype.key];
   if (!config || !config.label) return null;
 

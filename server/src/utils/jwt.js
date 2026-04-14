@@ -5,7 +5,16 @@ const SECRET = process.env.JWT_SECRET;
 if (!SECRET) {
   throw new Error('[jwt] JWT_SECRET environment variable is not set — refusing to start without a signing secret');
 }
-const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || SECRET;
+if (SECRET.startsWith('CHANGE_ME')) {
+  throw new Error('[jwt] JWT_SECRET is still a placeholder — generate a real secret with: openssl rand -hex 64');
+}
+const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET;
+if (!REFRESH_SECRET) {
+  throw new Error('[jwt] JWT_REFRESH_SECRET environment variable is not set — must be a separate secret from JWT_SECRET');
+}
+if (REFRESH_SECRET.startsWith('CHANGE_ME')) {
+  throw new Error('[jwt] JWT_REFRESH_SECRET is still a placeholder — generate a real secret with: openssl rand -hex 64');
+}
 const ACCESS_EXPIRES_IN = '30m';
 const REFRESH_EXPIRES_IN = '24h';
 

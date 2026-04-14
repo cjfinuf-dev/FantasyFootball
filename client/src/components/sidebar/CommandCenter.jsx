@@ -31,7 +31,7 @@ function getPositionGrades(teamId, rosters, scoringPreset) {
   const grades = {};
   for (const pos of ['QB', 'RB', 'WR', 'TE']) {
     const posPlayers = players.filter(p => p.pos === pos);
-    const hexes = posPlayers.map(p => getHexScore(p.id, scoringPreset));
+    const hexes = posPlayers.map(p => getHexScore(p.id, scoringPreset)).sort((a, b) => b - a);
     const starterCount = STARTER_COUNTS[pos] || 1;
     const starterHex = hexes.slice(0, starterCount);
     const avgStarterHex = starterHex.length > 0 ? starterHex.reduce((a, b) => a + b, 0) / starterHex.length : 0;

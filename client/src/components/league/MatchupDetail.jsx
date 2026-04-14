@@ -275,10 +275,10 @@ function DualHexRadar({ dimsA, dimsB, teamA, teamB }) {
               <g>
                 {/* Team A value */}
                 <rect x={ax + (aDx/aDist)*24 - 22} y={ay + (aDy/aDist)*24 - 11} width="44" height="20" rx="5" fill="#2563EB" fillOpacity="0.9" />
-                <text x={ax + (aDx/aDist)*24} y={ay + (aDy/aDist)*24 + 4} textAnchor="middle" fontSize="13" fontWeight="800" fill="#fff">{aVal}</text>
+                <text x={ax + (aDx/aDist)*24} y={ay + (aDy/aDist)*24 + 4} textAnchor="middle" fontSize="13" fontWeight="800" fill="var(--on-accent)">{aVal}</text>
                 {/* Team B value */}
                 <rect x={bx + (bDx/bDist)*24 - 22} y={by + (bDy/bDist)*24 - 11} width="44" height="20" rx="5" fill="#10B981" fillOpacity="0.8" />
-                <text x={bx + (bDx/bDist)*24} y={by + (bDy/bDist)*24 + 4} textAnchor="middle" fontSize="13" fontWeight="800" fill="#fff">{bVal}</text>
+                <text x={bx + (bDx/bDist)*24} y={by + (bDy/bDist)*24 + 4} textAnchor="middle" fontSize="13" fontWeight="800" fill="var(--on-accent)">{bVal}</text>
               </g>
             );
           })()}
@@ -295,7 +295,7 @@ function DualHexRadar({ dimsA, dimsB, teamA, teamB }) {
               <g key={i} style={{ cursor: 'pointer' }} onMouseEnter={() => setHoveredIdx(i)} onMouseLeave={() => setHoveredIdx(null)}>
                 <circle cx={lx} cy={ly} r={42} fill="transparent" />
                 <rect x={lx - mPillW/2} y={ly - mPillH/2} width={mPillW} height={mPillH} rx="10" fill="var(--hex-purple)" fillOpacity={isHovered ? 0.3 : 0.12} stroke="var(--hex-purple)" strokeWidth="1.5" strokeOpacity={isHovered ? 0.7 : 0.3} />
-                <text x={lx} y={ly + 5} textAnchor="middle" fontSize="15" fontWeight="700" fill={isHovered ? '#fff' : 'var(--hex-purple)'} style={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <text x={lx} y={ly + 5} textAnchor="middle" fontSize="15" fontWeight="700" fill={isHovered ? 'var(--on-accent)' : 'var(--hex-purple)'} style={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   {dim.label}
                 </text>
               </g>

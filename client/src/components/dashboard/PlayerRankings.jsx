@@ -471,7 +471,7 @@ export default function PlayerRankings({ onPlayerClick }) {
                 ))}
                 {!detailView && statColumns.length === 0 && !effectiveShowHistory && <th style={{ width: 60 }}>Trend</th>}
                 {effectiveShowHistory && seasons.map((yr, i) => {
-                  const yrColor = sortField === `yr_${yr}` ? '#fff' : 'var(--text-muted)';
+                  const yrColor = sortField === `yr_${yr}` ? 'var(--on-accent)' : 'var(--text-muted)';
                   const borderLeft = '2px solid var(--border-strong)';
                   return [
                     <th key={`${yr}_gp`} style={{ width: 40, textAlign: 'center', color: yrColor, borderLeft }}>GP</th>,

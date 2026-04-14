@@ -36,7 +36,7 @@ const SCORING_OPTIONS = [
 
 const MAX_PER_SIDE = 5;
 
-function PlayerSearch({ onSelect, excludeIds, placeholder }) {
+function PlayerSearch({ onSelect, excludeIds, placeholder, scoringPreset }) {
   const [query, setQuery] = useState('');
   const [focused, setFocused] = useState(false);
 
@@ -73,7 +73,7 @@ function PlayerSearch({ onSelect, excludeIds, placeholder }) {
           maxHeight: 240, marginTop: 2, overflowY: 'auto',
         }}>
           {results.map(p => {
-            const hex = getHexScore(p.id);
+            const hex = getHexScore(p.id, scoringPreset);
             return (
               <div key={p.id}
                 className="ff-tm-player-row"
@@ -101,6 +101,7 @@ function SidePanel({ label, playerIds, onAdd, onRemove, allIds, scoringPreset })
       <PlayerSearch
         onSelect={onAdd}
         excludeIds={allIds}
+        scoringPreset={scoringPreset}
         placeholder={playerIds.length >= MAX_PER_SIDE ? 'Max 5 players' : 'Search players...'}
       />
       <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 6, minHeight: 80 }}>
@@ -163,7 +164,7 @@ export default function QuickTradeCalc({ onSignIn, onSignUp }) {
                 padding: '6px 14px', borderRadius: 6, border: 'none', cursor: 'pointer',
                 fontSize: 14, fontWeight: 600,
                 background: scoring === opt.value ? 'var(--hex-purple, #8B5CF6)' : 'var(--surface, var(--bg-alt))',
-                color: scoring === opt.value ? '#fff' : 'var(--text-muted)',
+                color: scoring === opt.value ? 'var(--on-accent)' : 'var(--text-muted)',
                 transition: 'all 0.15s',
               }}>
               {opt.label}

@@ -1,5 +1,4 @@
 const express = require('express');
-const rateLimit = require('express-rate-limit');
 const authService = require('../services/auth.service');
 const { requireAuth } = require('../middleware/auth');
 const { validateSignup, validateSignin } = require('../middleware/validate');
@@ -26,27 +25,15 @@ function setTokenCookies(res, token, refreshToken) {
 }
 
 function clearTokenCookies(res) {
-  res.clearCookie('ff-token', { path: '/' });
-  res.clearCookie('ff-refresh-token', { path: '/api/auth' });
+  const isProduction = process.env.NODE_ENV === 'production';
+  res.clearCookie('ff-token', { path: '/', httpOnly: true, secure: isProduction, sameSite: 'strict' });
+  res.clearCookie('ff-refresh-token', { path: '/api/auth', httpOnly: true, secure: isProduction, sameSite: 'strict' });
 }
 
-const signinLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 10,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'Too many login attempts. Try again in 15 minutes.' },
-});
+// Rate limiting is handled globally in index.js — no per-route limiters here
+// to avoid double-counting (separate stores = 2x the allowed attempts)
 
-const signupLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000,
-  max: 5,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'Too many signup attempts. Try again in an hour.' },
-});
-
-router.post('/signup', signupLimiter, validateSignup, async (req, res, next) => {
+router.post('/signup', validateSignup, async (req, res, next) => {
   try {
     const { name, email, password } = req.body;
     const { user, token, refreshToken } = await authService.signup({ name, email, password });
@@ -57,7 +44,7 @@ router.post('/signup', signupLimiter, validateSignup, async (req, res, next) => 
   }
 });
 
-router.post('/signin', signinLimiter, validateSignin, async (req, res, next) => {
+router.post('/signin', validateSignin, async (req, res, next) => {
   try {
     const { email, password } = req.body;
     const { user, token, refreshToken } = await authService.signin({ email, password });

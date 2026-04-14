@@ -211,9 +211,7 @@ function getBestAvailable(state, teamId, scoringPreset = 'ppr', archetypes = {},
   // Score each available player with format-aware, archetype-aware valuation
   const scored = available.map(p => {
     let score = getHexScore(p.id, scoringPreset);
-
-    // Apply scoring format multiplier
-    score *= getPositionMultiplier(p.pos, scoringPreset);
+    // HexScore already includes format-aware position multipliers — no double-apply
 
     // Archetype round preferences: big boost if this position is preferred this round
     const roundPrefs = archetypeDef.roundPrefs[round];
@@ -943,7 +941,7 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
                   </div>
                 </div>
                 <div style={{ textAlign: 'center' }}>
-                  <div className="ff-draft-grade-reveal" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 72, height: 78, clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)', background: gradeColor, fontSize: 30, fontWeight: 900, color: '#fff' }}>
+                  <div className="ff-draft-grade-reveal" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 72, height: 78, clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)', background: gradeColor, fontSize: 30, fontWeight: 900, color: 'var(--on-accent)' }}>
                     {draftGrade}
                   </div>
                   <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginTop: 4 }}><HexBrand word="Grade" size="sm" /></div>
@@ -1163,7 +1161,7 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ fontSize: 17, fontWeight: 700, color: 'var(--di-text)' }}>{currentTeam?.name}</span>
-          {isUserTurn && <span className="ff-inline-badge" style={{ background: 'var(--accent)', color: '#fff' }}>YOUR PICK</span>}
+          {isUserTurn && <span className="ff-inline-badge" style={{ background: 'var(--accent)', color: 'var(--on-accent)' }}>YOUR PICK</span>}
           {!isUserTurn && <span style={{ fontSize: 12, color: 'var(--di-text-muted)' }}>on the clock</span>}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>

@@ -31,7 +31,7 @@ export const TEAM_PROFILES = {
   GB:  { schemeType: 'west-coast',  passRate: 0.55, rushRate: 0.45, passEfficiency: 0.77, rushEfficiency: 0.80, oLineRank: 11, tempoScore: 0.98, qbRating: 0.74, teUsage: 'medium', sosRank: 23 },
   TB:  { schemeType: 'spread',      passRate: 0.58, rushRate: 0.42, passEfficiency: 0.80, rushEfficiency: 0.72, oLineRank: 17, tempoScore: 1.01, qbRating: 0.76, teUsage: 'low',    sosRank: 10 },
   DEN: { schemeType: 'balanced',    passRate: 0.53, rushRate: 0.47, passEfficiency: 0.74, rushEfficiency: 0.78, oLineRank: 13, tempoScore: 0.96, qbRating: 0.70, teUsage: 'low',    sosRank: 14 },
-  LAR: { schemeType: 'west-coast',  passRate: 0.58, rushRate: 0.42, passEfficiency: 0.78, rushEfficiency: 0.70, oLineRank: 20, tempoScore: 0.98, qbRating: 0.72, teUsage: 'medium', sosRank: 20 },
+  LA: { schemeType: 'west-coast',  passRate: 0.58, rushRate: 0.42, passEfficiency: 0.78, rushEfficiency: 0.70, oLineRank: 20, tempoScore: 0.98, qbRating: 0.72, teUsage: 'medium', sosRank: 20 },
   SEA: { schemeType: 'balanced',    passRate: 0.55, rushRate: 0.45, passEfficiency: 0.76, rushEfficiency: 0.74, oLineRank: 22, tempoScore: 0.97, qbRating: 0.68, teUsage: 'medium', sosRank: 13 },
   PIT: { schemeType: 'power-run',   passRate: 0.48, rushRate: 0.52, passEfficiency: 0.70, rushEfficiency: 0.80, oLineRank: 9,  tempoScore: 0.90, qbRating: 0.62, teUsage: 'medium', sosRank: 24 },
   IND: { schemeType: 'balanced',    passRate: 0.52, rushRate: 0.48, passEfficiency: 0.72, rushEfficiency: 0.76, oLineRank: 7,  tempoScore: 0.94, qbRating: 0.60, teUsage: 'low',    sosRank: 12 },

@@ -712,7 +712,7 @@ export default function PlayerStats({ playerId, onBack }) {
 
             {/* Badges row */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-              <span className="ff-inline-badge" style={{ background: teamColor, color: '#fff' }}>
+              <span className="ff-inline-badge" style={{ background: teamColor, color: 'var(--on-accent)' }}>
                 {player.pos}{hexPosRank}
               </span>
               <ArchetypeBadge playerId={player.id} pos={player.pos} size="sm" />

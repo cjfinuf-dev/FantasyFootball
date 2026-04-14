@@ -54,7 +54,7 @@ export default function TeamPicker({ value, onChange }) {
       )}
       {chiefsConfirm && (
         <div style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1100,
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 'var(--z-modal)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }} onClick={() => setChiefsConfirm(null)}>
           <div role="dialog" aria-modal="true" aria-label="Confirm team selection" style={{

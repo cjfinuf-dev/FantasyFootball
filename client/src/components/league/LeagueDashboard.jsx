@@ -556,7 +556,7 @@ export default function LeagueDashboard() {
       )}
 
       {activeTab === 'compare' && (
-        <div className="ff-tab-content ff-tab-content-wide">
+        <div className="ff-tab-content ff-tab-content-full">
           <PlayerCompare
             rosters={draftedRosters}
             scoringPreset={league.scoring_preset}
