@@ -2,7 +2,7 @@ import { gameState } from '../data/gameState';
 
 // Average per-player score variance (points). Used to estimate standard
 // deviation of remaining team score based on remaining player count.
-const AVG_PLAYER_VARIANCE = 6;
+const AVG_PLAYER_VARIANCE = 7;
 const POSITION_VARIANCE_MULT = {
   QB: 1.4, RB: 1.1, WR: 1.15, TE: 1.0, K: 0.5, DEF: 0.6,
 };
@@ -161,6 +161,18 @@ export function getStarterIds(rosterIds, playerMap, rosterConfig = null) {
   }
 
   return starters;
+}
+
+/**
+ * Sum projected points for starters only (same pool used by win probability).
+ */
+export function getStarterProjection(rosterIds, playerMap) {
+  if (!rosterIds || !rosterIds.length) return 0;
+  const starters = getStarterIds(rosterIds, playerMap);
+  return starters.reduce((sum, pid) => {
+    const p = playerMap[pid];
+    return sum + (p ? p.proj : 0);
+  }, 0);
 }
 
 /**

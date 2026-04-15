@@ -248,6 +248,22 @@ export default function LeagueDashboard() {
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [viewingPlayerId, viewingTeamId, viewingMatchupId, searchParams]);
 
+  const [overviewReady, setOverviewReady] = useState(false);
+
+  useEffect(() => {
+    if (leagueLoading || draftLoading || !league) {
+      setOverviewReady(false);
+      return;
+    }
+    let raf1, raf2;
+    raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => {
+        setOverviewReady(true);
+      });
+    });
+    return () => { cancelAnimationFrame(raf1); cancelAnimationFrame(raf2); };
+  }, [leagueLoading, draftLoading, league]);
+
   const isTabDisabled = (id) => !draftComplete && DRAFT_REQUIRED_TABS.has(id);
 
   // Dropdown league tabs (everything not shown inline)
@@ -282,7 +298,7 @@ export default function LeagueDashboard() {
   };
 
 
-  if (leagueLoading || !league) {
+  if (leagueLoading || draftLoading || !league) {
     return (
       <div className="ff-overview-layout" style={{ paddingTop: 'calc(var(--navbar-height) + var(--hero-compact-height) + 20px)' }}>
         <div className="ff-overview-grid">
@@ -464,8 +480,21 @@ export default function LeagueDashboard() {
                 </div>
               </div>
             </div>
+          ) : !overviewReady ? (
+            <div className="ff-overview-layout" style={{ paddingTop: 20 }}>
+              <div className="ff-overview-grid">
+                <div className="ff-left">
+                  <SkeletonCard lines={5} />
+                  <SkeletonTable rows={4} cols={3} />
+                </div>
+                <div className="ff-right" style={{ position: 'static', maxHeight: 'none' }}>
+                  <SkeletonCard lines={4} />
+                  <SkeletonCard lines={2} />
+                </div>
+              </div>
+            </div>
           ) : (
-            <div className="ff-overview-layout">
+            <div className="ff-overview-layout ff-overview-reveal">
               <div className="ff-overview-grid">
                 <div className="ff-left">
                   <MatchupWidget rosters={draftedRosters} onPlayerClick={handlePlayerClick} onMatchupClick={handleMatchupClick} />

@@ -1,11 +1,28 @@
-import { Navigate, useOutletContext } from 'react-router-dom';
+import { useState } from 'react';
+import { Navigate, useNavigate, useOutletContext } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import QuickTradeCalc from '../trade/QuickTradeCalc';
 import NewsFeed from '../dashboard/NewsFeed';
+import PlayerRankings from '../dashboard/PlayerRankings';
+import PlayerCompare from '../league/PlayerCompare';
+
+const LANDING_TABS = [
+  { id: 'players', label: 'Players' },
+  { id: 'compare', label: 'Compare' },
+  { id: 'news', label: 'News' },
+];
+
+const TAB_UPSELL = {
+  players: 'Create an account to unlock roster-aware rankings, waiver suggestions, and trade targets personalized to your league.',
+  compare: 'Sign up to layer in your league\u2019s scoring settings, roster context, and trade value on every comparison.',
+  news: 'Create an account to filter news to your roster, opponents, and waiver wire \u2014 with live strategic context.',
+};
 
 export default function LandingPage() {
   const { user, loading } = useAuth();
   const { onSignIn, onSignUp } = useOutletContext();
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState('players');
 
   if (loading) return <div className="ff-loading-screen"><svg className="ff-hex-spinner" viewBox="0 0 48 52"><polygon points="24,2 46,14 46,38 24,50 2,38 2,14" /></svg>Loading</div>;
   if (user) return <Navigate to="/hub" replace />;
@@ -93,11 +110,41 @@ export default function LandingPage() {
           </div>
         </div>
       </div>
-      <div className="ff-tab-content-full" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <div style={{ maxWidth: 1000, margin: '0 auto', width: '100%' }}>
+      <div className="ff-landing-trade-header">
+        <div className="ff-landing-trade-header-bar">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" width="18" height="18">
+            <polyline points="13,6 17,6 17,10"/><line x1="17" y1="6" x2="11" y2="12"/>
+            <polyline points="7,14 3,14 3,10"/><line x1="3" y1="14" x2="9" y2="8"/>
+          </svg>
+          <span>Trade Calculator</span>
+        </div>
+        <div className="ff-landing-trade-body">
           <QuickTradeCalc onSignIn={onSignIn} onSignUp={onSignUp} />
         </div>
-        <NewsFeed />
+      </div>
+      <div className="ff-landing-hub-preview">
+        <div className="ff-hub-tabs">
+          <div className="ff-tabs-container">
+            {LANDING_TABS.map(t => (
+              <button
+                key={t.id}
+                className={`ff-league-tab${activeTab === t.id ? ' active' : ''}`}
+                onClick={() => setActiveTab(t.id)}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="ff-tab-content ff-tab-content-full">
+          <div className="ff-hub-upsell">
+            <p>{TAB_UPSELL[activeTab]}</p>
+            <button className="ff-btn ff-btn-copper ff-btn-sm" onClick={onSignUp}>Create Account</button>
+          </div>
+          {activeTab === 'players' && <PlayerRankings />}
+          {activeTab === 'compare' && <PlayerCompare />}
+          {activeTab === 'news' && <NewsFeed />}
+        </div>
       </div>
     </>
   );

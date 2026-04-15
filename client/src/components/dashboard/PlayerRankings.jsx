@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import * as XLSX from 'xlsx';
 import { PLAYERS } from '../../data/players';
 import { getEspnId } from '../../data/espnIds';
 import { getHexScore, getHexTier, getHistoricalData, formatHex } from '../../utils/hexScore';
@@ -107,12 +108,36 @@ export default function PlayerRankings({ onPlayerClick }) {
   const [showFilters, setShowFilters] = useState(false);
   const [rowLimit, setRowLimit] = useState(50);
   const [detailView, setDetailView] = useState(false);
-  const [showRetired, setShowRetired] = useState(false);
+  const [poolMode, setPoolMode] = useState('active');       // 'active' | 'all' | 'retired'
+  const [showViewPanel, setShowViewPanel] = useState(false);
   const [inactivePool, setInactivePool] = useState(null);
   const [tableScrolled, setTableScrolled] = useState(false);
   const [scrolledEnd, setScrolledEnd] = useState(false);
   const [csvToast, setCsvToast] = useState(false);
+  const [showExportPanel, setShowExportPanel] = useState(false);
   const tableWrapRef = useRef(null);
+  const viewPanelRef = useRef(null);
+  const exportPanelRef = useRef(null);
+
+  const viewHasCustomizations = poolMode !== 'active' || showHistory || (!detailView && rowLimit > 50);
+
+  useEffect(() => {
+    if (!showViewPanel) return;
+    const handler = (e) => {
+      if (viewPanelRef.current && !viewPanelRef.current.contains(e.target)) setShowViewPanel(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showViewPanel]);
+
+  useEffect(() => {
+    if (!showExportPanel) return;
+    const handler = (e) => {
+      if (exportPanelRef.current && !exportPanelRef.current.contains(e.target)) setShowExportPanel(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showExportPanel]);
 
   const handleTableScroll = useCallback((e) => {
     setTableScrolled(e.target.scrollLeft > 8);
@@ -121,7 +146,7 @@ export default function PlayerRankings({ onPlayerClick }) {
 
   // Lazy-load inactive players index on first toggle (slim ~750KB vs full 1.9MB)
   useEffect(() => {
-    if ((showRetired || search.length >= 3) && !inactivePool) {
+    if ((poolMode !== 'active' || search.length >= 3) && !inactivePool) {
       import('../../data/inactivePlayersIndex').then(mod => {
         const HEADSHOT_PREFIX = {
           u: 'https://static.www.nfl.com/image/upload/f_auto,q_auto/league/',
@@ -138,11 +163,11 @@ export default function PlayerRankings({ onPlayerClick }) {
         setInactivePool(pool);
       });
     }
-  }, [showRetired, search, inactivePool]);
+  }, [poolMode, search, inactivePool]);
 
   // Detail view forces history on and max rows
   const effectiveShowHistory = detailView || showHistory;
-  const effectiveRowLimit = detailView ? 9999 : showRetired ? 500 : rowLimit;
+  const effectiveRowLimit = detailView ? 9999 : poolMode !== 'active' ? 500 : rowLimit;
   const positions = ['ALL', 'QB', 'RB', 'WR', 'TE', 'K', 'DEF'];
 
   const [filters, setFilters] = useState({
@@ -193,9 +218,11 @@ export default function PlayerRankings({ onPlayerClick }) {
     // Search >= 3 chars searches across all pools
     const pool = search.length >= 3
       ? [...PLAYERS, ...(inactivePool || [])]
-      : showRetired
-        ? (inactivePool || []).filter(p => p.status === 'INACT')
-        : PLAYERS;
+      : poolMode === 'all'
+        ? [...PLAYERS, ...(inactivePool || [])]
+        : poolMode === 'retired'
+          ? (inactivePool || []).filter(p => p.status === 'INACT')
+          : PLAYERS;
 
     return pool
       .filter(p => posFilter === 'ALL' || p.pos === posFilter)
@@ -251,7 +278,7 @@ export default function PlayerRankings({ onPlayerClick }) {
         if (typeof av === 'string') return sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
         return sortDir === 'asc' ? av - bv : bv - av;
       });
-  }, [sortField, sortDir, posFilter, search, showRetired, inactivePool, filters, yearFilters, showFilters, hasActiveFilters, effectiveShowHistory, historicalData, seasons]);
+  }, [sortField, sortDir, posFilter, search, poolMode, inactivePool, filters, yearFilters, showFilters, hasActiveFilters, effectiveShowHistory, historicalData, seasons]);
 
   const SortArrow = ({ field }) => {
     if (field !== sortField) return null;
@@ -265,14 +292,14 @@ export default function PlayerRankings({ onPlayerClick }) {
     return { fontWeight: 700, color, textShadow: shadow, fontFamily: 'monospace' };
   };
 
-  const handleExportCSV = () => {
+  const buildExportRows = () => {
     const headers = ['Rank', 'Player', 'Team', 'POS', 'Pool', 'HEX', 'PTS', 'PROJ', 'AVG'];
     statColumns.forEach(col => headers.push(col.label));
     if (effectiveShowHistory) seasons.forEach(yr => headers.push(`${yr} GP`, `${yr} Total`, `${yr} PPG`));
     headers.push('Status');
 
     const rows = filtered.map((p, i) => {
-      const row = [i + 1, `"${p.name}"`, p.team, p.pos, getPool(p.status), getHexScore(p.id), p.pts, p.proj, p.avg];
+      const row = [i + 1, p.name, p.team, p.pos, getPool(p.status), getHexScore(p.id), p.pts, p.proj, p.avg];
       statColumns.forEach(col => row.push(p[col.key] ?? ''));
       if (effectiveShowHistory) {
         const h = getPlayerHistory(p.id);
@@ -282,17 +309,37 @@ export default function PlayerRankings({ onPlayerClick }) {
         });
       }
       row.push(p.status);
-      return row.join(',');
+      return row;
     });
+    return { headers, rows };
+  };
 
-    const csv = [headers.join(','), ...rows].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `hexmetrics-players-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+  const handleExport = (format) => {
+    const { headers, rows } = buildExportRows();
+    const datestamp = new Date().toISOString().slice(0, 10);
+    const filename = `hexmetrics-players-${datestamp}`;
+
+    if (format === 'csv') {
+      const csvRows = rows.map(r => r.map(v => typeof v === 'string' && v.includes(',') ? `"${v}"` : v).join(','));
+      const csv = [headers.join(','), ...csvRows].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = `${filename}.csv`; a.click();
+      URL.revokeObjectURL(url);
+    } else if (format === 'json') {
+      const data = rows.map(r => Object.fromEntries(headers.map((h, i) => [h, r[i]])));
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = `${filename}.json`; a.click();
+      URL.revokeObjectURL(url);
+    } else if (format === 'xlsx') {
+      const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Players');
+      XLSX.writeFile(wb, `${filename}.xlsx`);
+    }
+
+    setShowExportPanel(false);
     setCsvToast(true);
     setTimeout(() => setCsvToast(false), 2000);
   };
@@ -347,37 +394,115 @@ export default function PlayerRankings({ onPlayerClick }) {
           ))}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          {!detailView && (
-            <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 14, color: 'var(--text-muted)', cursor: 'pointer' }}>
-              <input type="checkbox" checked={showHistory} onChange={e => setShowHistory(e.target.checked)}
-                style={{ width: 12, height: 12, accentColor: 'var(--hex-purple)' }} />
-              History
-            </label>
-          )}
-          <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 14, color: showRetired ? 'var(--text)' : 'var(--text-muted)', cursor: 'pointer' }}>
-            <input type="checkbox" checked={showRetired} onChange={e => setShowRetired(e.target.checked)}
-              style={{ width: 12, height: 12, accentColor: 'var(--text-muted)' }} />
-            Retired
-          </label>
+          {/* View options popover */}
+          <div ref={viewPanelRef} style={{ position: 'relative' }}>
+            <button
+              className={`ff-tm-filter-pill${showViewPanel ? ' active' : ''}`}
+              onClick={() => setShowViewPanel(v => !v)}>
+              View{viewHasCustomizations ? ' \u2022' : ''}
+            </button>
+            {showViewPanel && (
+              <div style={{
+                position: 'absolute', top: '100%', right: 0, marginTop: 4,
+                background: 'var(--bg-white)', border: '1px solid var(--border)',
+                borderRadius: 'var(--radius-md)', padding: '10px 14px',
+                boxShadow: 'var(--shadow-lg)', zIndex: 20,
+                minWidth: 200, display: 'flex', flexDirection: 'column', gap: 10,
+              }}>
+                {/* Pool selector */}
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)',
+                    textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
+                    Player Pool
+                  </div>
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    {[
+                      { value: 'active', label: 'Active' },
+                      { value: 'all', label: 'All' },
+                      { value: 'retired', label: 'Retired' },
+                    ].map(opt => (
+                      <button key={opt.value}
+                        className={`ff-tm-filter-pill${poolMode === opt.value ? ' active' : ''}`}
+                        style={{ fontSize: 12, padding: '3px 10px' }}
+                        onClick={() => setPoolMode(opt.value)}>
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {/* History toggle — Card view only */}
+                {!detailView && (
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13,
+                    cursor: 'pointer', color: 'var(--text-muted)' }}>
+                    <input type="checkbox" checked={showHistory}
+                      onChange={e => setShowHistory(e.target.checked)}
+                      style={{ width: 13, height: 13, accentColor: 'var(--hex-purple)' }} />
+                    Show season history
+                  </label>
+                )}
+                {/* Row limit — Card view only */}
+                {!detailView && (
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13,
+                    cursor: 'pointer', color: 'var(--text-muted)' }}>
+                    <input type="checkbox" checked={rowLimit > 50}
+                      onChange={e => setRowLimit(e.target.checked ? 100 : 50)}
+                      style={{ width: 13, height: 13, accentColor: 'var(--hex-purple)' }} />
+                    Show 100 rows
+                  </label>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Filters — pure data filters, unchanged behavior */}
           <button
             className={`ff-tm-filter-pill${showFilters ? ' active' : ''}`}
             onClick={() => setShowFilters(f => !f)}>
-            Filters{hasActiveFilters ? ' *' : ''}
+            Filters{hasActiveFilters ? ' \u2022' : ''}
           </button>
-          {!detailView && (
-            <button
-              className={`ff-tm-filter-pill${rowLimit > 50 ? ' active' : ''}`}
-              onClick={() => setRowLimit(prev => prev > 50 ? 50 : 100)}>
-              Top {rowLimit > 50 ? '100' : '50'}
+
+          {/* Export dropdown */}
+          <div ref={exportPanelRef} style={{ position: 'relative' }}>
+            <button className={`ff-tm-filter-pill${showExportPanel ? ' active' : ''}`}
+              onClick={() => setShowExportPanel(v => !v)} title="Export"
+              style={{ display: 'inline-flex', alignItems: 'center', padding: '5px 8px' }}>
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor"
+                strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M8 2v8M4 7l4 4 4-4M2 13h12"/>
+              </svg>
             </button>
-          )}
-          <button className="ff-tm-filter-pill" onClick={handleExportCSV} title="Export CSV" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M8 2v8M4 7l4 4 4-4M2 13h12"/>
-            </svg>
-            CSV
-          </button>
-          <input className="ff-search-input ff-search-input-expand" type="text" placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)}
+            {showExportPanel && (
+              <div style={{
+                position: 'absolute', top: '100%', right: 0, marginTop: 4,
+                background: 'var(--bg-white)', border: '1px solid var(--border)',
+                borderRadius: 'var(--radius-md)', padding: '4px 0',
+                boxShadow: 'var(--shadow-lg)', zIndex: 20, minWidth: 120,
+              }}>
+                {[
+                  { fmt: 'csv', label: 'CSV' },
+                  { fmt: 'json', label: 'JSON' },
+                  { fmt: 'xlsx', label: 'Excel (.xlsx)' },
+                ].map(opt => (
+                  <button key={opt.fmt}
+                    onClick={() => handleExport(opt.fmt)}
+                    style={{
+                      display: 'block', width: '100%', textAlign: 'left',
+                      padding: '6px 14px', fontSize: 13, border: 'none',
+                      background: 'transparent', cursor: 'pointer',
+                      color: 'var(--text)',
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'var(--surface)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Search */}
+          <input className="ff-search-input ff-search-input-expand" type="text"
+            placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)}
             style={{ fontSize: 14, padding: '5px 8px' }} />
         </div>
       </div>

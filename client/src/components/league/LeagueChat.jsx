@@ -6,7 +6,7 @@ const REACT_EMOJIS  = ['🔥', '💀', '😂'];
 const SPORTS_EMOJIS = ['🏈', '🏆', '📈', '💪', '🗑️'];
 
 const TEAM_COLORS = [
-  '#8B5CF6','#3B82F6','#10B981','#F59E0B','#EF4444','#06B6D4',
+  '#8B5CF6','#3B82F6','#10B981','#F59E0B','#EF4444','#B9A07A',
   '#F97316','#EC4899','#14B8A6','#A855F7','#84CC16','#6366F1',
 ];
 const getTeamColor = (teamId) => {

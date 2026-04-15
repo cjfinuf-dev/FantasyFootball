@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { PLAYERS } from '../../data/players';
 import { getHexScore, computeTradeTier, formatHex } from '../../utils/hexScore';
 import { hexChipClass } from './TradePlayerRow';
@@ -36,7 +36,7 @@ const SCORING_OPTIONS = [
 
 const MAX_PER_SIDE = 5;
 
-function PlayerSearch({ onSelect, excludeIds, placeholder, scoringPreset }) {
+function PlayerSearch({ onSelect, excludeIds, placeholder, scoringPreset, deltas }) {
   const [query, setQuery] = useState('');
   const [focused, setFocused] = useState(false);
 
@@ -83,6 +83,17 @@ function PlayerSearch({ onSelect, excludeIds, placeholder, scoringPreset }) {
                 <span className="p-name">{p.name}</span>
                 <span className="p-nfl">{p.team}</span>
                 <span className={hexChipClass(hex)} style={{ marginLeft: 4 }}>{formatHex(hex)}</span>
+                {deltas && deltas[p.id] != null && (
+                  <span style={{
+                    fontSize: 11, fontWeight: 700,
+                    fontFamily: "'DM Mono', monospace",
+                    color: deltas[p.id] > 0 ? 'var(--success-green)' : 'var(--red)',
+                    marginLeft: 4,
+                    animation: 'fadeIn 150ms ease',
+                  }}>
+                    {deltas[p.id] > 0 ? '\u25B2' : '\u25BC'}{Math.abs(deltas[p.id]).toFixed(1)}
+                  </span>
+                )}
               </div>
             );
           })}
@@ -92,7 +103,7 @@ function PlayerSearch({ onSelect, excludeIds, placeholder, scoringPreset }) {
   );
 }
 
-function SidePanel({ label, playerIds, onAdd, onRemove, allIds, scoringPreset }) {
+function SidePanel({ label, playerIds, onAdd, onRemove, allIds, scoringPreset, deltas }) {
   return (
     <div style={{ flex: 1, minWidth: 0 }}>
       <div style={{ fontSize: 15, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 10, letterSpacing: '0.05em' }}>
@@ -102,6 +113,7 @@ function SidePanel({ label, playerIds, onAdd, onRemove, allIds, scoringPreset })
         onSelect={onAdd}
         excludeIds={allIds}
         scoringPreset={scoringPreset}
+        deltas={deltas}
         placeholder={playerIds.length >= MAX_PER_SIDE ? 'Max 5 players' : 'Search players...'}
       />
       <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 6, minHeight: 80 }}>
@@ -124,6 +136,17 @@ function SidePanel({ label, playerIds, onAdd, onRemove, allIds, scoringPreset })
               <PosBadge pos={p.pos} />
               <span style={{ fontWeight: 600, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
               <span className={hexChipClass(hex)}>{formatHex(hex)}</span>
+              {deltas[id] != null && (
+                <span style={{
+                  fontSize: 11, fontWeight: 700,
+                  fontFamily: "'DM Mono', monospace",
+                  color: deltas[id] > 0 ? 'var(--success-green)' : 'var(--red)',
+                  marginLeft: 4,
+                  animation: 'fadeIn 150ms ease',
+                }}>
+                  {deltas[id] > 0 ? '\u25B2' : '\u25BC'}{Math.abs(deltas[id]).toFixed(1)}
+                </span>
+              )}
               <button onClick={() => onRemove(id)} style={{
                 background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)',
                 fontSize: 18, padding: '0 4px', lineHeight: 1,
@@ -140,8 +163,29 @@ export default function QuickTradeCalc({ onSignIn, onSignUp }) {
   const [sideA, setSideA] = useState([]);
   const [sideB, setSideB] = useState([]);
   const [scoring, setScoring] = useState('ppr');
+  const prevScoresRef = useRef({});
+  const [deltas, setDeltas] = useState({});
+  const deltaTimerRef = useRef(null);
 
   const allIds = useMemo(() => new Set([...sideA, ...sideB]), [sideA, sideB]);
+
+  useEffect(() => {
+    const allPlayerIds = [...sideA, ...sideB];
+    const newDeltas = {};
+    allPlayerIds.forEach(id => {
+      const prev = prevScoresRef.current[id];
+      const current = getHexScore(id, scoring);
+      if (prev !== undefined && prev !== current) {
+        newDeltas[id] = current - prev;
+      }
+      prevScoresRef.current[id] = current;
+    });
+    if (Object.keys(newDeltas).length > 0) {
+      setDeltas(newDeltas);
+      clearTimeout(deltaTimerRef.current);
+      deltaTimerRef.current = setTimeout(() => setDeltas({}), 2500);
+    }
+  }, [scoring, sideA, sideB]);
 
   const addA = (id) => { if (sideA.length < MAX_PER_SIDE) setSideA(prev => [...prev, id]); };
   const addB = (id) => { if (sideB.length < MAX_PER_SIDE) setSideB(prev => [...prev, id]); };
@@ -175,11 +219,11 @@ export default function QuickTradeCalc({ onSignIn, onSignUp }) {
       <div className="ff-card-body" style={{ padding: '24px' }}>
         {/* Two-panel trade builder */}
         <div style={{ display: 'flex', gap: 24 }}>
-          <SidePanel label="Side A" playerIds={sideA} onAdd={addA} onRemove={removeA} allIds={allIds} scoringPreset={scoring} />
+          <SidePanel label="Side A" playerIds={sideA} onAdd={addA} onRemove={removeA} allIds={allIds} scoringPreset={scoring} deltas={deltas} />
           <div style={{ display: 'flex', alignItems: 'stretch', padding: '0 4px' }}>
             <div style={{ width: 1, background: 'var(--border)' }} />
           </div>
-          <SidePanel label="Side B" playerIds={sideB} onAdd={addB} onRemove={removeB} allIds={allIds} scoringPreset={scoring} />
+          <SidePanel label="Side B" playerIds={sideB} onAdd={addB} onRemove={removeB} allIds={allIds} scoringPreset={scoring} deltas={deltas} />
         </div>
 
         {/* Evaluation */}
@@ -255,6 +299,15 @@ export default function QuickTradeCalc({ onSignIn, onSignUp }) {
                   {tier.label} ({tier.delta >= 0 ? '+' : ''}{tier.delta})
                 </span>
               </div>
+              {Object.keys(deltas).length > 0 && (
+                <div style={{
+                  marginTop: 8, fontSize: 13,
+                  color: 'var(--text-muted)', fontStyle: 'italic',
+                  animation: 'fadeIn 150ms ease',
+                }}>
+                  Scores adjusted for {SCORING_OPTIONS.find(o => o.value === scoring)?.label} format
+                </div>
+              )}
             </div>
           );
         })()}

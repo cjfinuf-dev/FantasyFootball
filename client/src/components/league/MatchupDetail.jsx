@@ -4,7 +4,7 @@ import { PLAYERS } from '../../data/players';
 import { ROSTER_PRESETS } from '../../data/scoring';
 import { getEspnId } from '../../data/espnIds';
 import { getHexScore, getHexData, formatHex } from '../../utils/hexScore';
-import { getMatchupWinProb } from '../../utils/winProb';
+import { getMatchupWinProb, getStarterProjection } from '../../utils/winProb';
 import { useLiveTick } from '../../hooks/useLiveTick';
 import PosBadge from '../ui/PosBadge';
 import HexBrand from '../ui/HexBrand';
@@ -321,12 +321,12 @@ export default function MatchupDetail({ matchup, rosters, onBack, onPlayerClick 
   // Compute projections from rosters
   const homeProj = useMemo(() => {
     if (!rosters?.[matchup.home.teamId]) return matchup.home.projected;
-    return rosters[matchup.home.teamId].reduce((s, pid) => s + (PLAYER_MAP[pid]?.proj || 0), 0);
+    return getStarterProjection(rosters[matchup.home.teamId], PLAYER_MAP) || matchup.home.projected;
   }, [rosters, matchup, tick]);
 
   const awayProj = useMemo(() => {
     if (!rosters?.[matchup.away.teamId]) return matchup.away.projected;
-    return rosters[matchup.away.teamId].reduce((s, pid) => s + (PLAYER_MAP[pid]?.proj || 0), 0);
+    return getStarterProjection(rosters[matchup.away.teamId], PLAYER_MAP) || matchup.away.projected;
   }, [rosters, matchup, tick]);
 
   const homeRoster = rosters?.[matchup.home.teamId] || [];

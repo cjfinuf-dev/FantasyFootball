@@ -34,7 +34,7 @@ const TEAM_COLORS = {
   t5:  '#8B5CF6', // purple
   t6:  '#F59E0B', // amber
   t7:  '#EC4899', // pink
-  t8:  '#0891B2', // cyan
+  t8:  '#B9A07A', // gold
   t9:  '#EA580C', // orange
   t10: '#4F46E5', // indigo
   t11: '#16A34A', // green

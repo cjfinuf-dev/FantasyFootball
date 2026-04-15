@@ -95,15 +95,15 @@ const SCARCITY_CURVES = {
 const SCORING_PROFILES = {
   standard: {
     prodMultiplier: { QB: 1.0, RB: 1.15, WR: 0.95, TE: 0.90, K: 1.0, DEF: 1.0 },
-    slotValueOverrides: {},
+    slotValueOverrides: { productionOverride: { RB: 0.75, WR: 0.62, TE: 0.45 } },
   },
   ppr: {
     prodMultiplier: { QB: 1.0, RB: 1.0, WR: 1.15, TE: 1.05, K: 1.0, DEF: 1.0 },
-    slotValueOverrides: {},
+    slotValueOverrides: { productionOverride: { RB: 0.65, WR: 0.78, TE: 0.58 } },
   },
   halfPpr: {
     prodMultiplier: { QB: 1.0, RB: 1.05, WR: 1.08, TE: 1.05, K: 1.0, DEF: 1.0 },
-    slotValueOverrides: {},
+    slotValueOverrides: { productionOverride: { RB: 0.70, WR: 0.72, TE: 0.52 } },
   },
   sixPtPassTd: {
     prodMultiplier: { QB: 1.25, RB: 0.95, WR: 0.95, TE: 0.95, K: 1.0, DEF: 1.0 },
@@ -122,6 +122,16 @@ const SCORING_PROFILES = {
     slotValueOverrides: {},
     ageWeightOverride: 0.14,
   },
+};
+
+const FORMAT_INTENSITY = {
+  standard: 0,
+  halfPpr: 0.5,
+  ppr: 1.0,
+  tePremium: 1.0,
+  sixPtPassTd: 0,
+  superflex: 0,
+  dynasty: 0,
 };
 
 const DEFAULT_PROFILE = { prodMultiplier: { QB: 1.0, RB: 1.0, WR: 1.0, TE: 1.0, K: 1.0, DEF: 1.0 } };
@@ -348,13 +358,15 @@ function calcProduction(player, posGroup, preset) {
   const profile = getScoringProfile(preset);
   const mult = profile.prodMultiplier[player.pos] || 1.0;
   const sosMult = getSosMultiplier(player.team);
-  const raw = rawProduction(player) * mult * sosMult;
-  const values = posGroup.map(p => rawProduction(p) * mult * getSosMultiplier(p.team));
+  // Normalize WITHOUT format multiplier — it cancels in min-max
+  const raw = rawProduction(player) * sosMult;
+  const values = posGroup.map(p => rawProduction(p) * getSosMultiplier(p.team));
   const max = Math.max(...values);
   const min = Math.min(...values);
   const range = max - min;
-  // Fallback: when all players score identically (range === 0), return neutral 0.5
-  return range > 0 ? (raw - min) / range : 0.5;
+  const normalized = range > 0 ? (raw - min) / range : 0.5;
+  // Apply format multiplier post-normalization
+  return Math.min(1, normalized * mult);
 }
 
 function calcScarcity(player, posGroup, rankMap) {
@@ -894,8 +906,8 @@ export function computeAllHexScores(players = PLAYERS, rosterContext = null, sco
   const posGroups = buildPositionGroups(players, scoringPreset);
   const results = new Map();
 
-  // Determine if this is a PPR-family format
-  const isPPR = ['ppr', 'halfPpr', 'tePremium'].includes(scoringPreset);
+  // Format intensity: 0 (standard), 0.5 (half-PPR), 1.0 (PPR/TE-premium)
+  const formatIntensity = FORMAT_INTENSITY[scoringPreset] ?? 0;
 
   // Resolve age weight — dynasty/keeper formats can override
   const profile = getScoringProfile(scoringPreset);
@@ -941,8 +953,8 @@ export function computeAllHexScores(players = PLAYERS, rosterContext = null, sco
     production = Math.min(1, production * archetype.fantasyPremium);
     // Floor boost enhances consistency (high-floor players are more reliable)
     consistency = Math.min(1, consistency + archetype.floorBoost);
-    // PPR format bonus (pass-catching players get extra value)
-    const pprBonus = isPPR ? archetype.pprAdjust : 0;
+    // PPR format bonus — scaled by format intensity (0/0.5/1.0)
+    const pprBonus = archetype.pprAdjust * formatIntensity;
 
     const slotValue = calcSlotValue(p.pos, scoringPreset);
 

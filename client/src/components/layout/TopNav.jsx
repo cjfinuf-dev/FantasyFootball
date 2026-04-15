@@ -61,7 +61,14 @@ export default function TopNav({ onSignIn, onSignUp, onCreateLeague }) {
         ) : user ? (
           <div className="ff-nav-hint-bright">Get started by creating a league</div>
         ) : (
-          <div className="ff-nav-hint">Sign in to access your leagues</div>
+          <div className="ff-nav-hub-links">
+            <button className={`ff-nav-hub-link${location.pathname === '/hub/players' ? ' active' : ''}`}
+              onClick={() => navigate('/hub/players')}>Players</button>
+            <button className={`ff-nav-hub-link${location.pathname === '/hub/compare' ? ' active' : ''}`}
+              onClick={() => navigate('/hub/compare')}>Compare</button>
+            <button className={`ff-nav-hub-link${location.pathname === '/hub/news' ? ' active' : ''}`}
+              onClick={() => navigate('/hub/news')}>News</button>
+          </div>
         )}
       </div>
 

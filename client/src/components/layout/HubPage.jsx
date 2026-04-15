@@ -8,6 +8,7 @@ import PlayerCompare from '../league/PlayerCompare';
 import ImportLeague from '../league/ImportLeague';
 import { SkeletonCard } from '../ui/Skeleton';
 import * as leagueApi from '../../api/leagues';
+import { Navigate } from 'react-router-dom';
 
 const HUB_TABS = [
   { id: 'leagues', label: 'My Leagues' },
@@ -19,10 +20,15 @@ const HUB_TABS = [
 export default function HubPage() {
   const { user } = useAuth();
   const { tab } = useParams();
-  const activeTab = tab || 'leagues';
+  const activeTab = tab || (user ? 'leagues' : 'players');
   const { leagues, leaguesLoading, addLeague } = useLeagues();
-  const { onCreateLeague, onDeleteLeague } = useOutletContext();
+  const { onCreateLeague, onDeleteLeague, onSignUp } = useOutletContext();
   const navigate = useNavigate();
+
+  // Redirect unauthenticated users away from leagues tab
+  if (!user && activeTab === 'leagues') {
+    return <Navigate to="/hub/players" replace />;
+  }
 
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
@@ -63,8 +69,8 @@ export default function HubPage() {
     <>
       <div className="ff-hub-banner">
         <div>
-          <h1>Welcome back{user?.name ? `, ${user.name.split(' ')[0]}` : ''}</h1>
-          <p>{leaguesLoading ? '\u00a0' : leagues.length === 0 ? 'Create your first league to get started.' : `${leagues.length} league${leagues.length !== 1 ? 's' : ''} active \u00b7 2024\u201325 season`}</p>
+          <h1>{user ? `Welcome back${user.name ? `, ${user.name.split(' ')[0]}` : ''}` : 'Explore HexMetrics'}</h1>
+          <p>{user ? (leaguesLoading ? '\u00a0' : leagues.length === 0 ? 'Create your first league to get started.' : `${leagues.length} league${leagues.length !== 1 ? 's' : ''} active \u00b7 2024\u201325 season`) : 'Browse players, compare stats, and see what HexMetrics can do.'}</p>
         </div>
       </div>
 
@@ -75,9 +81,20 @@ export default function HubPage() {
             <button
               key={t.id}
               className={`ff-league-tab${activeTab === t.id ? ' active' : ''}`}
-              onClick={() => navigate(`/hub/${t.id === 'leagues' ? '' : t.id}`)}
+              onClick={() => {
+                if (!user && t.id === 'leagues') { onSignUp(); return; }
+                navigate(`/hub/${t.id === 'leagues' ? '' : t.id}`);
+              }}
             >
               {t.label}
+              {!user && t.id === 'leagues' && (
+                <svg viewBox="0 0 10 12" fill="none" stroke="currentColor" strokeWidth="1.5"
+                  strokeLinecap="round" width="10" height="12"
+                  style={{ marginLeft: 4, opacity: 0.5, verticalAlign: '-1px' }}>
+                  <rect x="1.5" y="5.5" width="7" height="5" rx="1"/>
+                  <path d="M3 5.5V4a2 2 0 014 0v1.5"/>
+                </svg>
+              )}
             </button>
           ))}
         </div>
@@ -154,8 +171,11 @@ export default function HubPage() {
           <div className="ff-tab-content ff-tab-content-full">
             <div className="ff-hub-upsell">
               <p>Exploring the full player pool — nice. Inside a league, HexMetrics cross-references your roster, matchup schedule, and waiver wire to surface the players that actually move your needle. Rankings get personal.</p>
-              <button className="ff-btn ff-btn-copper ff-btn-sm" onClick={() => leagues.length > 0 ? navigate(`/league/${leagues[0].id}/players`) : onCreateLeague()}>
-                {leagues.length > 0 ? `Open in ${leagues[0].name}` : 'Create a League'}
+              <button className="ff-btn ff-btn-copper ff-btn-sm" onClick={() => {
+                if (!user) { onSignUp(); return; }
+                leagues.length > 0 ? navigate(`/league/${leagues[0].id}/players`) : onCreateLeague();
+              }}>
+                {!user ? 'Sign Up to Unlock' : leagues.length > 0 ? `Open in ${leagues[0].name}` : 'Create a League'}
               </button>
             </div>
             <PlayerRankings />
@@ -168,8 +188,11 @@ export default function HubPage() {
           <div className="ff-tab-content ff-tab-content-full">
             <div className="ff-hub-upsell">
               <p>Side-by-side stats are just the start. In a league, Compare layers in your scoring settings, roster context, and trade value so you can see exactly who wins the deal — not just who has better numbers.</p>
-              <button className="ff-btn ff-btn-copper ff-btn-sm" onClick={() => leagues.length > 0 ? navigate(`/league/${leagues[0].id}/compare`) : onCreateLeague()}>
-                {leagues.length > 0 ? `Open in ${leagues[0].name}` : 'Create a League'}
+              <button className="ff-btn ff-btn-copper ff-btn-sm" onClick={() => {
+                if (!user) { onSignUp(); return; }
+                leagues.length > 0 ? navigate(`/league/${leagues[0].id}/compare`) : onCreateLeague();
+              }}>
+                {!user ? 'Sign Up to Unlock' : leagues.length > 0 ? `Open in ${leagues[0].name}` : 'Create a League'}
               </button>
             </div>
             <PlayerCompare />
@@ -182,8 +205,11 @@ export default function HubPage() {
           <div className="ff-tab-content ff-tab-content-full">
             <div className="ff-hub-upsell">
               <p>Staying informed league-wide. Inside a league, news is filtered to your players and opponents, paired with live standings and power rankings so every headline has immediate strategic context.</p>
-              <button className="ff-btn ff-btn-copper ff-btn-sm" onClick={() => leagues.length > 0 ? navigate(`/league/${leagues[0].id}/news`) : onCreateLeague()}>
-                {leagues.length > 0 ? `Open in ${leagues[0].name}` : 'Create a League'}
+              <button className="ff-btn ff-btn-copper ff-btn-sm" onClick={() => {
+                if (!user) { onSignUp(); return; }
+                leagues.length > 0 ? navigate(`/league/${leagues[0].id}/news`) : onCreateLeague();
+              }}>
+                {!user ? 'Sign Up to Unlock' : leagues.length > 0 ? `Open in ${leagues[0].name}` : 'Create a League'}
               </button>
             </div>
             <NewsFeed onPlayerClick={leagues.length > 0 ? (playerId) => {
