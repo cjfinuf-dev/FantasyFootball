@@ -3,26 +3,38 @@ import { Navigate, useNavigate, useOutletContext } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import QuickTradeCalc from '../trade/QuickTradeCalc';
 import NewsFeed from '../dashboard/NewsFeed';
-import PlayerRankings from '../dashboard/PlayerRankings';
 import PlayerCompare from '../league/PlayerCompare';
 
 const LANDING_TABS = [
-  { id: 'players', label: 'Players' },
   { id: 'compare', label: 'Compare' },
   { id: 'news', label: 'News' },
 ];
 
 const TAB_UPSELL = {
-  players: 'Create an account to unlock roster-aware rankings, waiver suggestions, and trade targets personalized to your league.',
-  compare: 'Sign up to layer in your league\u2019s scoring settings, roster context, and trade value on every comparison.',
-  news: 'Create an account to filter news to your roster, opponents, and waiver wire \u2014 with live strategic context.',
+  compare: {
+    headline: 'This is just the surface',
+    body: 'Sign in to unlock league-specific scoring, full roster context, trade value overlays, head-to-head deep dives, and strategic recommendations tailored to your team.',
+  },
+  news: {
+    headline: 'There\u2019s more to the story',
+    body: 'Sign in to filter news to your roster and opponents, get waiver wire alerts, injury impact analysis, and live strategic context on every update.',
+  },
 };
 
 export default function LandingPage() {
   const { user, loading } = useAuth();
   const { onSignIn, onSignUp } = useOutletContext();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('players');
+  const [activeTab, setActiveTab] = useState('compare');
+  const [compareCount, setCompareCount] = useState(() => {
+    const stored = localStorage.getItem('hm_compare_count');
+    return stored ? parseInt(stored, 10) : 0;
+  });
+  const bumpCompareCount = () => setCompareCount(c => {
+    const next = c + 1;
+    localStorage.setItem('hm_compare_count', next);
+    return next;
+  });
 
   if (loading) return <div className="ff-loading-screen"><svg className="ff-hex-spinner" viewBox="0 0 48 52"><polygon points="24,2 46,14 46,38 24,50 2,38 2,14" /></svg>Loading</div>;
   if (user) return <Navigate to="/hub" replace />;
@@ -137,13 +149,35 @@ export default function LandingPage() {
           </div>
         </div>
         <div className="ff-tab-content ff-tab-content-full">
-          <div className="ff-hub-upsell">
-            <p>{TAB_UPSELL[activeTab]}</p>
-            <button className="ff-btn ff-btn-copper ff-btn-sm" onClick={onSignUp}>Create Account</button>
-          </div>
-          {activeTab === 'players' && <PlayerRankings />}
-          {activeTab === 'compare' && <PlayerCompare />}
-          {activeTab === 'news' && <NewsFeed />}
+          {activeTab === 'compare' && compareCount >= 2 ? (
+            <div className="ff-landing-paywall-cta ff-landing-paywall-cta--standalone">
+              <h3>{TAB_UPSELL.compare.headline}</h3>
+              <p>{TAB_UPSELL.compare.body}</p>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button className="ff-btn ff-btn-copper" onClick={onSignUp}>Create Account</button>
+                <button className="ff-btn ff-btn-secondary" onClick={onSignIn}>Sign In</button>
+              </div>
+            </div>
+          ) : (
+            <div className={`ff-landing-paywall${activeTab === 'compare' ? ' ff-landing-paywall--open' : ''}`}>
+              <div className="ff-landing-paywall-content">
+                {activeTab === 'compare' && <PlayerCompare maxSlots={2} onShowResults={bumpCompareCount} />}
+                {activeTab === 'news' && <NewsFeed />}
+              </div>
+              {activeTab === 'news' && (
+                <div className="ff-landing-paywall-fade">
+                  <div className="ff-landing-paywall-cta">
+                    <h3>{TAB_UPSELL.news.headline}</h3>
+                    <p>{TAB_UPSELL.news.body}</p>
+                    <div style={{ display: 'flex', gap: 10 }}>
+                      <button className="ff-btn ff-btn-copper" onClick={onSignUp}>Create Account</button>
+                      <button className="ff-btn ff-btn-secondary" onClick={onSignIn}>Sign In</button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </>

@@ -161,6 +161,14 @@ export default function CommandCenter({ rosters, scoringPreset, leagueName, onPl
 
   return (
     <div className="ff-sidebar-card cc-command-center">
+      <div className="ff-sidebar-card-header">
+        <h3>
+          <svg viewBox="0 0 14 15.5" width="14" height="15" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: '-2px', marginRight: '4px' }}>
+            <path d="M7 1.27L12.6 4.5v6.5L7 14.23 1.4 11V4.5z"/>
+          </svg>
+          Command Center
+        </h3>
+      </div>
       {/* ═══ 1. MATCHUP SNAPSHOT ═══ */}
       {matchupData && (
         <div className="cc-section cc-matchup">

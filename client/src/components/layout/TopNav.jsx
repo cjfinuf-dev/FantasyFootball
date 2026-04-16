@@ -13,6 +13,7 @@ export default function TopNav({ onSignIn, onSignUp, onCreateLeague }) {
   const location = useLocation();
   const leagueMatch = useMatch('/league/:leagueId/:tab?');
   const leagueId = leagueMatch?.params?.leagueId;
+  const activeTab = leagueMatch?.params?.tab;
 
   const activeLeague = leagueId ? leagues.find(lg => lg.id === leagueId) : null;
   const isLeagueView = !!leagueId;
@@ -50,7 +51,13 @@ export default function TopNav({ onSignIn, onSignUp, onCreateLeague }) {
         {isLeagueView && activeLeague && (
           <nav aria-label="breadcrumb" style={{ display: 'contents' }}>
             <span className="ff-nav-breadcrumb-sep" aria-hidden="true">/</span>
-            <span className="ff-nav-breadcrumb-label" aria-current="page">{activeLeague.name}</span>
+            <span className="ff-nav-breadcrumb-label">{activeLeague.name}</span>
+            {activeTab && (
+              <>
+                <span className="ff-nav-breadcrumb-sep" aria-hidden="true">/</span>
+                <span className="ff-nav-breadcrumb-label" aria-current="page">{activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</span>
+              </>
+            )}
           </nav>
         )}
       </div>

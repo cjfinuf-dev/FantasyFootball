@@ -176,6 +176,34 @@ export function getStarterProjection(rosterIds, playerMap) {
 }
 
 /**
+ * Hex-based win probability.
+ * Uses the same normal CDF framework but driven by hex score averages
+ * instead of projected points. Hex scores are on a 0–100 scale with
+ * tighter variance (~8 per starter) reflecting talent-quality signal
+ * rather than weekly projection noise.
+ */
+const HEX_PLAYER_VARIANCE = 8;
+
+export function getHexWinProb(homeRosterIds, awayRosterIds, playerMap, getHexScoreFn) {
+  const homeStarters = getStarterIds(homeRosterIds, playerMap);
+  const awayStarters = getStarterIds(awayRosterIds, playerMap);
+
+  const homeHexes = homeStarters.map(pid => getHexScoreFn(pid)).filter(h => h > 0);
+  const awayHexes = awayStarters.map(pid => getHexScoreFn(pid)).filter(h => h > 0);
+
+  if (!homeHexes.length || !awayHexes.length) return 0.5;
+
+  const homeAvg = homeHexes.reduce((s, v) => s + v, 0) / homeHexes.length;
+  const awayAvg = awayHexes.reduce((s, v) => s + v, 0) / awayHexes.length;
+  const spread = homeAvg - awayAvg;
+
+  const stdDev = HEX_PLAYER_VARIANCE * Math.sqrt(1 / homeHexes.length + 1 / awayHexes.length);
+
+  const raw = normalCDF(spread / stdDev);
+  return Math.max(0.0001, Math.min(0.9999, raw));
+}
+
+/**
  * Convenience: compute win probability for a full matchup.
  */
 export function getMatchupWinProb(homeRosterIds, awayRosterIds, playerMap) {

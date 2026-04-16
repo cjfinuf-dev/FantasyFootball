@@ -4,7 +4,7 @@ import { MATCHUPS } from '../../data/matchups';
 import { PLAYERS } from '../../data/players';
 import { ROSTER_PRESETS } from '../../data/scoring';
 import { getEspnId } from '../../data/espnIds';
-import { getMatchupWinProb, getStarterProjection } from '../../utils/winProb';
+import { getMatchupWinProb, getHexWinProb, getStarterProjection } from '../../utils/winProb';
 import { getHexScore, formatHex } from '../../utils/hexScore';
 import { GAMES_PLAYED } from '../../data/seasonConfig';
 import { useLiveTick } from '../../hooks/useLiveTick';
@@ -213,22 +213,22 @@ function RosterComparison({ homeTeamId, awayTeamId, rosters, homeTeam, awayTeam,
           <tr className="ff-h2h-totals">
             <td style={{ fontWeight: 800 }}>Total</td>
             <td className={`ff-h2h-td-hex tabular-nums${homeHexAvg >= awayHexAvg ? ' ff-h2h-hex-adv' : ''}`}
-                style={{ fontWeight: 800, ...(homeHexAvg >= awayHexAvg ? hexStyle(homeHexAvg) : { color: 'var(--text-muted)' }) }}>
+                style={{ fontWeight: 800, ...(homeHexAvg >= awayHexAvg ? { color: 'var(--hex-purple-vivid)' } : { color: 'var(--text-muted)' }) }}>
               {formatHex(homeHexAvg)}
             </td>
-            <td className="ff-h2h-td-proj tabular-nums" style={{ fontWeight: 800, ...(homeTotal >= awayTotal ? hexStyle(85) : {}) }}>
+            <td className="ff-h2h-td-proj tabular-nums" style={{ fontWeight: 800, color: homeTotal >= awayTotal ? 'var(--win)' : 'var(--text-muted)' }}>
               {homeTotal.toFixed(1)}
             </td>
             <td className="ff-h2h-td-slot" style={{ fontSize: 10 }}>
-              <span style={homeTotal > awayTotal ? hexStyle(85) : awayTotal > homeTotal ? { color: 'var(--hex-purple)' } : { color: 'var(--text-muted)' }}>
+              <span style={{ color: homeTotal > awayTotal ? 'var(--win)' : awayTotal > homeTotal ? 'var(--win)' : 'var(--text-muted)' }}>
                 {homeTotal > awayTotal ? '+' : ''}{(homeTotal - awayTotal).toFixed(1)}
               </span>
             </td>
-            <td className="ff-h2h-td-proj tabular-nums" style={{ fontWeight: 800, ...(awayTotal >= homeTotal ? hexStyle(85) : {}) }}>
+            <td className="ff-h2h-td-proj tabular-nums" style={{ fontWeight: 800, color: awayTotal >= homeTotal ? 'var(--win)' : 'var(--text-muted)' }}>
               {awayTotal.toFixed(1)}
             </td>
             <td className={`ff-h2h-td-hex tabular-nums${awayHexAvg >= homeHexAvg ? ' ff-h2h-hex-adv' : ''}`}
-                style={{ fontWeight: 800, ...(awayHexAvg >= homeHexAvg ? hexStyle(awayHexAvg) : { color: 'var(--text-muted)' }) }}>
+                style={{ fontWeight: 800, ...(awayHexAvg >= homeHexAvg ? { color: 'var(--hex-purple-vivid)' } : { color: 'var(--text-muted)' }) }}>
               {formatHex(awayHexAvg)}
             </td>
             <td style={{ fontWeight: 800, textAlign: 'right' }}>Total</td>
@@ -319,6 +319,28 @@ function StreakBadge({ streak }) {
   );
 }
 
+function HexWinProbBar({ homeProb }) {
+  const homePct = (homeProb * 100).toFixed(1);
+  const awayPct = (100 - homeProb * 100).toFixed(1);
+
+  return (
+    <div className="ff-winprob ff-hexbar" aria-label={`Hex win probability: Home ${homePct}%, Away ${awayPct}%`}>
+      <span className="ff-winprob-label tabular-nums" style={{ color: 'var(--hex-purple-vivid)', fontWeight: 700 }}><AnimatedNumber value={parseFloat(homePct)} decimals={1} suffix="%" /></span>
+      <div className="ff-winprob-bar" style={{ position: 'relative' }}>
+        <div className="ff-winprob-fill" style={{ width: `${homePct}%`, background: 'var(--hex-purple)', borderRadius: '3px 0 0 3px' }} />
+        <div className="ff-winprob-fill" style={{ width: `${awayPct}%`, background: 'var(--hex-purple-light, rgba(139,92,246,0.3))', borderRadius: '0 3px 3px 0' }} />
+        <div style={{
+          position: 'absolute', top: -1, bottom: -1,
+          left: `${homePct}%`, transform: 'translateX(-1px)',
+          width: 2, background: 'var(--bg)', zIndex: 1,
+          boxShadow: '0 0 0 1px var(--border)',
+        }} />
+      </div>
+      <span className="ff-winprob-label tabular-nums" style={{ color: 'var(--hex-purple-vivid)', fontWeight: 700 }}><AnimatedNumber value={parseFloat(awayPct)} decimals={1} suffix="%" /></span>
+    </div>
+  );
+}
+
 function MatchupCard({ matchup, expanded, rosters, onPlayerClick, onToggle, onMatchupClick }) {
   const homeTeam = TEAMS.find(t => t.id === matchup.home.teamId);
   const awayTeam = TEAMS.find(t => t.id === matchup.away.teamId);
@@ -335,6 +357,23 @@ function MatchupCard({ matchup, expanded, rosters, onPlayerClick, onToggle, onMa
   const isUserMatchup = matchup.home.teamId === USER_TEAM_ID || matchup.away.teamId === USER_TEAM_ID;
 
   const hasRosters = homeRoster.length > 0 || awayRoster.length > 0;
+
+  // Hex averages for the hex compare bar
+  const { homeHexAvg, awayHexAvg } = useMemo(() => {
+    if (!hasRosters) return { homeHexAvg: 0, awayHexAvg: 0 };
+    const homeSlots = rosters?.[matchup.home.teamId] ? assignToSlots(rosters[matchup.home.teamId]) : [];
+    const awaySlots = rosters?.[matchup.away.teamId] ? assignToSlots(rosters[matchup.away.teamId]) : [];
+    const hs = homeSlots.filter(s => s.pos !== 'BN' && s.pick);
+    const as = awaySlots.filter(s => s.pos !== 'BN' && s.pick);
+    const hAvg = hs.length ? hs.reduce((sum, s) => sum + getHexScore(s.pick.pid), 0) / hs.length : 0;
+    const aAvg = as.length ? as.reduce((sum, s) => sum + getHexScore(s.pick.pid), 0) / as.length : 0;
+    return { homeHexAvg: hAvg, awayHexAvg: aAvg };
+  }, [hasRosters, rosters, matchup.home.teamId, matchup.away.teamId]);
+
+  const hexProb = useMemo(() => {
+    if (!homeRoster.length || !awayRoster.length) return 0.5;
+    return getHexWinProb(homeRoster, awayRoster, PLAYER_MAP, getHexScore);
+  }, [homeRoster, awayRoster]);
 
   return (
     <div
@@ -366,8 +405,8 @@ function MatchupCard({ matchup, expanded, rosters, onPlayerClick, onToggle, onMa
         </div>
       )}
 
+      {/* Projected Points Section */}
       <div className={expanded ? 'ff-matchup' : 'ff-matchup ff-matchup-compact'}>
-        {/* Home Team */}
         <div className="ff-matchup-team">
           <div className="ff-matchup-team-name" style={!expanded ? { fontSize: 15 } : undefined}>{homeTeam.name}</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 'var(--space-1)' }}>
@@ -379,11 +418,7 @@ function MatchupCard({ matchup, expanded, rosters, onPlayerClick, onToggle, onMa
           </div>
           <div className="ff-matchup-projected tabular-nums">Projected</div>
         </div>
-
-        {/* VS Divider */}
         <div className="ff-matchup-vs"><span>VS</span></div>
-
-        {/* Away Team */}
         <div className="ff-matchup-team">
           <div className="ff-matchup-team-name" style={!expanded ? { fontSize: 15 } : undefined}>{awayTeam.name}</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 'var(--space-1)' }}>
@@ -396,6 +431,43 @@ function MatchupCard({ matchup, expanded, rosters, onPlayerClick, onToggle, onMa
           <div className="ff-matchup-projected tabular-nums">Projected</div>
         </div>
       </div>
+
+      {/* Proj Win Probability — directly below projected scores */}
+      <div style={{ padding: expanded ? '0 var(--space-4) var(--space-2)' : '0 var(--space-2) var(--space-1-5)' }}>
+        <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--win)', marginBottom: 2 }}>Proj Win Probability</div>
+        <WinProbBar homeProb={homeProb} />
+      </div>
+
+      {/* Hex Score Section */}
+      {hasRosters && (
+        <>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: expanded ? '0 var(--space-4)' : '0 var(--space-2)', borderTop: '1px solid var(--border)' }}>
+            <div style={{ flex: 1, textAlign: 'center', padding: 'var(--space-2) 0' }}>
+              <div className="ff-mono tabular-nums" style={{ fontSize: expanded ? 28 : 20, fontWeight: 700, color: homeHexAvg >= awayHexAvg ? 'var(--hex-purple-vivid)' : 'var(--text-muted)' }}>
+                <AnimatedNumber value={homeHexAvg} decimals={1} />
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--hex-purple)', fontWeight: 600 }}>Avg Hex</div>
+            </div>
+            <div style={{ width: 52, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg viewBox="0 0 14 15.5" fill="none" stroke="var(--hex-purple)" strokeWidth="1.4" width="18" height="20" style={{ opacity: 0.5 }}>
+                <path d="M7 1.27L12.6 4.5v6.5L7 14.23 1.4 11V4.5z"/>
+              </svg>
+            </div>
+            <div style={{ flex: 1, textAlign: 'center', padding: 'var(--space-2) 0' }}>
+              <div className="ff-mono tabular-nums" style={{ fontSize: expanded ? 28 : 20, fontWeight: 700, color: awayHexAvg >= homeHexAvg ? 'var(--hex-purple-vivid)' : 'var(--text-muted)' }}>
+                <AnimatedNumber value={awayHexAvg} decimals={1} />
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--hex-purple)', fontWeight: 600 }}>Avg Hex</div>
+            </div>
+          </div>
+
+          {/* Hex Win Probability — directly below hex scores */}
+          <div style={{ padding: expanded ? '0 var(--space-4) var(--space-2)' : '0 var(--space-2) var(--space-1-5)' }}>
+            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--hex-purple-vivid)', marginBottom: 2 }}>Hex Win Probability</div>
+            <HexWinProbBar homeProb={hexProb} />
+          </div>
+        </>
+      )}
 
       {/* Head-to-Head Roster Comparison */}
       {hasRosters && (
@@ -410,11 +482,6 @@ function MatchupCard({ matchup, expanded, rosters, onPlayerClick, onToggle, onMa
           />
         </div>
       )}
-
-      {/* Win Probability */}
-      <div style={{ padding: expanded ? '0 var(--space-4) var(--space-3)' : '0 0 var(--space-2-5)' }}>
-        <WinProbBar homeProb={homeProb} />
-      </div>
 
       {/* View Full Matchup link */}
       {expanded && onMatchupClick && (

@@ -97,9 +97,7 @@ export default function AppLayout() {
         <div className="ff-footer-brand"><img src="/logo-full.png" alt="HexMetrics" width="96" height="24" style={{ height: 'var(--logo-height-footer)', width: 'var(--logo-width-footer)', opacity: 0.7 }} /> <span className="ff-footer-season">{`${new Date().getFullYear() - 1}-${String(new Date().getFullYear()).slice(2)}`}</span></div>
         <div className="ff-footer-links">
           {isLeagueView && <button className="ff-footer-link" onClick={() => navigate('/hub')}>Home</button>}
-          <span className="ff-footer-link disabled">Fantasy Tools</span>
-          <span className="ff-footer-link disabled">Privacy</span>
-          <span className="ff-footer-link disabled">&copy; {new Date().getFullYear()} HexMetrics</span>
+          <span className="ff-footer-link">&copy; {new Date().getFullYear()} HexMetrics</span>
         </div>
       </footer>
 

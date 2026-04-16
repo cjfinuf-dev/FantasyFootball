@@ -67,6 +67,14 @@ function textOnBg(bgHex) {
   return lum > 0.35 ? '#111111' : '#FFFFFF';
 }
 
+function blendOver(fgRgb, bgRgb, alpha) {
+  return fgRgb.map((c, i) => Math.round(c * alpha + bgRgb[i] * (1 - alpha)));
+}
+
+function rgbToHex([r, g, b]) {
+  return '#' + [r, g, b].map(c => c.toString(16).padStart(2, '0')).join('');
+}
+
 export function ThemeProvider({ children }) {
   const [theme, setTheme] = useState(() => {
     try { return localStorage.getItem('ff-theme') || 'dark'; }
@@ -124,6 +132,11 @@ export function ThemeProvider({ children }) {
     el.style.setProperty('--accent2-10', hexToRgba(team.secondary, 0.1));
     el.style.setProperty('--accent2-15', hexToRgba(team.secondary, 0.15));
     el.style.setProperty('--accent2-20', hexToRgba(team.secondary, 0.2));
+    el.style.setProperty('--accent2-25', hexToRgba(team.secondary, 0.25));
+    el.style.setProperty('--accent2-12', hexToRgba(team.secondary, 0.12));
+    const headerBlended = rgbToHex(blendOver(hexToRgb(team.secondary), hexToRgb(bg), 0.25));
+    el.style.setProperty('--on-surface3', textOnBg(headerBlended));
+    el.style.setProperty('--on-surface3-muted', ensureContrast(team.primary, headerBlended, 3.0));
     el.style.setProperty('--accent3-10', hexToRgba(team.tertiary, 0.1));
     el.style.setProperty('--accent3-15', hexToRgba(team.tertiary, 0.15));
   }, [teamId, theme]);

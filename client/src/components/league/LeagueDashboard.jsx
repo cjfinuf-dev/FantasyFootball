@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
 import MatchupWidget from '../dashboard/MatchupWidget';
+import PredictionShowdown from '../dashboard/PredictionShowdown';
 import PlayerRankings from '../dashboard/PlayerRankings';
 import NewsFeed from '../dashboard/NewsFeed';
 import StandingsCard from '../sidebar/StandingsCard';
@@ -39,6 +40,7 @@ const TAB_ICONS = {
   chat: <svg viewBox="0 0 14 15.5" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d={HEX}/><path d="M5 6h4M5 8.5h2.5"/></svg>,
   playoffs: <svg viewBox="0 0 14 15.5" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d={HEX}/><path d="M5 5.5v2h4v-2M7 7.5v3"/><circle cx="7" cy="5" r="0.5" fill="currentColor"/></svg>,
   news: <svg viewBox="0 0 14 15.5" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d={HEX}/><path d="M5 5.5l2 2 2-2M5 8.5h4"/></svg>,
+  oracle: <svg viewBox="0 0 14 15.5" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d={HEX}/><circle cx="7" cy="7" r="2.2"/><circle cx="7" cy="7" r="0.6" fill="currentColor"/><line x1="7" y1="4" x2="7" y2="4.8"/><line x1="7" y1="9.2" x2="7" y2="10"/></svg>,
   locked: <svg viewBox="0 0 14 15.5" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d={HEX}/><rect x="5" y="7.5" width="4" height="3" rx="0.5"/><path d="M5.8 7.5V6.5a1.2 1.2 0 012.4 0v1"/></svg>,
 };
 
@@ -46,8 +48,11 @@ const TAB_ICONS = {
 const PRIMARY_TABS = [
   { id: 'overview', label: 'Overview' },
   { id: 'matchups', label: 'Matchups' },
+  { id: 'oracle', label: 'Oracle' },
   { id: 'standings', label: 'Standings' },
   { id: 'lineup', label: 'Lineup' },
+  { id: 'waivers', label: 'Waivers' },
+  { id: 'trades', label: 'Trades' },
 ];
 const PRIMARY_TAB_IDS = new Set(PRIMARY_TABS.map(t => t.id));
 
@@ -59,7 +64,7 @@ const SECONDARY_TABS = [
 ];
 
 // Tabs that require a completed draft before they become clickable
-const DRAFT_REQUIRED_TABS = new Set(['overview', 'lineup', 'matchups', 'standings', 'playoffs', 'waivers', 'trades', 'chat']);
+const DRAFT_REQUIRED_TABS = new Set(['overview', 'lineup', 'matchups', 'oracle', 'standings', 'playoffs', 'waivers', 'trades', 'chat']);
 
 
 export default function LeagueDashboard() {
@@ -270,16 +275,12 @@ export default function LeagueDashboard() {
   const dropdownLeagueTabs = draftComplete
     ? [
         { id: 'playoffs', label: 'Playoffs' },
-        { id: 'waivers', label: 'Waivers' },
-        { id: 'trades', label: 'Trades' },
         { id: 'chat', label: 'League Chat' },
         { id: 'draft', label: 'Draft Results' },
       ]
     : [
         { id: 'draft', label: 'Draft' },
         { id: 'playoffs', label: 'Playoffs' },
-        { id: 'waivers', label: 'Waivers' },
-        { id: 'trades', label: 'Trades' },
         { id: 'chat', label: 'League Chat' },
       ];
 
@@ -374,6 +375,7 @@ export default function LeagueDashboard() {
             </button>
             {showMoreMenu && (
               <div className="ff-more-tabs-menu">
+                <div className="ff-more-tabs-label">League</div>
                 {dropdownLeagueTabs.map(t => {
                   const locked = isTabDisabled(t.id);
                   return (
@@ -402,6 +404,7 @@ export default function LeagueDashboard() {
                   );
                 })}
                 <div className="ff-more-tabs-divider" />
+                <div className="ff-more-tabs-label">Tools</div>
                 {SECONDARY_TABS.map(t => (
                   <button key={t.id}
                     className={`ff-more-tab-item${activeTab === t.id ? ' active' : ''}`}
@@ -509,6 +512,7 @@ export default function LeagueDashboard() {
                     onMatchupClick={handleMatchupClick}
                     onTabSwitch={setActiveTab}
                   />
+                  <StandingsCard rosters={draftedRosters} leagueName={league.name} onTeamClick={handleTeamClick} />
                 </div>
               </div>
             </div>
@@ -538,6 +542,12 @@ export default function LeagueDashboard() {
       {activeTab === 'matchups' && (
         <div className="ff-tab-content ff-tab-content-wide">
           <MatchupWidget mode="all" rosters={draftedRosters} onPlayerClick={handlePlayerClick} onMatchupClick={handleMatchupClick} />
+        </div>
+      )}
+
+      {activeTab === 'oracle' && (
+        <div className="ff-tab-content ff-tab-content-wide">
+          <PredictionShowdown />
         </div>
       )}
 
@@ -611,24 +621,14 @@ export default function LeagueDashboard() {
       )}
 
       {activeTab === 'chat' && (
-        <div className="ff-tab-content ff-tab-content-mid">
+        <div className="ff-tab-content ff-tab-content-narrow">
           <LeagueChat league={league} leagueId={leagueId} />
         </div>
       )}
 
       {activeTab === 'news' && (
-        <div className="ff-tab-content">
-          <div className="ff-overview-layout">
-            <div className="ff-overview-grid">
-              <div className="ff-left">
-                <NewsFeed onPlayerClick={handlePlayerClick} />
-              </div>
-              <div className="ff-right">
-                <StandingsCard rosters={draftedRosters} leagueName={league.name} onTeamClick={handleTeamClick} />
-                <PowerRankingsCard rosters={draftedRosters} />
-              </div>
-            </div>
-          </div>
+        <div className="ff-tab-content ff-tab-content-wide">
+          <NewsFeed onPlayerClick={handlePlayerClick} />
         </div>
       )}
       </>}

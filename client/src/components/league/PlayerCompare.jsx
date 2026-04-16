@@ -44,6 +44,9 @@ function getTeamColor(teamId) {
   return TEAM_COLORS[teamId] || '#6B7280';
 }
 
+const TIER_RANK = { Elite: 0, 'Starter+': 1, Starter: 2, Flex: 3, Bench: 4, Depth: 5, Waiver: 6 };
+const aAn = (tier) => /^[AEIOUaeiou]/.test(tier) ? 'an' : 'a';
+
 const DIMS = [
   { key: 'production', label: 'Production' },
   { key: 'volume', label: 'Volume' },
@@ -165,6 +168,33 @@ const hexFontSize = (hex, base) => {
   return base;
 };
 
+function clusterPlayers(sorted) {
+  const top = sorted[0];
+  const topRank = TIER_RANK[top.tier] ?? 3;
+  const contenders = [top];
+  const alsoRans = [];
+
+  for (let i = 1; i < sorted.length; i++) {
+    const p = sorted[i];
+    const pRank = TIER_RANK[p.tier] ?? 3;
+    const tierDist = pRank - topRank;
+    const scoreDist = top.hex - p.hex;
+    if (tierDist === 0 || (tierDist === 1 && scoreDist <= 8)) {
+      contenders.push(p);
+    } else {
+      alsoRans.push(p);
+    }
+  }
+
+  let landscape;
+  if (contenders.length === 1) landscape = 'runaway';
+  else if (contenders.length === 2 && alsoRans.length > 0) landscape = 'two-horse';
+  else if (alsoRans.length === 0) landscape = 'all-contenders';
+  else landscape = 'tiered';
+
+  return { contenders, alsoRans, landscape };
+}
+
 function generateAnalysis(playerData, scoringPreset) {
   const filled = playerData.filter(Boolean);
   if (filled.length < 2) return null;
@@ -184,16 +214,34 @@ function generateAnalysis(playerData, scoringPreset) {
 
   // Verdict
   let verdict;
+  let cluster;
   if (filled.length === 2) {
-    if (gap > 8) verdict = `${top.name} has a clear edge over ${second.name}`;
-    else if (gap >= 4) verdict = `${top.name} holds an advantage over ${second.name}`;
-    else verdict = `${top.name} and ${second.name} are neck-and-neck - both are strong options`;
+    const tierDiff = (TIER_RANK[second.tier] ?? 3) - (TIER_RANK[top.tier] ?? 3);
+    if (tierDiff >= 2) {
+      verdict = `${top.name} is ${aAn(top.tier)} ${top.tier} while ${second.name} is ${aAn(second.tier)} ${second.tier} - this isn't close`;
+    } else if (tierDiff === 1) {
+      verdict = `${top.name} is a tier above ${second.name} (${top.tier} vs ${second.tier})`;
+    } else if (gap > 8) {
+      verdict = `${top.name} has a clear edge over ${second.name} - both grade as ${top.tier} but the gap is real`;
+    } else if (gap >= 4) {
+      verdict = `${top.name} holds an advantage over ${second.name} within the ${top.tier} tier`;
+    } else {
+      verdict = `${top.name} and ${second.name} are neck-and-neck - both grade as ${top.tier}`;
+    }
   } else {
-    const bottom = sorted[sorted.length - 1];
-    const totalGap = top.hex - bottom.hex;
-    if (totalGap > 8) verdict = `${top.name} leads the group with a clear edge`;
-    else if (totalGap >= 4) verdict = `${top.name} holds a slight advantage over the field`;
-    else verdict = `This group is incredibly tight - hard to go wrong with any of them`;
+    cluster = clusterPlayers(sorted);
+    const { contenders, alsoRans, landscape } = cluster;
+    if (landscape === 'runaway') {
+      verdict = `${top.name} is in a class of their own at ${top.tier} - no one else is close`;
+    } else if (landscape === 'two-horse') {
+      verdict = `This is a two-player race between ${contenders[0].name} and ${contenders[1].name} - the rest fall off`;
+    } else if (landscape === 'tiered') {
+      const names = contenders.map(c => c.name);
+      const last = names.pop();
+      verdict = `${names.join(', ')}, and ${last} are the contenders - the rest are a tier or more behind`;
+    } else {
+      verdict = `All ${sorted.length} grade as ${top.tier} - this is genuinely tight`;
+    }
   }
 
   // Per-dimension breakdown
@@ -245,9 +293,33 @@ function generateAnalysis(playerData, scoringPreset) {
 
   // Bottom line
   let bottomLine;
-  if (gap > 8) bottomLine = `Go with ${top.name} - the gap is significant.`;
-  else if (gap >= 4) bottomLine = `${top.name} is the stronger pick, but ${second.name} isn't far behind.`;
-  else bottomLine = `You can't go wrong here - pick the one that fits your roster needs.`;
+  if (filled.length === 2) {
+    const tierDiff = (TIER_RANK[second.tier] ?? 3) - (TIER_RANK[top.tier] ?? 3);
+    if (tierDiff >= 2) {
+      bottomLine = `Go with ${top.name} - they're ${aAn(top.tier)} ${top.tier} while ${second.name} is ${aAn(second.tier)} ${second.tier}.`;
+    } else if (tierDiff === 1 || gap > 8) {
+      bottomLine = `Go with ${top.name} - ${top.tier} vs ${second.tier} makes this straightforward.`;
+    } else if (gap >= 4) {
+      bottomLine = `${top.name} is the stronger pick, but ${second.name} isn't far behind within ${top.tier}.`;
+    } else {
+      bottomLine = `No wrong answer - both are ${top.tier}-caliber. Pick based on roster needs.`;
+    }
+  } else {
+    const { contenders, alsoRans, landscape } = cluster;
+    if (landscape === 'runaway') {
+      bottomLine = `Take ${top.name} and don't overthink it.`;
+    } else if (landscape === 'two-horse') {
+      const dropTier = alsoRans[0]?.tier || 'Bench';
+      bottomLine = `This is between ${contenders[0].name} and ${contenders[1].name} - the rest are ${dropTier}-level and aren't in the conversation.`;
+    } else if (landscape === 'tiered') {
+      const names = contenders.map(c => c.name);
+      const last = names.pop();
+      const dropName = alsoRans[0]?.name || 'the rest';
+      bottomLine = `Focus on ${names.join(', ')}, and ${last}. After that, ${dropName} and below are a clear step down.`;
+    } else {
+      bottomLine = `No wrong answers - all ${sorted.length} are ${top.tier}-caliber. Pick based on roster needs.`;
+    }
+  }
 
   return { verdict, dimBreakdown, advantages, archetypeLines, bottomLine, scores: sorted };
 }
@@ -416,8 +488,8 @@ function PlayerSlot({ player, color, onSelect, onRemove, excludeIds, scoringPres
   );
 }
 
-export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpenTrade, initialPlayerIds }) {
-  const [slots, setSlots] = useState([null, null, null, null, null, null]);
+export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpenTrade, initialPlayerIds, maxSlots = 6, onShowResults }) {
+  const [slots, setSlots] = useState(() => Array(maxSlots).fill(null));
   const [hoveredDim, setHoveredDim] = useState(null);
   const [animProgress, setAnimProgress] = useState(0);
   const [sortDim, setSortDim] = useState('hex');
@@ -450,8 +522,8 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
     const key = initialPlayerIds.join(',');
     if (initRef.current === key) return;
     initRef.current = key;
-    const newSlots = [null, null, null, null, null, null];
-    initialPlayerIds.slice(0, 6).forEach((id, i) => {
+    const newSlots = Array(maxSlots).fill(null);
+    initialPlayerIds.slice(0, maxSlots).forEach((id, i) => {
       newSlots[i] = PLAYER_MAP[id] || null;
     });
     setSlots(newSlots);
@@ -477,6 +549,7 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
   const handleCompare = () => {
     setShowResults(true);
     triggerAnimation();
+    onShowResults?.();
   };
   const handleEdit = () => {
     setShowResults(false);
@@ -1050,16 +1123,37 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
     const gap = top.hex - second.hex;
     const topIdx = playerData.findIndex(pd => pd && pd.player.name === top.name);
 
-    // Verdict text per spec
+    // Verdict text - tier-aware
     let verdictText;
-    if (gap > 12) verdictText = `${top.name} is the clear winner`;
-    else if (gap >= 8) verdictText = `${top.name} takes this matchup`;
-    else if (gap >= 4) {
-      const topWins = analysis.dimBreakdown.filter(d => d.winner !== top.name && !d.isTie).map(d => d.dim);
-      const otherStrengths = topWins.length > 0 ? topWins.slice(0, 2).join(' & ') : 'key areas';
-      verdictText = `${top.name} holds the edge, but ${second.name} has strengths in ${otherStrengths}`;
+    if (filled.length === 2) {
+      const tierDiff = (TIER_RANK[second.tier] ?? 3) - (TIER_RANK[top.tier] ?? 3);
+      if (tierDiff >= 2) {
+        verdictText = `${top.name} is ${aAn(top.tier)} ${top.tier} while ${second.name} is ${aAn(second.tier)} ${second.tier} - not close`;
+      } else if (tierDiff === 1) {
+        verdictText = `${top.name} is a tier above (${top.tier} vs ${second.tier})`;
+      } else if (gap > 8) {
+        verdictText = `${top.name} is the clear winner`;
+      } else if (gap >= 4) {
+        const secondWins = analysis.dimBreakdown.filter(d => d.winner !== top.name && !d.isTie).map(d => d.dim);
+        const otherStrengths = secondWins.length > 0 ? secondWins.slice(0, 2).join(' & ') : 'key areas';
+        verdictText = `${top.name} holds the edge, but ${second.name} has strengths in ${otherStrengths}`;
+      } else {
+        verdictText = `Too close to call - both grade as ${top.tier}`;
+      }
     } else {
-      verdictText = `Too close to call - both grade as ${top.tier} options`;
+      const cl = clusterPlayers(scores);
+      const { contenders, alsoRans, landscape } = cl;
+      if (landscape === 'runaway') {
+        verdictText = `${top.name} is in a class of their own at ${top.tier}`;
+      } else if (landscape === 'two-horse') {
+        verdictText = `Two-player race: ${contenders[0].name} and ${contenders[1].name} - the rest fall off`;
+      } else if (landscape === 'tiered') {
+        const names = contenders.map(c => c.name);
+        const last = names.pop();
+        verdictText = `${names.join(', ')}, and ${last} are the contenders`;
+      } else {
+        verdictText = `All ${scores.length} grade as ${top.tier} - genuinely tight`;
+      }
     }
 
     return (
@@ -1862,7 +1956,7 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
                 {scoringPreset === 'ppr' ? 'PPR' : scoringPreset === 'half_ppr' ? 'Half PPR' : scoringPreset === 'standard' ? 'Standard' : scoringPreset.toUpperCase()} Scoring
               </span>
             )}
-            {rosters && (
+            {rosters && maxSlots > 2 && (
               <select
                 className="ff-compare-mode-select"
                 value={compareMode}
@@ -1873,7 +1967,7 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
                 <option value="trade">Trade Context</option>
               </select>
             )}
-            <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>Compare up to 6 players</span>
+            <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>Compare {maxSlots <= 2 ? '2 players' : `up to ${maxSlots} players`}</span>
           </div>
         </div>
 
@@ -1881,11 +1975,11 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
           {/* --- SELECTION MODE (no results yet) --- */}
           {!showResults && (
             <>
-              {/* Top row: slots 1–3 */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 16 }}>
-                <PlayerSlot player={slots[0]} color={COLORS[0]} onSelect={p => setSlot(0, p)} onRemove={() => clearSlot(0)} excludeIds={excludeIds} scoringPreset={scoringPreset} rosters={compareMode !== 'basic' ? rosters : null} />
-                <PlayerSlot player={slots[1]} color={COLORS[1]} onSelect={p => setSlot(1, p)} onRemove={() => clearSlot(1)} excludeIds={excludeIds} scoringPreset={scoringPreset} rosters={compareMode !== 'basic' ? rosters : null} />
-                <PlayerSlot player={slots[2]} color={COLORS[2]} onSelect={p => setSlot(2, p)} onRemove={() => clearSlot(2)} excludeIds={excludeIds} scoringPreset={scoringPreset} rosters={compareMode !== 'basic' ? rosters : null} />
+              {/* Top row: slots 1–3 (or 1–2 when maxSlots=2) */}
+              <div style={{ display: 'grid', gridTemplateColumns: maxSlots <= 2 ? '1fr 1fr' : '1fr 1fr 1fr', gap: 16, marginBottom: 16 }}>
+                {slots.slice(0, Math.min(maxSlots, 3)).map((p, i) => (
+                  <PlayerSlot key={i} player={p} color={COLORS[i]} onSelect={pl => setSlot(i, pl)} onRemove={() => clearSlot(i)} excludeIds={excludeIds} scoringPreset={scoringPreset} rosters={compareMode !== 'basic' ? rosters : null} />
+                ))}
               </div>
 
               {/* Compare button - always visible, inactive until 2+ players selected */}
@@ -1906,12 +2000,14 @@ export default function PlayerCompare({ rosters, scoringPreset, leagueId, onOpen
                 </button>
               </div>
 
-              {/* Bottom row: slots 4–6 */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginTop: 16, paddingBottom: 220, marginBottom: -200 }}>
-                <PlayerSlot player={slots[3]} color={COLORS[3]} onSelect={p => setSlot(3, p)} onRemove={() => clearSlot(3)} excludeIds={excludeIds} scoringPreset={scoringPreset} rosters={compareMode !== 'basic' ? rosters : null} />
-                <PlayerSlot player={slots[4]} color={COLORS[4]} onSelect={p => setSlot(4, p)} onRemove={() => clearSlot(4)} excludeIds={excludeIds} scoringPreset={scoringPreset} rosters={compareMode !== 'basic' ? rosters : null} />
-                <PlayerSlot player={slots[5]} color={COLORS[5]} onSelect={p => setSlot(5, p)} onRemove={() => clearSlot(5)} excludeIds={excludeIds} scoringPreset={scoringPreset} rosters={compareMode !== 'basic' ? rosters : null} />
-              </div>
+              {/* Bottom row: slots 4–6 (hidden when maxSlots <= 3) */}
+              {maxSlots > 3 && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginTop: 16, paddingBottom: 220, marginBottom: -200 }}>
+                  {slots.slice(3, 6).map((p, i) => (
+                    <PlayerSlot key={i + 3} player={p} color={COLORS[i + 3]} onSelect={pl => setSlot(i + 3, pl)} onRemove={() => clearSlot(i + 3)} excludeIds={excludeIds} scoringPreset={scoringPreset} rosters={compareMode !== 'basic' ? rosters : null} />
+                  ))}
+                </div>
+              )}
             </>
           )}
 
