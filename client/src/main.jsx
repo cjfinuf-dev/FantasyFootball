@@ -7,6 +7,9 @@ import { LeaguesProvider } from './context/LeaguesContext';
 import { LiveScoringProvider } from './context/LiveScoringContext';
 import App from './App';
 import './index.css';
+import './styles/trade.css';
+import './styles/chat.css';
+import './styles/compare.css';
 
 class ErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { error: null }; }

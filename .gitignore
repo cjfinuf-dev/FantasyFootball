@@ -1,9 +1,10 @@
 node_modules/
-dist/
+**/dist/
 .env
 server/.env
 server/data/
 *.db
+*.log
 .DS_Store
 nflverse_cache/
 nfl_player_stats.csv
