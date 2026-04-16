@@ -14,6 +14,7 @@ const ICON_SVG = {
   chat:      '<path d="M5 6h4M5 8.5h2.5"/>',
   playoffs:  '<path d="M5 5.5v2h4v-2M7 7.5v3"/><circle cx="7" cy="5" r="0.5"/>',
   news:      '<path d="M5 5.5l2 2 2-2M5 8.5h4"/>',
+  oracle:    '<circle cx="7" cy="7" r="2.2"/><circle cx="7" cy="7" r="0.6" fill="currentColor"/><line x1="7" y1="4" x2="7" y2="4.8"/><line x1="7" y1="9.2" x2="7" y2="10"/>',
 };
 
 // Default icon center matches the 14×15.5 TAB_ICON viewBox

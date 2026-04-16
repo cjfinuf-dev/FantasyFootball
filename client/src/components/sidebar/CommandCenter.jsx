@@ -5,7 +5,6 @@ import { PLAYERS } from '../../data/players';
 import { WAIVERS } from '../../data/waivers';
 import { TRADES_SEED } from '../../data/rosters';
 import { getByeWeek } from '../../data/nflSchedule';
-import { calcWinProb } from '../../utils/winProb';
 import { useLiveTick } from '../../hooks/useLiveTick';
 import { getHexScore, formatHex } from '../../utils/hexScore';
 import { runSimulations, getStatus, getMagicNumber, GAMES_PLAYED } from '../../utils/playoffCalc';
@@ -61,9 +60,9 @@ export default function CommandCenter({ rosters, scoringPreset, leagueName, onPl
     const oppSide = isHome ? matchup.away : matchup.home;
     const oppTeam = TEAMS.find(t => t.id === oppSide.teamId);
 
-    // Derive win prob directly from the projected scores we display,
-    // so the percentage always matches the numbers on screen.
-    const userWinProb = calcWinProb(0, userSide.projected, 0, oppSide.projected);
+    // Pre-game: win prob is a simple share of the projections shown on screen.
+    const totalProj = userSide.projected + oppSide.projected;
+    const userWinProb = totalProj > 0 ? userSide.projected / totalProj : 0.5;
 
     let label, labelClass;
     if (userWinProb >= 0.6) { label = 'Favored'; labelClass = 'cc-wp-favored'; }

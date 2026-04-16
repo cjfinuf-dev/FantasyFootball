@@ -4,7 +4,7 @@ import { MATCHUPS } from '../../data/matchups';
 import { PLAYERS } from '../../data/players';
 import { ROSTER_PRESETS } from '../../data/scoring';
 import { getEspnId } from '../../data/espnIds';
-import { getMatchupWinProb, getHexWinProb, getStarterProjection } from '../../utils/winProb';
+import { getHexWinProb, getStarterProjection } from '../../utils/winProb';
 import { getHexScore, formatHex } from '../../utils/hexScore';
 import { GAMES_PLAYED } from '../../data/seasonConfig';
 import { useLiveTick } from '../../hooks/useLiveTick';
@@ -346,11 +346,10 @@ function MatchupCard({ matchup, expanded, rosters, onPlayerClick, onToggle, onMa
   const awayTeam = TEAMS.find(t => t.id === matchup.away.teamId);
   const homeRoster = rosters?.[matchup.home.teamId] || [];
   const awayRoster = rosters?.[matchup.away.teamId] || [];
-  const homeProb = homeRoster.length && awayRoster.length
-    ? getMatchupWinProb(homeRoster, awayRoster, PLAYER_MAP)
-    : (matchup.home.projected + matchup.away.projected > 0
-      ? matchup.home.projected / (matchup.home.projected + matchup.away.projected)
-      : 0.5);
+  const totalProj = matchup.home.projected + matchup.away.projected;
+  const homeProb = totalProj > 0
+    ? matchup.home.projected / totalProj
+    : 0.5;
   const isTossUp = homeProb > 0.45 && homeProb < 0.55;
   const homeFavored = homeProb >= 0.55;
   const awayFavored = homeProb <= 0.45;

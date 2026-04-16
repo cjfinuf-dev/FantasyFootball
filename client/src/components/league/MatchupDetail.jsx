@@ -4,7 +4,7 @@ import { PLAYERS } from '../../data/players';
 import { ROSTER_PRESETS } from '../../data/scoring';
 import { getEspnId } from '../../data/espnIds';
 import { getHexScore, getHexData, formatHex } from '../../utils/hexScore';
-import { getMatchupWinProb, getStarterProjection } from '../../utils/winProb';
+import { getStarterProjection } from '../../utils/winProb';
 import { useLiveTick } from '../../hooks/useLiveTick';
 import PosBadge from '../ui/PosBadge';
 import HexBrand from '../ui/HexBrand';
@@ -329,11 +329,9 @@ export default function MatchupDetail({ matchup, rosters, onBack, onPlayerClick 
     return getStarterProjection(rosters[matchup.away.teamId], PLAYER_MAP) || matchup.away.projected;
   }, [rosters, matchup, tick]);
 
-  const homeRoster = rosters?.[matchup.home.teamId] || [];
-  const awayRoster = rosters?.[matchup.away.teamId] || [];
-  const homeWinProb = homeRoster.length && awayRoster.length
-    ? getMatchupWinProb(homeRoster, awayRoster, PLAYER_MAP)
-    : (homeProj + awayProj > 0 ? homeProj / (homeProj + awayProj) : 0.5);
+  const homeWinProb = homeProj + awayProj > 0
+    ? homeProj / (homeProj + awayProj)
+    : 0.5;
   const homePct = (homeWinProb * 100).toFixed(2);
   const awayPct = (100 - homeWinProb * 100).toFixed(2);
 

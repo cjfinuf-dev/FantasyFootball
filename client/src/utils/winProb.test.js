@@ -41,11 +41,17 @@ describe('calcWinProb', () => {
     expect(prob).toBeCloseTo(0.5, 1);
   });
 
-  it('uses varianceSum when provided', () => {
-    const withVariance = calcWinProb(0, 120, 0, 100, 9, 9, 5000);
-    const withoutVariance = calcWinProb(0, 120, 0, 100, 9, 9, 0);
-    // Different variance should produce different probabilities
+  it('uses varianceSum when provided (mid-game)', () => {
+    // Mid-game (some actuals on the board) is when the variance model kicks in.
+    const withVariance = calcWinProb(50, 60, 40, 60, 5, 5, 2000);
+    const withoutVariance = calcWinProb(50, 60, 40, 60, 5, 5, 0);
     expect(withVariance).not.toBeCloseTo(withoutVariance, 3);
+  });
+
+  it('pre-game returns simple projection share', () => {
+    // 8-point spread on ~120 total should yield modest favorite, not 90%+.
+    expect(calcWinProb(0, 124, 0, 116, 9, 9, 800)).toBeCloseTo(124 / 240, 3);
+    expect(calcWinProb(0, 70, 0, 70, 9, 9, 0)).toBeCloseTo(0.5, 3);
   });
 });
 
@@ -168,13 +174,24 @@ describe('getHexWinProb', () => {
     expect(prob).toBeLessThanOrEqual(0.9999);
   });
 
-  it('produces meaningful spread for 5-point hex advantage', () => {
+  it('returns simple share of total for hex averages', () => {
     const away2 = ['aqb1', 'arb1', 'arb2', 'awr1', 'awr2', 'ate1', 'ak1', 'adef1'];
     const pm2 = { ...playerMap };
     away2.forEach((id, i) => { pm2[id] = Object.values(playerMap)[i]; });
     const hexFn = (pid) => pid.startsWith('a') ? 65 : 70;
     const prob = getHexWinProb(homeRoster, away2, pm2, hexFn);
-    // 5-point advantage should produce strong signal, not near coin flip
-    expect(prob).toBeGreaterThan(0.7);
+    // 70 / (70 + 65) ≈ 0.519
+    expect(prob).toBeCloseTo(70 / 135, 3);
+  });
+
+  it('treats small hex spreads as near coin flips', () => {
+    const away2 = ['aqb1', 'arb1', 'arb2', 'awr1', 'awr2', 'ate1', 'ak1', 'adef1'];
+    const pm2 = { ...playerMap };
+    away2.forEach((id, i) => { pm2[id] = Object.values(playerMap)[i]; });
+    const hexFn = (pid) => pid.startsWith('a') ? 68.3 : 70;
+    const prob = getHexWinProb(homeRoster, away2, pm2, hexFn);
+    // 70 / (70 + 68.3) ≈ 0.506
+    expect(prob).toBeCloseTo(70 / 138.3, 3);
+    expect(prob).toBeLessThan(0.55);
   });
 });

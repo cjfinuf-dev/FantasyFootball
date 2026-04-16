@@ -2,10 +2,15 @@ import { gameState } from '../data/gameState';
 
 // Average per-player score variance (points). Used to estimate standard
 // deviation of remaining team score based on remaining player count.
-const AVG_PLAYER_VARIANCE = 7;
+const AVG_PLAYER_VARIANCE = 9;
 const POSITION_VARIANCE_MULT = {
   QB: 1.4, RB: 1.1, WR: 1.15, TE: 1.0, K: 0.5, DEF: 0.6,
 };
+
+// Game-level noise floor (coaching, turnovers, weather, game-script flukes)
+// that applies independent of player-level variance. Expressed as variance
+// in point² units (≈ 9-point stdDev of game-script noise).
+const GAME_NOISE_VARIANCE = 80;
 
 /**
  * Error function approximation (Abramowitz & Stegun, formula 7.1.26).
@@ -57,11 +62,21 @@ export function calcWinProb(myActual, myRemaining, oppActual, oppRemaining, myRe
   // Uncertainty-weighted path: estimate standard deviation from remaining
   // player counts using a simple model. When position-weighted varianceSum
   // is provided, use it for more accurate per-position uncertainty.
+  // Pre-game (no actuals yet): win prob is just each side's projection as a
+  // share of total projected points. Variance-weighted models produce absurd
+  // confidences from synthetic inputs, so we stay out of their way until
+  // actual points hit the board.
+  const isPreGame = myActual === 0 && oppActual === 0 && totalRemaining > 0;
+  if (isPreGame) {
+    const totalProj = myRemaining + oppRemaining;
+    return totalProj > 0 ? myRemaining / totalProj : 0.5;
+  }
+
   const totalRemainingPlayers = myRemainingPlayers + oppRemainingPlayers;
   const stdDev = varianceSum > 0
-    ? Math.sqrt(varianceSum)
+    ? Math.sqrt(varianceSum + GAME_NOISE_VARIANCE)
     : totalRemainingPlayers > 0
-      ? Math.sqrt(totalRemainingPlayers) * AVG_PLAYER_VARIANCE
+      ? Math.sqrt(totalRemainingPlayers * AVG_PLAYER_VARIANCE ** 2 + GAME_NOISE_VARIANCE)
       : 0;
 
   let raw;
@@ -72,8 +87,6 @@ export function calcWinProb(myActual, myRemaining, oppActual, oppRemaining, myRe
     raw = 0.5 + (spread / totalRemaining) * 0.5;
   }
 
-  // While any players remain, cap at 99.99% / 0.01% — never show 100%/0%
-  // until the outcome is literally final.
   return Math.max(0.0001, Math.min(0.9999, raw));
 }
 
@@ -177,13 +190,10 @@ export function getStarterProjection(rosterIds, playerMap) {
 
 /**
  * Hex-based win probability.
- * Uses the same normal CDF framework but driven by hex score averages
- * instead of projected points. Hex scores are on a 0–100 scale with
- * tighter variance (~8 per starter) reflecting talent-quality signal
- * rather than weekly projection noise.
+ * Pre-game: a simple share of total hex average — homeAvg / (homeAvg + awayAvg).
+ * No variance modeling, since hex scores are themselves a talent signal and
+ * all inputs are synthetic pre-kickoff.
  */
-const HEX_PLAYER_VARIANCE = 8;
-
 export function getHexWinProb(homeRosterIds, awayRosterIds, playerMap, getHexScoreFn) {
   const homeStarters = getStarterIds(homeRosterIds, playerMap);
   const awayStarters = getStarterIds(awayRosterIds, playerMap);
@@ -195,12 +205,9 @@ export function getHexWinProb(homeRosterIds, awayRosterIds, playerMap, getHexSco
 
   const homeAvg = homeHexes.reduce((s, v) => s + v, 0) / homeHexes.length;
   const awayAvg = awayHexes.reduce((s, v) => s + v, 0) / awayHexes.length;
-  const spread = homeAvg - awayAvg;
+  const total = homeAvg + awayAvg;
 
-  const stdDev = HEX_PLAYER_VARIANCE * Math.sqrt(1 / homeHexes.length + 1 / awayHexes.length);
-
-  const raw = normalCDF(spread / stdDev);
-  return Math.max(0.0001, Math.min(0.9999, raw));
+  return total > 0 ? homeAvg / total : 0.5;
 }
 
 /**

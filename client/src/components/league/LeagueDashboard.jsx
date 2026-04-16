@@ -24,6 +24,7 @@ import { SkeletonCard, SkeletonTable } from '../ui/Skeleton';
 
 import { TEAMS, USER_TEAM_ID } from '../../data/teams';
 import { MATCHUPS } from '../../data/matchups';
+import { GAMES_PLAYED } from '../../data/seasonConfig';
 
 // Hex-branded tab icons — stroke-based SVGs using currentColor
 const HEX = 'M7 1.27L12.6 4.5v6.5L7 14.23 1.4 11V4.5z'; // hexagon path
@@ -52,13 +53,13 @@ const PRIMARY_TABS = [
   { id: 'standings', label: 'Standings' },
   { id: 'lineup', label: 'Lineup' },
   { id: 'waivers', label: 'Waivers' },
-  { id: 'trades', label: 'Trades' },
+  { id: 'players', label: 'Players' },
 ];
 const PRIMARY_TAB_IDS = new Set(PRIMARY_TABS.map(t => t.id));
 
 // Secondary / always-available tabs — grouped in dropdown
 const SECONDARY_TABS = [
-  { id: 'players', label: 'Players' },
+  { id: 'trades', label: 'Trades' },
   { id: 'compare', label: 'Compare' },
   { id: 'news', label: 'News' },
 ];
@@ -326,7 +327,7 @@ export default function LeagueDashboard() {
             <Link to="/hub" className="ff-back-btn">{'\u2190'} My Leagues</Link>
             <h1>{league.name}</h1>
             <span className="ff-hero-meta">
-              {league.type} &middot; {league.scoring_preset?.toUpperCase() || 'PPR'} &middot; {league.league_size}-Team &middot; <strong>{league.team_name}</strong>{league.role === 'commissioner' ? ' · Commissioner' : ''}
+              Week {GAMES_PLAYED + 1} &middot; {league.type} &middot; {league.scoring_preset?.toUpperCase() || 'PPR'} &middot; {league.league_size}-Team &middot; <strong>{league.team_name}</strong>{league.role === 'commissioner' ? ' · Commissioner' : ''}
             </span>
             <button onClick={() => setActiveTab('settings')}
               className={`ff-hero-settings-btn${activeTab === 'settings' ? ' active' : ''}`}
@@ -371,7 +372,7 @@ export default function LeagueDashboard() {
               onClick={() => setShowMoreMenu(prev => !prev)}
               aria-haspopup="listbox"
               aria-expanded={showMoreMenu}>
-              {activeDropdownTab?.label || 'More'} <span className="chevron">▾</span>
+              More <span className="chevron">▾</span>
             </button>
             {showMoreMenu && (
               <div className="ff-more-tabs-menu">
@@ -405,13 +406,33 @@ export default function LeagueDashboard() {
                 })}
                 <div className="ff-more-tabs-divider" />
                 <div className="ff-more-tabs-label">Tools</div>
-                {SECONDARY_TABS.map(t => (
-                  <button key={t.id}
-                    className={`ff-more-tab-item${activeTab === t.id ? ' active' : ''}`}
-                    onClick={() => { setActiveTab(t.id); setShowMoreMenu(false); }}>
-                    {TAB_ICONS[t.id]}{t.label}
-                  </button>
-                ))}
+                {SECONDARY_TABS.map(t => {
+                  const locked = isTabDisabled(t.id);
+                  return (
+                    <button key={t.id}
+                      className={`ff-more-tab-item${activeTab === t.id ? ' active' : ''}${locked ? ' disabled' : ''}`}
+                      aria-disabled={locked || undefined}
+                      title={locked ? 'Complete the draft first' : undefined}
+                      onClick={(e) => {
+                        if (locked) {
+                          e.currentTarget.animate([
+                            { transform: 'translateX(0)' },
+                            { transform: 'translateX(-3px)' },
+                            { transform: 'translateX(3px)' },
+                            { transform: 'translateX(-2px)' },
+                            { transform: 'translateX(2px)' },
+                            { transform: 'translateX(0)' },
+                          ], { duration: 300, easing: 'ease-in-out' });
+                          setLockToast(true);
+                          setTimeout(() => setLockToast(false), 2000);
+                          return;
+                        }
+                        setActiveTab(t.id); setShowMoreMenu(false);
+                      }}>
+                      {locked ? TAB_ICONS.locked : TAB_ICONS[t.id]}{t.label}
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>

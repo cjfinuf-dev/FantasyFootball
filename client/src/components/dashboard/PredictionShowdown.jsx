@@ -9,26 +9,30 @@ import HexBrand from '../ui/HexBrand';
 function AccuracyRace({ cumulative }) {
   const svgRef = useRef(null);
   const [drawn, setDrawn] = useState(false);
+  const [hoveredIdx, setHoveredIdx] = useState(null);
 
   useEffect(() => {
     const timer = setTimeout(() => setDrawn(true), 300);
     return () => clearTimeout(timer);
   }, []);
 
-  const W = 560, H = 180, PAD_X = 36, PAD_Y = 20;
-  const chartW = W - PAD_X * 2;
+  const W = 560, H = 180, PAD_L = 36, PAD_R = 56, PAD_Y = 24;
+  const chartW = W - PAD_L - PAD_R;
   const chartH = H - PAD_Y * 2;
   const minY = 55, maxY = 90;
   const yRange = maxY - minY;
 
-  const toX = (i) => PAD_X + (i / (cumulative.length - 1)) * chartW;
+  const toX = (i) => PAD_L + (i / (cumulative.length - 1)) * chartW;
   const toY = (pct) => PAD_Y + (1 - (pct - minY) / yRange) * chartH;
 
   const hexPoints = cumulative.map((w, i) => `${toX(i)},${toY(w.hexPct)}`).join(' ');
   const projPoints = cumulative.map((w, i) => `${toX(i)},${toY(w.projPct)}`).join(' ');
 
-  // Grid lines at 60%, 70%, 80%
-  const gridLines = [60, 70, 80].filter(v => v >= minY && v <= maxY);
+  // Grid lines every 5%, with major (10% multiples) darker than minor (5%)
+  const gridLines = [];
+  for (let v = Math.ceil(minY / 5) * 5; v <= maxY; v += 5) {
+    gridLines.push({ value: v, major: v % 10 === 0 });
+  }
 
   return (
     <div className="ff-oracle-section ff-oracle-race">
@@ -36,30 +40,87 @@ function AccuracyRace({ cumulative }) {
         <h3>Accuracy Race</h3>
         <span className="ff-oracle-section-meta">Cumulative accuracy over {cumulative.length} weeks</span>
       </div>
+      <div className="ff-oracle-readout">
+        {hoveredIdx !== null ? (
+          <div className="ff-oracle-readout-card" key={hoveredIdx}>
+            <span className="ff-oracle-readout-week">Week {cumulative[hoveredIdx].week}</span>
+            <span className="ff-oracle-readout-stat ff-oracle-readout-stat--hex">
+              <span className="ff-oracle-readout-dot" />
+              <span className="ff-oracle-readout-label">Hex</span>
+              <span className="ff-oracle-readout-value">{cumulative[hoveredIdx].hexPct.toFixed(1)}%</span>
+            </span>
+            <span className="ff-oracle-readout-stat ff-oracle-readout-stat--proj">
+              <span className="ff-oracle-readout-dot" />
+              <span className="ff-oracle-readout-label">Proj</span>
+              <span className="ff-oracle-readout-value">{cumulative[hoveredIdx].projPct.toFixed(1)}%</span>
+            </span>
+          </div>
+        ) : (
+          <div className="ff-oracle-readout-hint">Hover the chart to compare weekly accuracy</div>
+        )}
+      </div>
       <div className="ff-oracle-chart-wrap">
         <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} className="ff-oracle-chart">
+          <defs>
+            <linearGradient id="ff-oracle-hex-gradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="var(--hex-purple)" stopOpacity="0.28" />
+              <stop offset="100%" stopColor="var(--hex-purple)" stopOpacity="0" />
+            </linearGradient>
+            <linearGradient id="ff-oracle-win-gradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="var(--win)" stopOpacity="0.22" />
+              <stop offset="100%" stopColor="var(--win)" stopOpacity="0" />
+            </linearGradient>
+            <pattern id="ff-oracle-hex-hatch" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">
+              <line x1="0" y1="0" x2="0" y2="6" stroke="var(--hex-purple)" strokeWidth="1" opacity="0.18" />
+            </pattern>
+            <pattern id="ff-oracle-win-hatch" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(-45)">
+              <line x1="0" y1="0" x2="0" y2="6" stroke="var(--win)" strokeWidth="1" opacity="0.15" />
+            </pattern>
+          </defs>
+
           {/* Grid */}
-          {gridLines.map(v => (
-            <g key={v}>
-              <line x1={PAD_X} y1={toY(v)} x2={W - PAD_X} y2={toY(v)} stroke="var(--border)" strokeWidth="0.5" strokeDasharray="4,4" />
-              <text x={PAD_X - 6} y={toY(v) + 3} textAnchor="end" className="ff-oracle-chart-label">{v}%</text>
+          {gridLines.map(({ value, major }) => (
+            <g key={value}>
+              <line
+                x1={PAD_L} y1={toY(value)} x2={W - PAD_R} y2={toY(value)}
+                stroke="var(--border)"
+                strokeWidth={major ? 0.5 : 0.4}
+                strokeDasharray={major ? '4,4' : '2,4'}
+                opacity={major ? 1 : 0.55}
+              />
+              <text
+                x={PAD_L - 6} y={toY(value) + 3} textAnchor="end"
+                className="ff-oracle-chart-label"
+                style={{ fontSize: major ? '9px' : '7px' }}
+                opacity={major ? 1 : 0.6}
+              >{value}%</text>
             </g>
           ))}
 
           {/* Week labels */}
           {cumulative.map((w, i) => (
-            <text key={w.week} x={toX(i)} y={H - 4} textAnchor="middle" className="ff-oracle-chart-label">W{w.week}</text>
+            <text key={w.week} x={toX(i)} y={H - 8} textAnchor="middle" className="ff-oracle-chart-label">W{w.week}</text>
           ))}
 
-          {/* Area fills */}
+          {/* Area fills — gradient base + hatch overlay per series */}
           <polygon
             points={`${toX(0)},${toY(minY)} ${hexPoints} ${toX(cumulative.length - 1)},${toY(minY)}`}
-            fill="var(--hex-purple)" opacity="0.06"
+            fill="url(#ff-oracle-hex-gradient)"
+            className={drawn ? 'ff-oracle-area-reveal' : ''}
+          />
+          <polygon
+            points={`${toX(0)},${toY(minY)} ${hexPoints} ${toX(cumulative.length - 1)},${toY(minY)}`}
+            fill="url(#ff-oracle-hex-hatch)"
             className={drawn ? 'ff-oracle-area-reveal' : ''}
           />
           <polygon
             points={`${toX(0)},${toY(minY)} ${projPoints} ${toX(cumulative.length - 1)},${toY(minY)}`}
-            fill="var(--win)" opacity="0.04"
+            fill="url(#ff-oracle-win-gradient)"
+            className={drawn ? 'ff-oracle-area-reveal' : ''}
+          />
+          <polygon
+            points={`${toX(0)},${toY(minY)} ${projPoints} ${toX(cumulative.length - 1)},${toY(minY)}`}
+            fill="url(#ff-oracle-win-hatch)"
             className={drawn ? 'ff-oracle-area-reveal' : ''}
           />
 
@@ -100,6 +161,39 @@ function AccuracyRace({ cumulative }) {
               </text>
             </>
           )}
+
+          {/* Hover guide + highlight rings on active week */}
+          {drawn && hoveredIdx !== null && (() => {
+            const w = cumulative[hoveredIdx];
+            const hx = toX(hoveredIdx);
+            return (
+              <g className="ff-oracle-hover-group" key={hoveredIdx}>
+                <line
+                  x1={hx} y1={PAD_Y} x2={hx} y2={H - PAD_Y}
+                  stroke="var(--hex-purple)" strokeWidth="1" strokeDasharray="3,3" opacity="0.55"
+                />
+                <circle cx={hx} cy={toY(w.hexPct)} r="5.5" fill="none" stroke="var(--hex-purple)" strokeWidth="1.5" opacity="0.45" />
+                <circle cx={hx} cy={toY(w.projPct)} r="5" fill="none" stroke="var(--win)" strokeWidth="1.5" opacity="0.45" />
+              </g>
+            );
+          })()}
+
+          {/* Hit zones — one per week, capture hover */}
+          {drawn && cumulative.map((w, i) => {
+            const step = chartW / Math.max(1, cumulative.length - 1);
+            const x = toX(i) - step / 2;
+            return (
+              <rect
+                key={`hit-${w.week}`}
+                x={Math.max(0, x)} y={PAD_Y}
+                width={step} height={H - PAD_Y * 2}
+                fill="transparent"
+                style={{ cursor: 'crosshair' }}
+                onMouseEnter={() => setHoveredIdx(i)}
+                onMouseLeave={() => setHoveredIdx(null)}
+              />
+            );
+          })}
         </svg>
 
         {/* Legend */}

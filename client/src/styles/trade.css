@@ -119,10 +119,10 @@
     display: flex; align-items: center; justify-content: space-between; gap: 6px;
   }
   .ff-tm-column-header.send {
-    background: linear-gradient(135deg, rgba(245,158,11,0.10) 0%, rgba(245,158,11,0.04) 100%); color: #b45309;
+    background: var(--surface2); color: #b45309;
   }
   .ff-tm-column-header.receive {
-    background: linear-gradient(135deg, rgba(139,92,246,0.10) 0%, rgba(139,92,246,0.04) 100%); color: var(--hex-purple-vivid);
+    background: var(--surface2); color: var(--hex-purple-vivid);
   }
   [data-theme="dark"] .ff-tm-column-header.send {
     background: linear-gradient(135deg, var(--gray-900) 0%, #2a1a0a 100%); color: #f59e0b;
