@@ -29,7 +29,10 @@ app.use(helmet({
     directives: {
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
+      // styleSrc: only self-hosted stylesheets — no 'unsafe-inline'. If a
+      // third-party dep starts injecting inline <style> tags, switch to a
+      // per-request nonce (helmet supports it) rather than reopening the hole.
+      styleSrc: ["'self'"],
       imgSrc: ["'self'", 'data:', 'https://a.espncdn.com', 'https://static.www.nfl.com'],
       connectSrc: ["'self'"],
       fontSrc: ["'self'", 'https://fonts.gstatic.com'],
@@ -56,13 +59,16 @@ if (process.env.NODE_ENV === 'production' && ALLOWED_ORIGINS_SET.has('http://loc
 }
 app.use(cors({
   origin: (origin, cb) => {
-    // In production, reject requests with no Origin (server-to-server bypass)
+    // Silently reject (cb(null, false)) instead of throwing — throwing surfaces
+    // "CORS not allowed" into the generic 500 error path and adds noise to
+    // logs without improving security. A missing/disallowed origin should
+    // simply respond without CORS headers, which the browser blocks anyway.
     if (!origin) {
-      if (process.env.NODE_ENV === 'production') return cb(new Error('Origin required'));
+      if (process.env.NODE_ENV === 'production') return cb(null, false);
       return cb(null, true);
     }
-    if (ALLOWED_ORIGINS_SET.has(origin)) cb(null, true);
-    else cb(new Error('CORS not allowed'));
+    if (ALLOWED_ORIGINS_SET.has(origin)) return cb(null, true);
+    return cb(null, false);
   },
   credentials: true,
 }));
@@ -94,6 +100,11 @@ const refreshLimiter = rateLimit({
   max: 10,
   message: { error: 'Too many attempts. Please try again later.' },
 });
+// Live routes mounted BEFORE the global apiLimiter so SSE + snapshot polling
+// are not rate-limited (SSE stays connected for hours; snapshot fallback polls
+// once every 30s and is cheap, guarded by its own per-IP cache).
+app.use('/api/live', liveRoutes);
+
 app.use('/api/', apiLimiter);
 app.use('/api/auth/signup', authLimiter);
 app.use('/api/auth/signin', signinLimiter);
@@ -105,7 +116,6 @@ app.use('/api/auth', authRoutes);
 app.use('/api/leagues', leagueRoutes);
 app.use('/api/news', newsRoutes);
 app.use('/api/stats', statsRoutes);
-app.use('/api/live', liveRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

@@ -4,13 +4,17 @@ import { PLAYERS } from '../../data/players';
 import { ROSTER_PRESETS } from '../../data/scoring';
 import { getEspnId } from '../../data/espnIds';
 import { getHexScore, getHexData, formatHex } from '../../utils/hexScore';
-import { getStarterProjection } from '../../utils/winProb';
+import { getStarterIds } from '../../utils/winProb';
+import { computeLiveTeamScore } from '../../utils/liveScoring';
 import { useLiveTick } from '../../hooks/useLiveTick';
+import { useLiveDelta } from '../../hooks/useLiveDelta';
 import PosBadge from '../ui/PosBadge';
 import HexBrand from '../ui/HexBrand';
 import PlayerHeadshot from '../ui/PlayerHeadshot';
 import PlayerLink from '../ui/PlayerLink';
 import AnimatedNumber from '../ui/AnimatedNumber';
+import ScoreDelta from '../ui/ScoreDelta';
+import { HEX_CHART_RINGS, HEX_CHART_OUTER_STROKE } from '../../utils/hexChartRings';
 
 const PLAYER_MAP = {};
 PLAYERS.forEach(p => { PLAYER_MAP[p.id] = p; });
@@ -25,49 +29,69 @@ const MATCHUP_DIMS = [
   { key: 'health', label: 'Health', desc: 'Roster availability and injury risk' },
 ];
 
+// Normalizers for each matchup dimension. Centralized so tuning lives in one
+// place instead of being sprinkled through calcTeamDims as magic numbers.
+const MATCHUP_NORMALIZERS = {
+  starterCount: 9,                // top-N players treated as starters
+  firepowerMaxProj: 200,          // theoretical ceiling for starter projection sum
+  starPowerTopN: 3,               // players averaged into star power
+  starPowerHexMax: 90,            // per-player hex ceiling for star power
+  depthHexMax: 60,                // per-bench-player hex ceiling for depth
+  depthEmptyDefault: 0.2,         // depth score when no bench exists
+  ceilingMaxProj: 160,            // normalization denominator for ceiling sum
+  consistencyDefault: 0.5,        // fallback when a player has no hex data
+  xFactorDefault: 0.5,
+  durabilityDefault: 0.5,
+  healthDefault: 1.0,
+  durabilityWeight: 0.7,          // durability vs health blend inside health dim
+  healthWeight: 0.3,
+};
+
 function calcTeamDims(teamId, rosters) {
   const playerIds = rosters?.[teamId] || [];
   const players = playerIds.map(pid => ({ player: PLAYER_MAP[pid], pid })).filter(r => r.player);
   if (players.length === 0) return MATCHUP_DIMS.map(() => 0);
 
+  const N = MATCHUP_NORMALIZERS;
+
   // Sort by HexScore descending
   players.sort((a, b) => getHexScore(b.pid) - getHexScore(a.pid));
 
-  // Assign starters (top 9) and bench (rest)
-  const starters = players.slice(0, 9);
-  const bench = players.slice(9);
+  // Assign starters (top N) and bench (rest)
+  const starters = players.slice(0, N.starterCount);
+  const bench = players.slice(N.starterCount);
 
-  // Firepower: total starter projections, normalized against a theoretical max (~200 pts)
-  const firepower = Math.min(1, starters.reduce((s, r) => s + r.player.proj, 0) / 200);
+  // Firepower: total starter projections, normalized against a theoretical max
+  const firepower = Math.min(1, starters.reduce((s, r) => s + r.player.proj, 0) / N.firepowerMaxProj);
 
   // Star Power: avg HexScore of top 3, normalized to 0-1
-  const top3 = players.slice(0, 3);
-  const starPower = Math.min(1, top3.reduce((s, r) => s + getHexScore(r.pid), 0) / (3 * 90));
+  const top3 = players.slice(0, N.starPowerTopN);
+  const starPower = Math.min(1, top3.reduce((s, r) => s + getHexScore(r.pid), 0) / (N.starPowerTopN * N.starPowerHexMax));
 
   // Depth: avg HexScore of bench players, normalized
   const depth = bench.length > 0
-    ? Math.min(1, bench.reduce((s, r) => s + getHexScore(r.pid), 0) / (bench.length * 60))
-    : 0.2;
+    ? Math.min(1, bench.reduce((s, r) => s + getHexScore(r.pid), 0) / (bench.length * N.depthHexMax))
+    : N.depthEmptyDefault;
 
   // Consistency: avg consistency dimension across starters
   const consistency = starters.reduce((s, r) => {
     const hd = getHexData(r.pid);
-    return s + (hd?.dimensions?.consistency || 0.5);
+    return s + (hd?.dimensions?.consistency || N.consistencyDefault);
   }, 0) / starters.length;
 
   // Ceiling: sum of (proj × xFactor) for starters, normalized
   const ceiling = Math.min(1, starters.reduce((s, r) => {
     const hd = getHexData(r.pid);
-    const xf = hd?.dimensions?.xFactor || 0.5;
+    const xf = hd?.dimensions?.xFactor || N.xFactorDefault;
     return s + (r.player.proj * (0.5 + xf * 0.5));
-  }, 0) / 160);
+  }, 0) / N.ceilingMaxProj);
 
   // Health: avg durability+health across roster
   const health = players.reduce((s, r) => {
     const hd = getHexData(r.pid);
-    const dur = hd?.dimensions?.durability || 0.5;
-    const hp = hd?.dimensions?.health || 1.0;
-    return s + (dur * 0.7 + hp * 0.3);
+    const dur = hd?.dimensions?.durability || N.durabilityDefault;
+    const hp = hd?.dimensions?.health || N.healthDefault;
+    return s + (dur * N.durabilityWeight + hp * N.healthWeight);
   }, 0) / players.length;
 
   return [firepower, starPower, depth, consistency, ceiling, health];
@@ -208,18 +232,7 @@ function DualHexRadar({ dimsA, dimsB, teamA, teamB }) {
         </div>
         <svg width={svgSize} height={svgSize} viewBox={`0 0 ${svgSize} ${svgSize}`} style={{ display: 'block', maxWidth: '100%' }} role="img" aria-label={`HexAnalysis comparison: ${teamA.name} vs ${teamB.name}`}>
           {/* Grade bands — one per 10% ring */}
-          {[
-            { inner: 0,   outer: 0.1, color: '#991b1b' },
-            { inner: 0.1, outer: 0.2, color: '#dc2626' },
-            { inner: 0.2, outer: 0.3, color: '#ea580c' },
-            { inner: 0.3, outer: 0.4, color: '#d97706' },
-            { inner: 0.4, outer: 0.5, color: '#ca8a04' },
-            { inner: 0.5, outer: 0.6, color: '#65a30d' },
-            { inner: 0.6, outer: 0.7, color: '#16a34a' },
-            { inner: 0.7, outer: 0.8, color: '#15803d' },
-            { inner: 0.8, outer: 0.9, color: '#22c55e' },
-            { inner: 0.9, outer: 1.0, color: '#8B5CF6' },
-          ].map(band => {
+          {HEX_CHART_RINGS.map(band => {
             const outerPts = Array.from({ length: 6 }, (_, i) => getPoint(i, band.outer * maxR));
             const innerPts = Array.from({ length: 6 }, (_, i) => getPoint(i, band.inner * maxR)).reverse();
             const outerPath = outerPts.map((p, i) => (i === 0 ? 'M' : 'L') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ') + ' Z';
@@ -236,7 +249,7 @@ function DualHexRadar({ dimsA, dimsB, teamA, teamB }) {
             const val = Math.round(r * 100);
             const isOdd = (val / 10) % 2 === 1;
             return <path key={r} d={path} fill="none"
-              stroke={r === 1 ? '#8B5CF6' : isOdd ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.25)'}
+              stroke={r === 1 ? HEX_CHART_OUTER_STROKE : isOdd ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.25)'}
               strokeWidth={r === 1 ? 4 : 1} />;
           })}
 
@@ -318,15 +331,21 @@ export default function MatchupDetail({ matchup, rosters, onBack, onPlayerClick 
   const awayTeam = TEAMS.find(t => t.id === matchup.away.teamId);
   const isUserMatchup = matchup.home.teamId === USER_TEAM_ID || matchup.away.teamId === USER_TEAM_ID;
 
-  // Compute projections from rosters
+  // Live-aware projections: pre-game this equals pure projection; in-game it
+  // evolves as points lock in. Falls back to static matchup projection when
+  // rosters aren't loaded yet.
   const homeProj = useMemo(() => {
     if (!rosters?.[matchup.home.teamId]) return matchup.home.projected;
-    return getStarterProjection(rosters[matchup.home.teamId], PLAYER_MAP) || matchup.home.projected;
+    const starters = getStarterIds(rosters[matchup.home.teamId], PLAYER_MAP);
+    return computeLiveTeamScore(starters, PLAYER_MAP).projected || matchup.home.projected;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rosters, matchup, tick]);
 
   const awayProj = useMemo(() => {
     if (!rosters?.[matchup.away.teamId]) return matchup.away.projected;
-    return getStarterProjection(rosters[matchup.away.teamId], PLAYER_MAP) || matchup.away.projected;
+    const starters = getStarterIds(rosters[matchup.away.teamId], PLAYER_MAP);
+    return computeLiveTeamScore(starters, PLAYER_MAP).projected || matchup.away.projected;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rosters, matchup, tick]);
 
   const homeWinProb = homeProj + awayProj > 0
@@ -334,6 +353,9 @@ export default function MatchupDetail({ matchup, rosters, onBack, onPlayerClick 
     : 0.5;
   const homePct = (homeWinProb * 100).toFixed(2);
   const awayPct = (100 - homeWinProb * 100).toFixed(2);
+
+  const { delta: homeDelta, tier: homeTier } = useLiveDelta(homeProj);
+  const { delta: awayDelta, tier: awayTier } = useLiveDelta(awayProj);
 
   // Team dimensions for radar
   const homeDims = useMemo(() => calcTeamDims(matchup.home.teamId, rosters), [rosters, matchup, tick]);
@@ -361,8 +383,9 @@ export default function MatchupDetail({ matchup, rosters, onBack, onPlayerClick 
             <div style={{ textAlign: 'center', flex: 1 }}>
               <div style={{ fontSize: 20, fontWeight: 800 }}>{homeTeam.name}</div>
               <div style={{ fontSize: 14, color: 'var(--text-muted)' }}>{homeTeam.wins}-{homeTeam.losses} &middot; {homeTeam.streak}</div>
-              <div style={{ fontSize: 38, fontWeight: 900, marginTop: 8, color: homeProj >= awayProj ? 'var(--success-green)' : 'var(--text)' }} className="tabular-nums">
+              <div style={{ fontSize: 38, fontWeight: 900, marginTop: 8, color: homeProj >= awayProj ? 'var(--success-green)' : 'var(--text)', position: 'relative', display: 'inline-block' }} className="tabular-nums">
                 <AnimatedNumber value={homeProj} decimals={2} duration={600} />
+                <ScoreDelta value={homeDelta} tier={homeTier} position="absolute" />
               </div>
               <div style={{ fontSize: 14, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Projected</div>
             </div>
@@ -376,8 +399,9 @@ export default function MatchupDetail({ matchup, rosters, onBack, onPlayerClick 
             <div style={{ textAlign: 'center', flex: 1 }}>
               <div style={{ fontSize: 20, fontWeight: 800 }}>{awayTeam.name}</div>
               <div style={{ fontSize: 14, color: 'var(--text-muted)' }}>{awayTeam.wins}-{awayTeam.losses} &middot; {awayTeam.streak}</div>
-              <div style={{ fontSize: 38, fontWeight: 900, marginTop: 8, color: awayProj >= homeProj ? 'var(--success-green)' : 'var(--text)' }} className="tabular-nums">
+              <div style={{ fontSize: 38, fontWeight: 900, marginTop: 8, color: awayProj >= homeProj ? 'var(--success-green)' : 'var(--text)', position: 'relative', display: 'inline-block' }} className="tabular-nums">
                 <AnimatedNumber value={awayProj} decimals={2} duration={600} />
+                <ScoreDelta value={awayDelta} tier={awayTier} position="absolute" />
               </div>
               <div style={{ fontSize: 14, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Projected</div>
             </div>

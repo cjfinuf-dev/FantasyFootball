@@ -27,9 +27,30 @@ const ESPN_TEAM_MAP = {
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
+// SSRF guard — ESPN responses sometimes contain `$ref` URLs we follow.
+// Enforce an allowlist on hostname + scheme so a poisoned upstream response
+// can't redirect the server into the internal network or non-HTTPS targets.
+const ESPN_ALLOWED_HOSTS = new Set([
+  'site.api.espn.com',
+  'sports.core.api.espn.com',
+]);
+function assertEspnUrl(url) {
+  let parsed;
+  try { parsed = new URL(url); }
+  catch { throw new Error(`Invalid ESPN URL: ${url}`); }
+  if (parsed.protocol !== 'https:') {
+    throw new Error(`ESPN URL must use https: ${url}`);
+  }
+  if (!ESPN_ALLOWED_HOSTS.has(parsed.hostname)) {
+    throw new Error(`ESPN URL host not allowlisted: ${parsed.hostname}`);
+  }
+  return parsed.toString();
+}
+
 async function fetchJSON(url) {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`ESPN API ${res.status}: ${url}`);
+  const safeUrl = assertEspnUrl(url);
+  const res = await fetch(safeUrl);
+  if (!res.ok) throw new Error(`ESPN API ${res.status}: ${safeUrl}`);
   return res.json();
 }
 

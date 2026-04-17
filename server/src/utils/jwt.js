@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const { getDb, saveDb } = require('../db/connection');
 
 const SECRET = process.env.JWT_SECRET;
 if (!SECRET) {
@@ -18,23 +19,53 @@ if (REFRESH_SECRET.startsWith('CHANGE_ME')) {
 const ACCESS_EXPIRES_IN = '30m';
 const REFRESH_EXPIRES_IN = '24h';
 
-// In-memory token blacklist (JTI -> expiry timestamp)
-const _blacklist = new Map();
+// Refresh-token revocation list is persisted to SQLite so signouts survive a
+// restart. An in-memory Set mirrors the DB for fast verify-time lookups; it is
+// hydrated lazily on first use and kept in sync by blacklistToken.
+const _blacklistCache = new Set();
+let _blacklistHydrated = false;
 
-// Purge expired entries every 15 minutes
-setInterval(() => {
-  const now = Date.now();
-  for (const [jti, exp] of _blacklist) {
-    if (exp < now) _blacklist.delete(jti);
+async function hydrateBlacklist() {
+  if (_blacklistHydrated) return;
+  const db = await getDb();
+  db.run('DELETE FROM revoked_tokens WHERE expires_at < ?', [Date.now()]);
+  const res = db.exec('SELECT jti FROM revoked_tokens');
+  if (res.length > 0) {
+    for (const row of res[0].values) _blacklistCache.add(row[0]);
+  }
+  _blacklistHydrated = true;
+}
+
+// Purge expired entries every 15 minutes (both in-memory and persisted).
+setInterval(async () => {
+  try {
+    const db = await getDb();
+    const now = Date.now();
+    const res = db.exec('SELECT jti FROM revoked_tokens WHERE expires_at < ?', [now]);
+    if (res.length > 0) {
+      for (const row of res[0].values) _blacklistCache.delete(row[0]);
+    }
+    db.run('DELETE FROM revoked_tokens WHERE expires_at < ?', [now]);
+    saveDb();
+  } catch (err) {
+    console.error('[jwt] Blacklist purge failed:', err);
   }
 }, 15 * 60 * 1000).unref();
 
-function blacklistToken(jti, expiresAt) {
-  _blacklist.set(jti, expiresAt || Date.now() + 24 * 60 * 60 * 1000);
+async function blacklistToken(jti, expiresAt) {
+  const exp = expiresAt || Date.now() + 24 * 60 * 60 * 1000;
+  const db = await getDb();
+  db.run(
+    'INSERT OR REPLACE INTO revoked_tokens (jti, expires_at) VALUES (?, ?)',
+    [jti, exp]
+  );
+  saveDb();
+  _blacklistCache.add(jti);
 }
 
-function isBlacklisted(jti) {
-  return _blacklist.has(jti);
+async function isBlacklisted(jti) {
+  if (!_blacklistHydrated) await hydrateBlacklist();
+  return _blacklistCache.has(jti);
 }
 
 function signToken(payload) {
@@ -50,12 +81,12 @@ function verifyToken(token) {
   return jwt.verify(token, SECRET, { algorithms: ['HS256'] });
 }
 
-function verifyRefreshToken(token) {
+async function verifyRefreshToken(token) {
   const payload = jwt.verify(token, REFRESH_SECRET, { algorithms: ['HS256'] });
   if (payload.type !== 'refresh') {
     throw new Error('Invalid token type');
   }
-  if (payload.jti && isBlacklisted(payload.jti)) {
+  if (payload.jti && await isBlacklisted(payload.jti)) {
     throw new Error('Token has been revoked');
   }
   return payload;

@@ -384,9 +384,18 @@ function calcScarcity(player, posGroup, rankMap) {
 function calcConsistency(player, age = null, pos = null) {
   const history = _historicalData?.players?.[player.id];
   if (!history) {
-    // No history: use current-season GP as sole availability signal
+    // No history: availability is current-season GP; production-consistency
+    // uses the neutral default (0.50) so a healthy 17-GP rookie can reach
+    // the full ceiling (1.0 * 0.50 + 0.50 * 0.50 = 0.75) instead of being
+    // double-penalized for having no past seasons.
+    //
+    // Cup-of-coffee samples (gp < 4) still get an extra drag: availability
+    // is tiny AND production-consistency cannot be meaningfully measured,
+    // so fall back to the pre-fix floor.
     const gp = player.gp || 0;
-    return Math.min(1, gp / 17) * 0.50 + 0.50 * 0.50; // neutral production consistency
+    const availability = Math.min(1, gp / 17);
+    if (gp < 4) return availability * 0.50 + 0.25 * 0.50;
+    return availability * 0.50 + 0.50 * 0.50;
   }
 
   const years = Object.keys(history).map(Number).sort((a, b) => b - a);
@@ -614,9 +623,15 @@ function calcSlotValue(pos, scoringPreset) {
 
   const allPositions = ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'];
 
+  // Roster presets key defense as `DST` (not `DEF`). Map position → roster key
+  // so the dedicated-slot lookup doesn't silently return 0 for defenses.
+  const POS_TO_ROSTER_KEY = { DEF: 'DST' };
+  const rosterKeyFor = (p) => POS_TO_ROSTER_KEY[p] || p;
+
   // Helper: count eligible slots for a given position
   function countEligible(p) {
-    const dedicated = overrides.dedicatedOverride?.[p] ?? (roster[p] || 0);
+    const rk = rosterKeyFor(p);
+    const dedicated = overrides.dedicatedOverride?.[p] ?? (roster[rk] || 0);
     let flex = 0;
     for (const [slotType, eligible] of Object.entries(FLEX_SLOT_ELIGIBILITY)) {
       const extra = overrides.extraFlexSlots?.[p] || [];
@@ -635,7 +650,7 @@ function calcSlotValue(pos, scoringPreset) {
 
   // 2. Demand pressure: effective demand (including flex competition) vs supply
   const curve = getScarcityCurve(pos);
-  const dedicated = overrides.dedicatedOverride?.[pos] ?? (roster[pos] || 0);
+  const dedicated = overrides.dedicatedOverride?.[pos] ?? (roster[rosterKeyFor(pos)] || 0);
   const isFlexEligible = Object.values(FLEX_SLOT_ELIGIBILITY).some(e => e.includes(pos));
   const flexSlots = totalEligible - dedicated;
   const flexCompetition = isFlexEligible ? 0.33 : 0; // 3-way share of flex
@@ -992,9 +1007,10 @@ export function computeAllHexScores(players = PLAYERS, rosterContext = null, sco
       hexScore = peakFloor;
     }
 
-    // Pedigree protection is applied as a fluke dampener multiplier in
-    // statProduction.js — flows through production dimension, not post-sigmoid.
-    const pedigreeBonus = 0;
+    // Pedigree protection: fluke-dampener value is applied inside
+    // statProduction.js via the production dimension. Surface the computed
+    // bonus here so it's visible in HexData dumps and debug tooltips.
+    const pedigreeBonus = calcPedigreeBonus(p.id, p.pos, archetype.key);
 
     // Sanity check: raw HexScore should never exceed 110. A value this high indicates
     // a weight or normalization bug — catch it early in dev before it reaches the UI.

@@ -133,7 +133,9 @@ function perGame(stat, gp) {
  */
 function adjustShareForGP(shareValue, gp, maxGP = 17) {
   if (!shareValue || !gp || gp >= maxGP * 0.75) return shareValue;
-  const scaleFactor = Math.min(2.0, maxGP / gp);
+  // Cap the per-game-pace scale at 1.3× so small-sample breakouts don't get
+  // extrapolated into full-season "elite" territory.
+  const scaleFactor = Math.min(1.3, maxGP / gp);
   return shareValue * scaleFactor * 0.85;
 }
 

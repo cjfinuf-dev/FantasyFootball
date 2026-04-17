@@ -1,13 +1,13 @@
 export function SkeletonLine({ width = '100%', height = 18, style }) {
-  return <div className="skeleton" style={{ width, height, borderRadius: 4, ...style }} />;
+  return <div className="skeleton" style={{ width, height, borderRadius: 'var(--radius-sm)', ...style }} />;
 }
 
 export function SkeletonCard({ lines = 3, style }) {
   return (
-    <div className="ff-card" style={{ padding: 20, ...style }}>
-      <SkeletonLine width="40%" height={24} style={{ marginBottom: 12 }} />
+    <div className="ff-card" style={{ padding: 'var(--space-4)', ...style }}>
+      <SkeletonLine width="40%" height={24} style={{ marginBottom: 'var(--space-2-5)' }} />
       {Array.from({ length: lines }, (_, i) => (
-        <SkeletonLine key={i} width={`${85 - i * 10}%`} style={{ marginBottom: 8 }} />
+        <SkeletonLine key={i} width={`${85 - i * 10}%`} style={{ marginBottom: 'var(--space-1-5)' }} />
       ))}
     </div>
   );
@@ -16,12 +16,12 @@ export function SkeletonCard({ lines = 3, style }) {
 export function SkeletonTable({ rows = 5, cols = 4, style }) {
   return (
     <div className="ff-card" style={style}>
-      <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
+      <div style={{ padding: 'var(--space-2-5) var(--space-3)', borderBottom: '1px solid var(--border)' }}>
         <SkeletonLine width="30%" height={16} />
       </div>
-      <div style={{ padding: '8px 16px' }}>
+      <div style={{ padding: 'var(--space-1-5) var(--space-3)' }}>
         {Array.from({ length: rows }, (_, r) => (
-          <div key={r} style={{ display: 'flex', gap: 12, padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
+          <div key={r} style={{ display: 'flex', gap: 'var(--space-2-5)', padding: 'var(--space-1-5) 0', borderBottom: '1px solid var(--border)' }}>
             {Array.from({ length: cols }, (_, c) => (
               <SkeletonLine key={c} width={c === 0 ? '40%' : '15%'} height={22} />
             ))}
@@ -36,12 +36,12 @@ export function SkeletonPlayer({ style }) {
   return (
     <div className="ff-card" style={{ overflow: 'hidden', ...style }}>
       <SkeletonLine width="100%" height={6} style={{ borderRadius: 0 }} />
-      <div style={{ display: 'flex', gap: 16, padding: 20 }}>
+      <div style={{ display: 'flex', gap: 'var(--space-3)', padding: 'var(--space-4)', alignItems: 'center' }}>
         <div className="skeleton" style={{ width: 80, height: 80, borderRadius: '50%', flexShrink: 0 }} />
         <div style={{ flex: 1 }}>
-          <SkeletonLine width="60%" height={22} style={{ marginBottom: 10 }} />
-          <SkeletonLine width="40%" height={20} style={{ marginBottom: 8 }} />
-          <div style={{ display: 'flex', gap: 8 }}>
+          <SkeletonLine width="60%" height={22} style={{ marginBottom: 'var(--space-2)' }} />
+          <SkeletonLine width="40%" height={20} style={{ marginBottom: 'var(--space-1-5)' }} />
+          <div style={{ display: 'flex', gap: 'var(--space-1-5)' }}>
             <SkeletonLine width={60} height={22} />
             <SkeletonLine width={60} height={22} />
             <SkeletonLine width={80} height={22} />

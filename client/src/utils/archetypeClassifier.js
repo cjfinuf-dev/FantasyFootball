@@ -47,7 +47,9 @@ function classifyQB(p) {
   // Normalize volume stats to a 17-game pace so partial-season players
   // are classified on rate, not raw totals. Floor at 8 to avoid amplifying
   // tiny samples.
-  const gpScale = 17 / Math.max(gp, 8);
+  // Cap at 1.0 so partial-season rates aren't projected past full-season totals,
+  // which would misclassify flukes as elite workloads.
+  const gpScale = Math.min(1.0, 17 / Math.max(gp, 8));
 
   const rushYds = p.rushYds || 0;
   const carries = p.carries || 0;
@@ -74,7 +76,9 @@ function classifyQB(p) {
 function classifyRB(p) {
   if (!p.gp || p.gp <= 0) return 'backup';
   const gp = p.gp || 0;
-  const gpScale = 17 / Math.max(gp, 8);
+  // Cap at 1.0 so partial-season rates aren't projected past full-season totals,
+  // which would misclassify flukes as elite workloads.
+  const gpScale = Math.min(1.0, 17 / Math.max(gp, 8));
 
   const carries = p.carries || 0;
   const tgtShare = p.tgtShare || 0; // already a rate — no scaling
@@ -99,7 +103,9 @@ function classifyRB(p) {
 function classifyWR(p) {
   if (!p.gp || p.gp <= 0) return 'wr2-wr3';
   const gp = p.gp || 0;
-  const gpScale = 17 / Math.max(gp, 8);
+  // Cap at 1.0 so partial-season rates aren't projected past full-season totals,
+  // which would misclassify flukes as elite workloads.
+  const gpScale = Math.min(1.0, 17 / Math.max(gp, 8));
 
   const tgtShare = p.tgtShare || 0; // rate — no scaling
   const recYds = p.recYds || 0;
@@ -128,7 +134,9 @@ function classifyWR(p) {
 function classifyTE(p) {
   if (!p.gp || p.gp <= 0) return 'blocking-te';
   const gp = p.gp || 0;
-  const gpScale = 17 / Math.max(gp, 8);
+  // Cap at 1.0 so partial-season rates aren't projected past full-season totals,
+  // which would misclassify flukes as elite workloads.
+  const gpScale = Math.min(1.0, 17 / Math.max(gp, 8));
 
   const tgtShare = p.tgtShare || 0; // rate — no scaling
   const rec = p.rec || 0;

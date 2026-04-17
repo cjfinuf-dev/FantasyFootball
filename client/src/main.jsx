@@ -10,6 +10,7 @@ import './index.css';
 import './styles/trade.css';
 import './styles/chat.css';
 import './styles/compare.css';
+import './styles/liveDelta.css';
 
 class ErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { error: null }; }

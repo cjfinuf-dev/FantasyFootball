@@ -2,13 +2,15 @@ import { useState } from 'react';
 import { TEAMS, USER_TEAM_ID } from '../../data/teams';
 import { PLAYERS } from '../../data/players';
 import { timeUntil } from '../../utils/helpers';
+import { estimateAcceptance } from '../../utils/tradeMatchmaker';
 import TradeAnalyzer from './TradeAnalyzer';
 import TradePlayerRow from './TradePlayerRow';
+import AcceptanceMeter from './AcceptanceMeter';
 
 const PLAYER_MAP = {};
 PLAYERS.forEach(p => { PLAYER_MAP[p.id] = p; });
 
-export default function TradeInbox({ trades, rosters, onAccept, onReject, onWithdraw }) {
+export default function TradeInbox({ trades, rosters, onAccept, onReject, onWithdraw, history = [], scoringPreset = 'standard' }) {
   const [confirmAction, setConfirmAction] = useState(null);
 
   const incoming = trades.filter(t => t.toTeamId === USER_TEAM_ID && t.status === 'pending');
@@ -60,6 +62,32 @@ export default function TradeInbox({ trades, rosters, onAccept, onReject, onWith
         </div>
 
         <TradeAnalyzer sendIds={sendIds} receiveIds={receiveIds} />
+
+        {/* Acceptance readout: for outgoing trades, show the partner's
+            likelihood; for incoming, flip perspective — show what the OTHER
+            side thinks of it (i.e. would YOU accept from their angle). */}
+        {(() => {
+          const partnerId = isIncoming ? trade.fromTeamId : trade.toTeamId;
+          const partnerRoster = rosters?.[partnerId] || [];
+          const result = estimateAcceptance({
+            offeringPlayerIds: isIncoming ? trade.offeringPlayerIds : trade.offeringPlayerIds,
+            requestingPlayerIds: isIncoming ? trade.requestingPlayerIds : trade.requestingPlayerIds,
+            toTeamId: isIncoming ? USER_TEAM_ID : trade.toTeamId,
+            partnerRosterIds: isIncoming ? (rosters?.[USER_TEAM_ID] || []) : partnerRoster,
+            history,
+            scoringPreset,
+          });
+          return (
+            <div style={{ marginTop: 14 }}>
+              <AcceptanceMeter
+                result={result}
+                size="sm"
+                headline={isIncoming ? 'SHOULD YOU ACCEPT?' : 'WILL THEY ACCEPT?'}
+                showReasons={true}
+              />
+            </div>
+          );
+        })()}
 
         {trade.message && (
           <div className="ff-tm-inbox-message">{trade.message}</div>

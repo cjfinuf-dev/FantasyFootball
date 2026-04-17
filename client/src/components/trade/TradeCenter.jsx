@@ -5,9 +5,11 @@ import { deepClone } from '../../utils/helpers';
 import TradeProposal from './TradeProposal';
 import TradeInbox from './TradeInbox';
 import TradeHistory from './TradeHistory';
+import TradeFinder from './TradeFinder';
 
 export default function TradeCenter({ rosters, onRostersChange, scoringPreset = 'standard', onOpenCompare, leagueId = 'default' }) {
-  const [subTab, setSubTab] = useState('propose');
+  const [subTab, setSubTab] = useState('find');
+  const [prefill, setPrefill] = useState(null);
 
   const [trades, setTrades] = useState(() => {
     try {
@@ -97,35 +99,67 @@ export default function TradeCenter({ rosters, onRostersChange, scoringPreset = 
     setHistory(prev => [{ ...trade, status: 'withdrawn', resolvedAt: Date.now() }, ...prev]);
   };
 
-  return (
-    <div className="ff-tm-shell">
-      <div className="ff-tm-header">
-        <div>
-          <h2>Trade Center</h2>
-          <div className="ff-tm-header-sub">NEGOTIATE &middot; ANALYZE &middot; EXECUTE</div>
-        </div>
+  const now = new Date();
+  const timeLabel = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
 
-        <div className="ff-tm-subtabs">
-          <button className={`ff-tm-subtab${subTab === 'propose' ? ' active' : ''}`} onClick={() => setSubTab('propose')}>
+  return (
+    <div className="ff-trade-desk ff-tm-shell" data-td-subtab={subTab}>
+      <div className="td-scanline" key={subTab} aria-hidden="true" />
+      <aside className="td-rail" aria-hidden="true">
+        <div className="td-rail__slot td-rail__station">DESK.03</div>
+        <div className="td-rail__slot"><span>TIME</span><strong className="tabular-nums">{timeLabel}</strong></div>
+        <div className="td-rail__slot"><span>PENDING</span><strong className="tabular-nums">{pendingCount}</strong></div>
+        <div className="td-rail__slot"><span>ARCHIVED</span><strong className="tabular-nums">{history.length}</strong></div>
+      </aside>
+
+      <header className="td-head">
+        <div className="td-head__tag">NEGOTIATE · SCOUT · EXECUTE</div>
+        <nav className="td-switcher" role="tablist" aria-label="Trade desk sections">
+          <button role="tab" aria-selected={subTab === 'find'} className={`td-switcher__tab${subTab === 'find' ? ' is-active' : ''}`} onClick={() => setSubTab('find')}>
+            Find
+          </button>
+          <button role="tab" aria-selected={subTab === 'propose'} className={`td-switcher__tab${subTab === 'propose' ? ' is-active' : ''}`} onClick={() => setSubTab('propose')}>
             Propose
           </button>
-          <button className={`ff-tm-subtab${subTab === 'inbox' ? ' active' : ''}`} onClick={() => setSubTab('inbox')}>
-            Inbox{pendingCount > 0 && <span className="ff-tm-badge">{pendingCount}</span>}
+          <button role="tab" aria-selected={subTab === 'inbox'} className={`td-switcher__tab${subTab === 'inbox' ? ' is-active' : ''}`} onClick={() => setSubTab('inbox')}>
+            Inbox
+            {pendingCount > 0 && <span className="td-switcher__badge">{pendingCount}</span>}
           </button>
-          <button className={`ff-tm-subtab${subTab === 'history' ? ' active' : ''}`} onClick={() => setSubTab('history')}>
+          <button role="tab" aria-selected={subTab === 'history'} className={`td-switcher__tab${subTab === 'history' ? ' is-active' : ''}`} onClick={() => setSubTab('history')}>
             History
           </button>
-        </div>
-      </div>
+        </nav>
+      </header>
 
       <div className="ff-tm-body">
+        {subTab === 'find' && (
+          <TradeFinder
+            rosters={rosters}
+            history={history}
+            scoringPreset={scoringPreset}
+            onLoad={(payload) => {
+              setPrefill(payload);
+              setSubTab('propose');
+            }}
+          />
+        )}
         {subTab === 'propose' && (
-          <TradeProposal rosters={rosters} onPropose={handlePropose} scoringPreset={scoringPreset} onOpenCompare={onOpenCompare} />
+          <TradeProposal
+            rosters={rosters}
+            onPropose={handlePropose}
+            scoringPreset={scoringPreset}
+            onOpenCompare={onOpenCompare}
+            history={history}
+            prefill={prefill}
+            onConsumePrefill={() => setPrefill(null)}
+          />
         )}
         {subTab === 'inbox' && (
           <TradeInbox
             trades={trades}
             rosters={rosters}
+            history={history}
+            scoringPreset={scoringPreset}
             onAccept={handleAccept}
             onReject={handleReject}
             onWithdraw={handleWithdraw}

@@ -1,14 +1,17 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { TEAMS, USER_TEAM_ID } from '../../data/teams';
 import { PLAYERS } from '../../data/players';
 import { getHexScore, formatHex } from '../../utils/hexScore';
+import { estimateAcceptance } from '../../utils/tradeMatchmaker';
 import TradePlayerRow, { hexChipClass } from './TradePlayerRow';
 import TradeAnalyzer from './TradeAnalyzer';
+import PartnerProfile from './PartnerProfile';
+import AcceptanceMeter from './AcceptanceMeter';
 
 const PLAYER_MAP = {};
 PLAYERS.forEach(p => { PLAYER_MAP[p.id] = p; });
 
-export default function TradeProposal({ rosters, onPropose, scoringPreset, onOpenCompare }) {
+export default function TradeProposal({ rosters, onPropose, scoringPreset, onOpenCompare, history = [], prefill = null, onConsumePrefill }) {
   const [selectedTeamId, setSelectedTeamId] = useState(null);
   const [sendIds, setSendIds] = useState([]);
   const [receiveIds, setReceiveIds] = useState([]);
@@ -16,9 +19,32 @@ export default function TradeProposal({ rosters, onPropose, scoringPreset, onOpe
   const [expiry, setExpiry] = useState(48);
   const [posFilter, setPosFilter] = useState('ALL');
 
+  // Consume prefill from TradeFinder → set partner + sides, then clear.
+  useEffect(() => {
+    if (!prefill) return;
+    setSelectedTeamId(prefill.partnerId || null);
+    setSendIds(prefill.sendIds || []);
+    setReceiveIds(prefill.receiveIds || []);
+    setPosFilter('ALL');
+    onConsumePrefill?.();
+  }, [prefill]);
+
   const userRoster = rosters?.[USER_TEAM_ID] || [];
   const partnerRoster = selectedTeamId ? (rosters?.[selectedTeamId] || []) : [];
   const partnerTeam = TEAMS.find(t => t.id === selectedTeamId);
+
+  // Live acceptance estimate for the current sides — feeds the AcceptanceMeter.
+  const acceptance = useMemo(() => {
+    if (!selectedTeamId || sendIds.length === 0 || receiveIds.length === 0) return null;
+    return estimateAcceptance({
+      offeringPlayerIds: sendIds,
+      requestingPlayerIds: receiveIds,
+      toTeamId: selectedTeamId,
+      partnerRosterIds: partnerRoster,
+      history,
+      scoringPreset,
+    });
+  }, [selectedTeamId, sendIds, receiveIds, partnerRoster, history, scoringPreset]);
 
   const toggleSend = (id) => {
     setSendIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
@@ -99,6 +125,21 @@ export default function TradeProposal({ rosters, onPropose, scoringPreset, onOpe
           ))}
         </div>
       </div>
+
+      {/* Partner dossier — needs, surplus, trade-openness */}
+      <PartnerProfile
+        partner={partnerTeam}
+        partnerRosterIds={partnerRoster}
+        history={history}
+        scoringPreset={scoringPreset}
+      />
+
+      {/* Acceptance meter — only meaningful once both sides have players */}
+      {sendIds.length > 0 && receiveIds.length > 0 && acceptance && (
+        <div style={{ marginBottom: 18 }}>
+          <AcceptanceMeter result={acceptance} headline="WILL THEY ACCEPT?" size="md" />
+        </div>
+      )}
 
       {/* Trade staging zone */}
       {(sendIds.length > 0 || receiveIds.length > 0) && (

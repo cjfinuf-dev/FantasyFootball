@@ -24,15 +24,18 @@ const POS_BG = {
 const PLAYER_MAP = {};
 PLAYERS.forEach(p => { PLAYER_MAP[p.id] = p; });
 
-function getPickInfo(pickNumber, draftOrder, teamCount = 12) {
+function getPickInfo(pickNumber, draftOrder, teamCount = 12, draftStyle = 'snake') {
   const round = Math.floor(pickNumber / teamCount);
   const pickInRound = pickNumber % teamCount;
-  const orderIndex = round % 2 === 0 ? pickInRound : (teamCount - 1 - pickInRound);
+  // Snake drafts reverse order every other round. Linear/auction stay in
+  // the same order each round.
+  const reverse = draftStyle === 'snake' && round % 2 === 1;
+  const orderIndex = reverse ? (teamCount - 1 - pickInRound) : pickInRound;
   return { teamId: draftOrder[orderIndex], round, pickInRound };
 }
 
-function getTeamForPick(pickNumber, draftOrder, teamCount = 12) {
-  return getPickInfo(pickNumber, draftOrder, teamCount).teamId;
+function getTeamForPick(pickNumber, draftOrder, teamCount = 12, draftStyle = 'snake') {
+  return getPickInfo(pickNumber, draftOrder, teamCount, draftStyle).teamId;
 }
 
 function shuffleArray(arr) {
@@ -317,8 +320,8 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
   const pickedIds = useMemo(() => new Set(state.picks.map(p => p.playerId)), [state.picks]);
 
   const currentTeamId = useMemo(
-    () => state.phase === 'active' ? getTeamForPick(state.currentPick, state.draftOrder, TOTAL_TEAMS) : null,
-    [state.currentPick, state.draftOrder, state.phase]
+    () => state.phase === 'active' ? getTeamForPick(state.currentPick, state.draftOrder, TOTAL_TEAMS, draftStyle) : null,
+    [state.currentPick, state.draftOrder, state.phase, draftStyle]
   );
 
   const isUserTurn = currentTeamId === USER_TEAM_ID && !state.autoDraft;
@@ -375,19 +378,19 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
           round,
           pick: pickForThisCell ? { ...pickForThisCell, player } : null,
           isCurrent: state.phase === 'active' && state.currentPick < TOTAL_PICKS &&
-            getTeamForPick(state.currentPick, state.draftOrder, TOTAL_TEAMS) === state.draftOrder[col] &&
+            getTeamForPick(state.currentPick, state.draftOrder, TOTAL_TEAMS, draftStyle) === state.draftOrder[col] &&
             Math.floor(state.currentPick / TOTAL_TEAMS) === round,
         });
       }
       grid.push(row);
     }
     return grid;
-  }, [state.picks, state.draftOrder, state.currentPick, state.phase, rounds]);
+  }, [state.picks, state.draftOrder, state.currentPick, state.phase, rounds, draftStyle]);
 
   // Execute a pick
   const executePick = useCallback((prev, playerId = null) => {
     if (prev.currentPick >= TOTAL_PICKS) return prev;
-    const { teamId, round, pickInRound } = getPickInfo(prev.currentPick, prev.draftOrder, TOTAL_TEAMS);
+    const { teamId, round, pickInRound } = getPickInfo(prev.currentPick, prev.draftOrder, TOTAL_TEAMS, draftStyle);
     const isUser = teamId === USER_TEAM_ID;
     const pickedSet = new Set(prev.picks.map(p => p.playerId));
 
@@ -407,7 +410,7 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
     const newPick = { pickNumber: prev.currentPick, round, pickInRound, teamId, playerId, timestamp: Date.now() };
     const nextPick = prev.currentPick + 1;
     const isComplete = nextPick >= TOTAL_PICKS;
-    const nextTeam = isComplete ? null : getTeamForPick(nextPick, prev.draftOrder, TOTAL_TEAMS);
+    const nextTeam = isComplete ? null : getTeamForPick(nextPick, prev.draftOrder, TOTAL_TEAMS, draftStyle);
     const nextIsUser = nextTeam === USER_TEAM_ID;
 
     return {
@@ -423,13 +426,13 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
         ...prev.announcements.slice(0, 4),
       ],
     };
-  }, [scoringPreset, botArchetypes, rounds, rosterConfig]);
+  }, [scoringPreset, botArchetypes, rounds, rosterConfig, draftStyle]);
 
   // Timer effect
   useEffect(() => {
     if (state.phase !== 'active' || !state.timerRunning) return;
 
-    const currentTeam = getTeamForPick(state.currentPick, state.draftOrder, TOTAL_TEAMS);
+    const currentTeam = getTeamForPick(state.currentPick, state.draftOrder, TOTAL_TEAMS, draftStyle);
     const isUser = currentTeam === USER_TEAM_ID;
     const isManualUser = isUser && !state.autoDraft;
 
@@ -438,7 +441,7 @@ export default function DraftBoard({ onDraftComplete, onDraftReset, leagueName =
       setState(prev => {
         let s = prev;
         while (s.phase === 'active' && s.currentPick < TOTAL_PICKS) {
-          const teamId = getTeamForPick(s.currentPick, s.draftOrder, TOTAL_TEAMS);
+          const teamId = getTeamForPick(s.currentPick, s.draftOrder, TOTAL_TEAMS, draftStyle);
           if (teamId === USER_TEAM_ID && !s.autoDraft) break;
           s = executePick(s);
         }

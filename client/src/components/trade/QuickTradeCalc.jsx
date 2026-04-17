@@ -231,8 +231,11 @@ export default function QuickTradeCalc({ onSignIn, onSignUp }) {
           const total = tier.sendTotal + tier.receiveTotal || 1;
           const aPct = Math.round((tier.sendTotal / total) * 100);
           const bPct = 100 - aPct;
-          const aWins = tier.sendTotal > tier.receiveTotal;
-          const bWins = tier.receiveTotal > tier.sendTotal;
+          // The side with the LESS-valuable package is the winner — they got
+          // more value than they gave up. `sendTotal` = Side A, `receiveTotal`
+          // = Side B (see computeTradeTier signature).
+          const aWins = tier.sendTotal < tier.receiveTotal;
+          const bWins = tier.receiveTotal < tier.sendTotal;
           const even = tier.sendTotal === tier.receiveTotal;
 
           // Side A = hex purple, Side B = surface — brand colors, always distinct.

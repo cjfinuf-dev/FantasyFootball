@@ -5,12 +5,16 @@ import { PLAYERS } from '../../data/players';
 import { WAIVERS } from '../../data/waivers';
 import { TRADES_SEED } from '../../data/rosters';
 import { getByeWeek } from '../../data/nflSchedule';
-import { useLiveTick } from '../../hooks/useLiveTick';
+import { useLiveTick, useAnyGameActive } from '../../hooks/useLiveTick';
+import { useLiveDelta } from '../../hooks/useLiveDelta';
 import { getHexScore, formatHex } from '../../utils/hexScore';
+import { getStarterIds } from '../../utils/winProb';
+import { computeLiveTeamScore } from '../../utils/liveScoring';
 import { runSimulations, getStatus, getMagicNumber, GAMES_PLAYED } from '../../utils/playoffCalc';
 import { getAllAlerts } from '../../utils/rosterAlerts';
 import PosBadge from '../ui/PosBadge';
 import AnimatedNumber from '../ui/AnimatedNumber';
+import ScoreDelta from '../ui/ScoreDelta';
 
 const PLAYER_MAP = {};
 PLAYERS.forEach(p => { PLAYER_MAP[p.id] = p; });
@@ -19,10 +23,6 @@ const CURRENT_WEEK = GAMES_PLAYED + 1;
 
 // Position grades (from PowerRankingsCard pattern)
 const STARTER_COUNTS = { QB: 1, RB: 2, WR: 2, TE: 1, K: 1, DEF: 1 };
-const GRADE_COLORS = {
-  A: 'var(--success-green)', B: 'var(--success-green)', C: 'var(--warning-amber)',
-  D: 'var(--red)', F: 'var(--red)',
-};
 
 function getPositionGrades(teamId, rosters, scoringPreset) {
   if (!rosters || !rosters[teamId]) return {};
@@ -47,6 +47,7 @@ function getPositionGrades(teamId, rosters, scoringPreset) {
 
 export default function CommandCenter({ rosters, scoringPreset, leagueName, onPlayerClick, onMatchupClick, onTabSwitch }) {
   const tick = useLiveTick();
+  const gamesActive = useAnyGameActive();
 
   // ─── Matchup Snapshot ───
   const matchup = useMemo(() => {
@@ -60,9 +61,18 @@ export default function CommandCenter({ rosters, scoringPreset, leagueName, onPl
     const oppSide = isHome ? matchup.away : matchup.home;
     const oppTeam = TEAMS.find(t => t.id === oppSide.teamId);
 
-    // Pre-game: win prob is a simple share of the projections shown on screen.
-    const totalProj = userSide.projected + oppSide.projected;
-    const userWinProb = totalProj > 0 ? userSide.projected / totalProj : 0.5;
+    // Live-aware projections: sum actual + remaining (projected) across starters.
+    // Pre-game this equals pure projection; in-game it evolves as points lock in.
+    const userStarters = getStarterIds(rosters[userSide.teamId] || [], PLAYER_MAP);
+    const oppStarters = getStarterIds(rosters[oppSide.teamId] || [], PLAYER_MAP);
+    const userLive = computeLiveTeamScore(userStarters, PLAYER_MAP);
+    const oppLive = computeLiveTeamScore(oppStarters, PLAYER_MAP);
+
+    const userProj = userLive.projected || userSide.projected;
+    const oppProj = oppLive.projected || oppSide.projected;
+
+    const totalProj = userProj + oppProj;
+    const userWinProb = totalProj > 0 ? userProj / totalProj : 0.5;
 
     let label, labelClass;
     if (userWinProb >= 0.6) { label = 'Favored'; labelClass = 'cc-wp-favored'; }
@@ -70,15 +80,19 @@ export default function CommandCenter({ rosters, scoringPreset, leagueName, onPl
     else { label = 'Coin Flip'; labelClass = 'cc-wp-coinflip'; }
 
     return {
-      userProj: userSide.projected,
-      oppProj: oppSide.projected,
+      userProj,
+      oppProj,
+      userActual: userLive.actual,
+      oppActual: oppLive.actual,
       oppAbbr: oppTeam?.abbr || '???',
       oppRecord: oppTeam ? `${oppTeam.wins}-${oppTeam.losses}` : '',
       winProb: userWinProb,
       label,
       labelClass,
       matchupId: matchup.id,
+      isLive: userLive.playing > 0 || oppLive.playing > 0 || userLive.final > 0 || oppLive.final > 0,
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [matchup, rosters, tick]);
 
   // ─── Action Items ───
@@ -135,6 +149,9 @@ export default function CommandCenter({ rosters, scoringPreset, leagueName, onPl
     }));
   }, [scoringPreset]);
 
+  const { delta: userDelta, tier: userTier } = useLiveDelta(matchupData?.userProj ?? null);
+  const { delta: oppDelta, tier: oppTier } = useLiveDelta(matchupData?.oppProj ?? null);
+
   const [collapsed, setCollapsed] = useState({ playoff: true, standing: true, trending: true });
   const toggleSection = (key) => setCollapsed(prev => ({ ...prev, [key]: !prev[key] }));
 
@@ -175,7 +192,10 @@ export default function CommandCenter({ rosters, scoringPreset, leagueName, onPl
           <button type="button" className="cc-matchup-btn" onClick={() => onMatchupClick?.(matchupData.matchupId)}>
           <div className="cc-matchup-row">
             <div className="cc-matchup-you">
-              <span className="cc-matchup-proj tabular-nums"><AnimatedNumber value={matchupData.userProj} decimals={1} /></span>
+              <span className="cc-matchup-proj tabular-nums">
+                <AnimatedNumber value={matchupData.userProj} decimals={1} />
+                <ScoreDelta value={userDelta} tier={userTier} position="inline" />
+              </span>
               <span className="cc-matchup-side">You</span>
             </div>
             <div className="cc-matchup-vs">
@@ -187,7 +207,10 @@ export default function CommandCenter({ rosters, scoringPreset, leagueName, onPl
               <span className="cc-wp-pct tabular-nums"><AnimatedNumber value={matchupData.winProb * 100} decimals={0} suffix="%" /></span>
             </div>
             <div className="cc-matchup-opp">
-              <span className="cc-matchup-proj tabular-nums"><AnimatedNumber value={matchupData.oppProj} decimals={1} /></span>
+              <span className="cc-matchup-proj tabular-nums">
+                <AnimatedNumber value={matchupData.oppProj} decimals={1} />
+                <ScoreDelta value={oppDelta} tier={oppTier} position="inline" />
+              </span>
               <span className="cc-matchup-side">{matchupData.oppAbbr} <span className="cc-matchup-rec">{matchupData.oppRecord}</span></span>
             </div>
           </div>
@@ -266,7 +289,7 @@ export default function CommandCenter({ rosters, scoringPreset, leagueName, onPl
           {standingData.grades && (
             <div className="cc-grades">
               {Object.entries(standingData.grades).map(([pos, grade]) => (
-                <span key={pos} className="cc-grade-chip" style={{ color: GRADE_COLORS[grade] }}>
+                <span key={pos} className={`cc-grade-chip cc-grade-${grade.toLowerCase()}`}>
                   <span className="cc-grade-pos">{pos}</span>
                   <span className="cc-grade-letter">{grade}</span>
                 </span>

@@ -48,21 +48,22 @@ export default function PlayerHeadshot({ espnId, name, size = 'sm', pos, team, h
     }
   }
 
-  const posColors = {
-    QB: '#2563eb', RB: '#16a34a', WR: '#f59e0b', TE: '#dc2626', K: '#7c3aed', DEF: '#5A5F6B',
-  };
-
-  // Fallback: position initial on subtle tinted background
+  // Fallback: position initial on subtle tinted background. Color is read
+  // from the --pos-* CSS tokens defined in index.css so theming stays
+  // single-source (dark-mode overrides reach here automatically).
   if (!src) {
+    const posVar = pos ? `var(--pos-${pos.toLowerCase()}, var(--text-muted))` : 'var(--text-muted)';
     return (
-      <div style={{
-        width: dim.w, height: dim.h, flexShrink: 0,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        borderRadius: '50%',
-        background: `linear-gradient(135deg, ${posColors[pos] || '#64748b'}12, ${posColors[pos] || '#64748b'}25)`,
-        color: posColors[pos] || '#64748b',
-        fontSize: dim.w * 0.3, fontWeight: 700, letterSpacing: '0.02em',
-      }}>
+      <div
+        className={pos ? `player-headshot-fallback pos-${pos.toLowerCase()}` : 'player-headshot-fallback'}
+        style={{
+          width: dim.w, height: dim.h, flexShrink: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          borderRadius: '50%',
+          background: `color-mix(in srgb, ${posVar} 15%, transparent)`,
+          color: posVar,
+          fontSize: dim.w * 0.3, fontWeight: 700, letterSpacing: '0.02em',
+        }}>
         {pos || (name ? name.charAt(0) : '?')}
       </div>
     );

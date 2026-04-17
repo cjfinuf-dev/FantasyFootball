@@ -71,13 +71,26 @@ export default function TradeAnalyzer({ sendIds, receiveIds, userRoster, partner
 
   const { sendTotal, receiveTotal, delta, ratio, label, css } = computeTradeTier(sendIds, receiveIds, userRoster, partnerRoster, scoringPreset);
 
-  // Contextual value: apply positional-need boost to received players
+  // Contextual value: apply positional-need boost to the SAME trade-value
+  // transform `receiveTotal` used, so the two numbers are comparable. Using
+  // raw HexScore here would mix a 0-100 score with a replacement-decayed +
+  // concentration-penalized trade value.
   const needBoosts = getPositionalNeedBoost(receiveIds, userRoster, scoringPreset);
-  const contextualReceiveTotal = receiveIds.reduce((sum, id) => {
-    const raw = getHexScore(id, scoringPreset);
-    const mult = needBoosts[id] || 1.0;
-    return sum + raw * mult;
-  }, 0);
+  const hasAnyBoost = Object.values(needBoosts).some(m => m > 1);
+  const contextualReceiveTotal = hasAnyBoost
+    ? (() => {
+        // Scale each receive player's contribution to receiveTotal by its boost.
+        // If receiveIds is empty, fall back to receiveTotal.
+        if (receiveIds.length === 0) return receiveTotal;
+        const rawSum = receiveIds.reduce((s, id) => s + getHexScore(id, scoringPreset), 0) || 1;
+        const boostedRawSum = receiveIds.reduce((s, id) => {
+          const raw = getHexScore(id, scoringPreset);
+          const mult = needBoosts[id] || 1.0;
+          return s + raw * mult;
+        }, 0);
+        return receiveTotal * (boostedRawSum / rawSum);
+      })()
+    : receiveTotal;
   const contextualReceive = Math.round(contextualReceiveTotal * 10) / 10;
   const hasContextBoost = contextualReceive !== receiveTotal;
 
@@ -89,11 +102,16 @@ export default function TradeAnalyzer({ sendIds, receiveIds, userRoster, partner
 
   const glowClass = ratio >= 0.35 ? ' hex-glow-elite' : ratio >= 0.25 ? ' hex-glow-strong' : '';
 
-  // Roster impact
+  // Roster impact. Subtract/add on the same basis — the roster totals below
+  // are `computeTradeValue` sums (no concentration penalty), so use a
+  // penalty-free value for the deltas too. Otherwise we mix raw and
+  // penalized numbers and the "after" totals drift.
   const userBefore = userRoster ? computeTradeValue(userRoster, scoringPreset) : null;
   const partnerBefore = partnerRoster ? computeTradeValue(partnerRoster, scoringPreset) : null;
-  const userAfter = userBefore !== null ? userBefore - sendTotal + receiveTotal : null;
-  const partnerAfter = partnerBefore !== null ? partnerBefore - receiveTotal + sendTotal : null;
+  const sendDelta = computeTradeValue(sendIds, scoringPreset);
+  const receiveDelta = computeTradeValue(receiveIds, scoringPreset);
+  const userAfter = userBefore !== null ? userBefore - sendDelta + receiveDelta : null;
+  const partnerAfter = partnerBefore !== null ? partnerBefore - receiveDelta + sendDelta : null;
 
   // Positional depth analysis
   const posImpact = getPositionalImpact(sendIds, receiveIds, userRoster, scoringPreset);

@@ -4,22 +4,28 @@ import { MATCHUPS } from '../../data/matchups';
 import { PLAYERS } from '../../data/players';
 import { ROSTER_PRESETS } from '../../data/scoring';
 import { getEspnId } from '../../data/espnIds';
-import { getHexWinProb, getStarterProjection } from '../../utils/winProb';
+import { getHexWinProb, getStarterIds } from '../../utils/winProb';
+import { computeLiveTeamScore } from '../../utils/liveScoring';
 import { getHexScore, formatHex } from '../../utils/hexScore';
 import { GAMES_PLAYED } from '../../data/seasonConfig';
 import { useLiveTick } from '../../hooks/useLiveTick';
+import { useLiveDelta } from '../../hooks/useLiveDelta';
 import PosBadge from '../ui/PosBadge';
 import PlayerHeadshot from '../ui/PlayerHeadshot';
 import PlayerLink from '../ui/PlayerLink';
 import HexBrand from '../ui/HexBrand';
 import AnimatedNumber from '../ui/AnimatedNumber';
+import ScoreDelta from '../ui/ScoreDelta';
 
 const PLAYER_MAP = {};
 PLAYERS.forEach(p => { PLAYER_MAP[p.id] = p; });
 
+// Live-aware team projection. Pre-game this is pure projection; in-game it
+// evolves (actual + remaining) as players finish.
 function getTeamProjection(teamId, rosters) {
   if (!rosters || !rosters[teamId]) return 0;
-  return getStarterProjection(rosters[teamId], PLAYER_MAP);
+  const starters = getStarterIds(rosters[teamId], PLAYER_MAP);
+  return computeLiveTeamScore(starters, PLAYER_MAP).projected;
 }
 
 function assignToSlots(playerIds) {
@@ -54,10 +60,12 @@ function getActualPos(slot) {
   return slot.pos;
 }
 
-function hexStyle(score) {
-  const color = score >= 85 ? 'var(--hex-purple-hot)' : score >= 75 ? 'var(--hex-purple-vivid)' : score >= 60 ? 'var(--hex-purple)' : score >= 45 ? 'rgba(139,92,246,0.7)' : 'var(--text-muted)';
-  const shadow = score >= 85 ? 'var(--hex-purple-glow)' : score >= 75 ? '0 0 4px rgba(139,92,246,0.25)' : 'none';
-  return { fontWeight: 700, color, textShadow: shadow };
+function hexScoreClass(score) {
+  if (score >= 85) return 'ff-hex-score ff-hex-score-hot';
+  if (score >= 75) return 'ff-hex-score ff-hex-score-vivid';
+  if (score >= 60) return 'ff-hex-score ff-hex-score-mid';
+  if (score >= 45) return 'ff-hex-score ff-hex-score-low';
+  return 'ff-hex-score';
 }
 
 function RosterComparison({ homeTeamId, awayTeamId, rosters, homeTeam, awayTeam, onPlayerClick }) {
@@ -169,7 +177,7 @@ function RosterComparison({ homeTeamId, awayTeamId, rosters, homeTeam, awayTeam,
                 </td>
 
                 {/* Home hex score */}
-                <td className={`ff-h2h-td-hex tabular-nums${hexHomeAdv ? ' ff-h2h-hex-adv' : ''}`} style={hp ? hexStyle(hHex) : undefined}>
+                <td className={`ff-h2h-td-hex tabular-nums${hexHomeAdv ? ' ff-h2h-hex-adv' : ''}${hp ? ` ${hexScoreClass(hHex)}` : ''}`}>
                   {hp ? formatHex(hHex) : ''}
                 </td>
 
@@ -187,7 +195,7 @@ function RosterComparison({ homeTeamId, awayTeamId, rosters, homeTeam, awayTeam,
                 </td>
 
                 {/* Away hex score */}
-                <td className={`ff-h2h-td-hex tabular-nums${hexAwayAdv ? ' ff-h2h-hex-adv' : ''}`} style={ap ? hexStyle(aHex) : undefined}>
+                <td className={`ff-h2h-td-hex tabular-nums${hexAwayAdv ? ' ff-h2h-hex-adv' : ''}${ap ? ` ${hexScoreClass(aHex)}` : ''}`}>
                   {ap ? formatHex(aHex) : ''}
                 </td>
 
@@ -374,6 +382,9 @@ function MatchupCard({ matchup, expanded, rosters, onPlayerClick, onToggle, onMa
     return getHexWinProb(homeRoster, awayRoster, PLAYER_MAP, getHexScore);
   }, [homeRoster, awayRoster]);
 
+  const { delta: homeDelta, tier: homeTier } = useLiveDelta(matchup.home.projected);
+  const { delta: awayDelta, tier: awayTier } = useLiveDelta(matchup.away.projected);
+
   return (
     <div
       className={`ff-card${isUserMatchup ? ' ff-card-user-matchup' : ''}`}
@@ -414,6 +425,7 @@ function MatchupCard({ matchup, expanded, rosters, onPlayerClick, onToggle, onMa
           </div>
           <div className="ff-matchup-score ff-mono tabular-nums" style={!expanded ? { fontSize: 26 } : undefined}>
             <AnimatedNumber value={matchup.home.projected} decimals={1} />
+            <ScoreDelta value={homeDelta} tier={homeTier} position="inline" />
           </div>
           <div className="ff-matchup-projected tabular-nums">Projected</div>
         </div>
@@ -426,6 +438,7 @@ function MatchupCard({ matchup, expanded, rosters, onPlayerClick, onToggle, onMa
           </div>
           <div className="ff-matchup-score ff-mono tabular-nums" style={!expanded ? { fontSize: 26 } : undefined}>
             <AnimatedNumber value={matchup.away.projected} decimals={1} />
+            <ScoreDelta value={awayDelta} tier={awayTier} position="inline" />
           </div>
           <div className="ff-matchup-projected tabular-nums">Projected</div>
         </div>

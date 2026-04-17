@@ -44,6 +44,12 @@ router.post('/signup', validateSignup, async (req, res, next) => {
   }
 });
 
+// Sanitize user-derived strings before they hit logs so CRLF or tab injections
+// can't forge aggregated-log entries.
+function stripCtl(s) {
+  return String(s ?? '').replace(/[\r\n\t]+/g, ' ').slice(0, 200);
+}
+
 router.post('/signin', validateSignin, async (req, res, next) => {
   try {
     const { email, password } = req.body;
@@ -51,17 +57,25 @@ router.post('/signin', validateSignin, async (req, res, next) => {
     setTokenCookies(res, token, refreshToken);
     res.json({ user });
   } catch (err) {
+    // Log failed signin attempts for credential-stuffing / brute-force visibility.
+    // Do not log passwords; redact the email to its local-part initial only.
+    const emailPreview = stripCtl((req.body?.email || '').replace(/(.).*@/, '$1***@'));
+    console.warn('[auth] signin failed', {
+      email: emailPreview,
+      ip: stripCtl(req.ip),
+      reason: stripCtl(err?.message || 'unknown'),
+    });
     next(err);
   }
 });
 
-router.post('/signout', (req, res) => {
+router.post('/signout', async (req, res) => {
   const refreshToken = req.cookies?.['ff-refresh-token'];
   if (refreshToken) {
     try {
-      const payload = verifyRefreshToken(refreshToken);
+      const payload = await verifyRefreshToken(refreshToken);
       if (payload.jti) {
-        blacklistToken(payload.jti, payload.exp ? payload.exp * 1000 : undefined);
+        await blacklistToken(payload.jti, payload.exp ? payload.exp * 1000 : undefined);
       }
     } catch (_) {
       // Token already invalid — no-op
@@ -71,13 +85,13 @@ router.post('/signout', (req, res) => {
   res.json({ success: true });
 });
 
-router.post('/logout', (req, res) => {
+router.post('/logout', async (req, res) => {
   const refreshToken = req.cookies?.['ff-refresh-token'];
   if (refreshToken) {
     try {
-      const payload = verifyRefreshToken(refreshToken);
+      const payload = await verifyRefreshToken(refreshToken);
       if (payload.jti) {
-        blacklistToken(payload.jti, payload.exp ? payload.exp * 1000 : undefined);
+        await blacklistToken(payload.jti, payload.exp ? payload.exp * 1000 : undefined);
       }
     } catch (_) {
       // Token already invalid — no-op
@@ -93,16 +107,16 @@ router.post('/refresh', async (req, res, next) => {
     if (!refreshToken) {
       return res.status(400).json({ error: 'Refresh token is required.' });
     }
-    const payload = verifyRefreshToken(refreshToken);
+    const payload = await verifyRefreshToken(refreshToken);
     // Blacklist the old refresh token after successful verification (rotate)
     if (payload.jti) {
-      blacklistToken(payload.jti, payload.exp ? payload.exp * 1000 : undefined);
+      await blacklistToken(payload.jti, payload.exp ? payload.exp * 1000 : undefined);
     }
     const user = await authService.getUserById(payload.userId);
     if (!user) {
       return res.status(401).json({ error: 'User not found.' });
     }
-    const token = signToken({ userId: user.id, email: user.email });
+    const token = signToken({ userId: user.id, email: user.email, tv: user.token_version ?? 0 });
     const newRefreshToken = signRefreshToken(user.id);
     setTokenCookies(res, token, newRefreshToken);
     res.json({ user });

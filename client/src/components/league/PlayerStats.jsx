@@ -13,6 +13,7 @@ import StatusLabel from '../ui/StatusLabel';
 import ArchetypeBadge from '../ui/ArchetypeBadge';
 import AnimatedNumber from '../ui/AnimatedNumber';
 import HexBrand from '../ui/HexBrand';
+import { HEX_CHART_RINGS } from '../../utils/hexChartRings';
 import { getGrade } from '../../utils/grades';
 
 const PLAYER_MAP = {};
@@ -443,18 +444,7 @@ function HexRadar({ dimensions, hexData, player }) {
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 9999, padding: '4px 14px', marginBottom: 14, alignSelf: 'flex-start' }}><HexBrand word="Chart" size="sm" /></div>
       <svg width={svgSize} height={svgSize} viewBox={`0 0 ${svgSize} ${svgSize}`} style={{ display: 'block', maxWidth: '100%' }} role="img" aria-label={`HexChart for ${player.name} — ${dimensions.map(d => `${d.label}: ${Math.round(getDimensionValue(hexData.dimensions, d.key) * 100)}`).join(', ')}`}>
         {/* Grade bands — one per 10% ring, simple color ramp */}
-        {[
-          { inner: 0,   outer: 0.1, color: '#991b1b' },
-          { inner: 0.1, outer: 0.2, color: '#dc2626' },
-          { inner: 0.2, outer: 0.3, color: '#ea580c' },
-          { inner: 0.3, outer: 0.4, color: '#d97706' },
-          { inner: 0.4, outer: 0.5, color: '#ca8a04' },
-          { inner: 0.5, outer: 0.6, color: '#65a30d' },
-          { inner: 0.6, outer: 0.7, color: '#16a34a' },
-          { inner: 0.7, outer: 0.8, color: '#15803d' },
-          { inner: 0.8, outer: 0.9, color: '#22c55e' },
-          { inner: 0.9, outer: 1.0, color: '#8B5CF6' },
-        ].map(band => {
+        {HEX_CHART_RINGS.map(band => {
           const outerPts = Array.from({ length: 6 }, (_, i) => getPoint(i, band.outer * maxR));
           const innerPts = Array.from({ length: 6 }, (_, i) => getPoint(i, band.inner * maxR)).reverse();
           const outerPath = outerPts.map((p, i) => (i === 0 ? 'M' : 'L') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ') + ' Z';

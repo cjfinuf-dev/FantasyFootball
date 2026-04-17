@@ -4,15 +4,48 @@ import { PLAYERS } from '../../data/players';
 import { ROSTER_PRESETS } from '../../data/scoring';
 import { getEspnId } from '../../data/espnIds';
 import { getOpponent } from '../../data/nflSchedule';
+import { useLiveTick } from '../../hooks/useLiveTick';
+import { useLiveDelta } from '../../hooks/useLiveDelta';
+import { gameState } from '../../data/gameState';
 import PlayerHeadshot from '../ui/PlayerHeadshot';
 import PlayerLink from '../ui/PlayerLink';
 import PosBadge from '../ui/PosBadge';
 import StatusLabel from '../ui/StatusLabel';
+import ScoreDelta from '../ui/ScoreDelta';
 
 const PLAYER_MAP = {};
 PLAYERS.forEach(p => { PLAYER_MAP[p.id] = p; });
 
 const FLEX_POSITIONS = ['RB', 'WR', 'TE'];
+
+// Minimum count of each slot type that must exist in the starters array after
+// any swap. Sourced from the league roster preset so the check tracks config
+// changes automatically.
+const STARTER_COUNTS = (() => {
+  const preset = ROSTER_PRESETS.standard;
+  const out = {};
+  for (const [slot, count] of Object.entries(preset)) {
+    if (slot === 'BN' || slot === 'IR') continue;
+    out[slot] = count;
+  }
+  return out;
+})();
+
+function validateStarterCounts(starters) {
+  const got = {};
+  for (const entry of starters) {
+    const label = entry.slotLabel;
+    if (label === 'BN' || label === 'IR') continue;
+    got[label] = (got[label] || 0) + 1;
+  }
+  const errors = [];
+  for (const [slot, count] of Object.entries(STARTER_COUNTS)) {
+    if ((got[slot] || 0) !== count) {
+      errors.push(`expected ${count} ${slot} slot(s), got ${got[slot] || 0}`);
+    }
+  }
+  return { valid: errors.length === 0, errors };
+}
 
 function canPlaySlot(slotLabel, playerPos) {
   if (!playerPos) return false;
@@ -124,11 +157,30 @@ function PlayerRow({ entry, section, index, isSelected, isSwapTarget, onSelect, 
   const canMoveToIR = player?.status === 'out' && section !== 'ir';
   const canActivate = section === 'ir' && player;
 
+  // Live state — gameState[pid] is undefined pre-kickoff.
+  const live = player ? gameState[player.id] : null;
+  const liveStatus = live?.status;
+  const liveActual = live?.actual;
+  const showLive = isStarter && live && (liveStatus === 'playing' || liveStatus === 'final');
+
+  // Observe the live actual so we can chip on meaningful changes. Only track
+  // actively-playing starters — finals are locked, benches don't show live.
+  const trackedValue = isStarter && liveStatus === 'playing' ? (liveActual ?? null) : null;
+  const { delta, key: deltaKey, tier } = useLiveDelta(trackedValue);
+
   const rowClass = `ff-lineup-row${!isStarter ? ' bench-row' : ''}${isSelected ? ' selected' : ''}${isSwapTarget ? ' swap-target' : ''}`;
   const slotColorVar = entry.slotLabel === 'FLEX' ? 'flex' : entry.slotLabel === 'DST' ? 'def' : entry.slotLabel === 'BN' || entry.slotLabel === 'IR' ? '' : entry.slotLabel.toLowerCase();
 
   return (
-    <div className={rowClass}>
+    <div className={rowClass} style={{ position: 'relative', isolation: 'isolate' }}>
+      {deltaKey > 0 && (
+        <div
+          key={`bump-${deltaKey}`}
+          className="ff-live-bump"
+          style={{ position: 'absolute', inset: 0, zIndex: -1, borderRadius: 'inherit' }}
+          aria-hidden="true"
+        />
+      )}
       <div className="ff-lineup-slot" style={{ color: `var(--pos-${slotColorVar}, var(--text-muted))` }}>
         {entry.slot}
       </div>
@@ -154,13 +206,20 @@ function PlayerRow({ entry, section, index, isSelected, isSwapTarget, onSelect, 
             </div>
           </div>
 
-          <div className="ff-lineup-proj">
-            <div className="ff-lineup-proj-val tabular-nums">{player.proj}</div>
-            <div className="ff-lineup-stat-label">PROJ</div>
+          <div className="ff-lineup-proj" style={{ position: 'relative' }}>
+            <ScoreDelta value={delta} tier={tier} position="absolute" />
+            <div className="ff-lineup-proj-val tabular-nums" style={showLive ? {
+              color: liveStatus === 'final' ? 'var(--text-muted)' : 'var(--success-green)',
+            } : undefined}>
+              {showLive ? (liveActual ?? 0).toFixed(1) : player.proj}
+            </div>
+            <div className="ff-lineup-stat-label">
+              {showLive ? (liveStatus === 'final' ? 'FINAL' : 'LIVE') : 'PROJ'}
+            </div>
           </div>
           <div className="ff-lineup-avg">
-            <div className="ff-lineup-avg-val tabular-nums">{player.avg}</div>
-            <div className="ff-lineup-stat-label">AVG</div>
+            <div className="ff-lineup-avg-val tabular-nums">{showLive ? player.proj : player.avg}</div>
+            <div className="ff-lineup-stat-label">{showLive ? 'PROJ' : 'AVG'}</div>
           </div>
 
           <div className="ff-lineup-actions">
@@ -202,6 +261,7 @@ function PlayerRow({ entry, section, index, isSelected, isSwapTarget, onSelect, 
 export default function MyLineup({ rosters, onPlayerClick }) {
   const userTeam = TEAMS.find(t => t.id === USER_TEAM_ID);
   const playerIds = rosters?.[USER_TEAM_ID] || [];
+  const tick = useLiveTick();
 
   const initialLayout = useMemo(() => assignSlots(playerIds), [playerIds]);
 
@@ -214,9 +274,22 @@ export default function MyLineup({ rosters, onPlayerClick }) {
     setSelected(null);
   }, [playerIds]);
 
+  // Live-aware total: sum actual when the player has locked/playing points,
+  // else fall back to projection. tick is in deps so this recomputes on SSE
+  // events even though we read from the singleton.
   const totalProj = useMemo(() => {
-    return lineup.starters.reduce((sum, s) => sum + (s.player?.proj || 0), 0);
-  }, [lineup.starters]);
+    return lineup.starters.reduce((sum, s) => {
+      if (!s.player) return sum;
+      const live = gameState[s.player.id];
+      if (live && (live.status === 'playing' || live.status === 'final')) {
+        return sum + (live.actual || 0) + Math.max(0, (s.player.proj || 0) - (live.actual || 0));
+      }
+      return sum + (s.player.proj || 0);
+    }, 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lineup.starters, tick]);
+
+  const { delta: totalDelta, tier: totalTier } = useLiveDelta(totalProj);
 
   const getEntry = (section, index) => lineup[section]?.[index];
 
@@ -254,6 +327,16 @@ export default function MyLineup({ rosters, onPlayerClick }) {
         // Clean up: remove null entries from bench (but not starters/IR which have fixed slots)
         if (selected.section === 'bench' && !tgtEntry.player) {
           next.bench = next.bench.filter((_, i) => i !== selected.index);
+        }
+
+        // Sanity: every slot in STARTER_COUNTS should still be represented.
+        // canSwapWith enforces this per pair, but re-check here as a belt-and-
+        // braces guard in case the slot metadata ever gets out of sync.
+        if (import.meta.env.DEV) {
+          const check = validateStarterCounts(next.starters);
+          if (!check.valid) {
+            console.warn('[MyLineup] Starter slot layout drift after swap:', check.errors);
+          }
         }
 
         return next;
@@ -366,7 +449,10 @@ export default function MyLineup({ rosters, onPlayerClick }) {
               fontSize: 14, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
             }}>Best Lineup</button>
             <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: 26, fontWeight: 800 }} className="tabular-nums">{totalProj.toFixed(2)}</div>
+              <div style={{ fontSize: 26, fontWeight: 800, display: 'inline-flex', alignItems: 'baseline', gap: 6 }} className="tabular-nums">
+                {totalProj.toFixed(2)}
+                <ScoreDelta value={totalDelta} tier={totalTier} position="inline" />
+              </div>
               <div className="text-muted-sm" style={{ fontSize: 14, fontWeight: 600, textTransform: 'uppercase' }}>Projected</div>
             </div>
           </div>

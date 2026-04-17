@@ -5,7 +5,7 @@ export default function HexBrand({ word, icon = true, size = 'md', filled = fals
   return (
     <span style={{ fontFamily: "'Playfair Display', serif", whiteSpace: 'nowrap' }}>
       {icon && (
-        <svg viewBox="0 0 14 16" width={dim.w} height={dim.h} style={{ verticalAlign: '-2px', marginRight: 3 }}>
+        <svg className="hex-brand-icon" viewBox="0 0 14 16" width={dim.w} height={dim.h}>
           <polygon
             points="7,1 13,4.5 13,11.5 7,15 1,11.5 1,4.5"
             fill={filled ? 'var(--hex-purple)' : 'none'}

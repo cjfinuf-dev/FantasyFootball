@@ -1,4 +1,6 @@
 const https = require('https');
+const fs = require('fs');
+const path = require('path');
 
 // ─── SSE Client Management ───
 const clients = new Set();
@@ -17,6 +19,33 @@ function broadcastToClients(eventName, data) {
 let pollTimer = null;
 let lastState = null;       // cached for initial send on new connections
 let activeGames = false;    // controls adaptive poll interval
+
+// ─── Restart-Survival Persistence ───
+const CACHE_DIR = path.join(__dirname, '..', '..', '.cache');
+const CACHE_FILE = path.join(CACHE_DIR, 'live-last-state.json');
+
+function loadPersistedState() {
+  try {
+    if (!fs.existsSync(CACHE_FILE)) return;
+    const raw = fs.readFileSync(CACHE_FILE, 'utf8');
+    const parsed = JSON.parse(raw);
+    if (parsed && parsed.timestamp) {
+      lastState = parsed;
+      console.log(`[LiveScoring] Restored lastState from cache (${parsed.timestamp})`);
+    }
+  } catch (err) {
+    console.error('[LiveScoring] Failed to load persisted state:', err.message);
+  }
+}
+
+function persistState(state) {
+  try {
+    if (!fs.existsSync(CACHE_DIR)) fs.mkdirSync(CACHE_DIR, { recursive: true });
+    fs.writeFileSync(CACHE_FILE, JSON.stringify(state), 'utf8');
+  } catch (err) {
+    console.error('[LiveScoring] Failed to persist state:', err.message);
+  }
+}
 
 function getLastState() { return lastState; }
 
@@ -228,6 +257,7 @@ async function pollOnce() {
     };
 
     lastState = state;
+    persistState(state);
     broadcastToClients('scores', state);
     console.log(`[LiveScoring] Poll complete — ${activeIds.length} active, ${finalIds.length} final, ${Object.keys(allPlayers).length} players`);
   } catch (err) {
@@ -248,6 +278,7 @@ async function schedulePoll() {
 
 function startPolling() {
   if (pollTimer) return;
+  loadPersistedState();
   console.log('[LiveScoring] Starting poll loop');
   schedulePoll();
 }

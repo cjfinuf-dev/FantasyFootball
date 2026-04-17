@@ -8,6 +8,19 @@ import {
 // Re-export so existing consumers don't break
 export { DATA_SEASON, TOTAL_WEEKS, PLAYOFF_SPOTS, BYE_SEEDS, GAMES_PLAYED, REMAINING_WEEKS, SIMULATIONS, checkSeasonGuard };
 
+// Current-week matchups (treated as "this week"). Hardcoded fallback schedule
+// for weeks 13 and 14 follows. If REMAINING_WEEKS extends past the hardcoded
+// window, the simulator will only see weeks that exist here — flag in dev so
+// the staleness is visible instead of silently producing wrong odds.
+if (typeof import.meta !== 'undefined' && import.meta.env?.DEV) {
+  const hardcodedWeeks = new Set([GAMES_PLAYED + 1, 13, 14]);
+  for (let w = GAMES_PLAYED + 1; w <= TOTAL_WEEKS; w++) {
+    if (!hardcodedWeeks.has(w)) {
+      console.warn(`[playoffCalc] Week ${w} has no schedule entries — simulation will skip it and produce stale odds.`);
+    }
+  }
+}
+
 export const schedule = [
   ...MATCHUPS.map(m => ({ home: m.home.teamId, away: m.away.teamId, week: GAMES_PLAYED + 1 })),
   { home: 't1', away: 't4', week: 13 }, { home: 't2', away: 't3', week: 13 },
@@ -50,8 +63,17 @@ export function runSimulations(teams, overrides = {}, simCount = SIMULATIONS) {
     for (const game of schedule) {
       const key = `${game.home}-${game.away}-w${game.week}`;
       if (overrides[key] !== undefined) {
-        if (overrides[key] === game.home) { records[game.home].wins++; records[game.away].losses++; }
-        else { records[game.away].wins++; records[game.home].losses++; }
+        // Apply the mean of the simulated PF distribution to overridden games
+        // so seed tiebreakers (wins → PF) don't penalize teams the user forced
+        // to a result. Winner averages 130 pts, loser 105 — midpoints of the
+        // [100,160] / [80,130] random ranges below.
+        if (overrides[key] === game.home) {
+          records[game.home].wins++; records[game.away].losses++;
+          pf[game.home] += 130; pf[game.away] += 105;
+        } else {
+          records[game.away].wins++; records[game.home].losses++;
+          pf[game.away] += 130; pf[game.home] += 105;
+        }
         continue;
       }
       const homeWinP = teamMap[game.home].power / (teamMap[game.home].power + teamMap[game.away].power);
@@ -75,13 +97,18 @@ export function runSimulations(teams, overrides = {}, simCount = SIMULATIONS) {
       if (i < BYE_SEEDS) byeCounts[t.id]++;
     });
 
-    // Playoff bracket: seeds 1-2 get first-round bye
-    // Wild Card: 3v6, 4v5
-    // Semis: 1 vs lowest remaining, 2 vs other
-    // Championship: semi winners
+    // Playoff bracket, driven by seasonConfig: top `BYE_SEEDS` seeds get a
+    // first-round bye. Remaining seeds play Wild Card games, pairing outermost
+    // to innermost (e.g. with BYE_SEEDS=2, PLAYOFF_SPOTS=6 → seeds 3v6, 4v5).
+    //
+    // NOTE: semis/championship still assume the 2-bye / 2-WC-game / 4-team
+    // semifinal shape. Changing BYE_SEEDS or the WC size would require
+    // reshaping the later rounds too.
     const p = ranked.slice(0, PLAYOFF_SPOTS).map(t => teamMap[t.id]);
-    const wc1 = simGame(p[2], p[5]); // 3v6
-    const wc2 = simGame(p[3], p[4]); // 4v5
+    const wcStart = BYE_SEEDS;          // first non-bye seed index (0-indexed)
+    const wcEnd = PLAYOFF_SPOTS - 1;    // last playoff seed index
+    const wc1 = simGame(p[wcStart], p[wcEnd]);
+    const wc2 = simGame(p[wcStart + 1], p[wcEnd - 1]);
     const wcW1 = teamMap[wc1], wcW2 = teamMap[wc2];
     // Seed-index-based pairing: look up each winner's original seed position.
     // The worse-seeded (higher index) winner faces the 1-seed.

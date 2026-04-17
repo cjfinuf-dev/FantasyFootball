@@ -53,26 +53,25 @@ export default function TeamPicker({ value, onChange }) {
         </div>
       )}
       {chiefsConfirm && (
-        <div style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 'var(--z-modal)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }} onClick={() => setChiefsConfirm(null)}>
-          <div role="dialog" aria-modal="true" aria-label="Confirm team selection" style={{
-            background: 'var(--bg-white)', borderRadius: 'var(--radius-lg)', padding: 32,
-            boxShadow: 'var(--shadow-lg)', border: '1px solid var(--border)',
-            textAlign: 'center', maxWidth: 340, width: '90%',
-          }} onClick={e => e.stopPropagation()}>
+        <div className="auth-overlay ff-confirm-overlay" onClick={() => setChiefsConfirm(null)}>
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Confirm team selection"
+            className="auth-modal ff-confirm-modal"
+            onClick={e => e.stopPropagation()}
+          >
             {chiefsConfirm === 'ask' ? (
               <>
-                <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 8, color: 'var(--text)' }}>Are you sure?</div>
-                <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 16 }}>
+                <div className="ff-confirm-title">Are you sure?</div>
+                <div className="ff-confirm-actions">
                   <button className="ff-btn ff-btn-primary" onClick={() => setChiefsConfirm('mistake')}>Yes</button>
                   <button className="ff-btn ff-btn-secondary" onClick={() => setChiefsConfirm(null)}>No</button>
                 </div>
               </>
             ) : (
               <>
-                <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 16, color: 'var(--text)' }}>Everybody makes mistakes</div>
+                <div className="ff-confirm-title">Everybody makes mistakes</div>
                 <button className="ff-btn ff-btn-primary" onClick={() => { onChange('kc'); setChiefsConfirm(null); }}>OK</button>
               </>
             )}

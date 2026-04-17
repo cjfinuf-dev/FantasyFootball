@@ -139,37 +139,58 @@ export function getTeamScoreSplit(starterIds, playerMap) {
  */
 const STARTER_COUNTS = { QB: 1, RB: 2, WR: 2, TE: 1, K: 1, DEF: 1 };
 
-export function getStarterIds(rosterIds, playerMap, rosterConfig = null) {
-  const slotLimits = rosterConfig
-    ? Object.fromEntries(Object.entries(rosterConfig).map(([pos, n]) => [pos, n]))
-    : STARTER_COUNTS;
+// Roster presets key defense as `DST` in ROSTER_PRESETS, but player.pos is `DEF`.
+const ROSTER_KEY_TO_POS = { DST: 'DEF' };
+// Which player positions can fill which flex-like slots.
+const FLEX_ELIGIBILITY = {
+  FLEX: ['RB', 'WR', 'TE'],
+  SFLEX: ['QB', 'RB', 'WR', 'TE'],
+  SUPERFLEX: ['QB', 'RB', 'WR', 'TE'],
+  WRT: ['WR', 'TE'],
+  RBWR: ['RB', 'WR'],
+  OP: ['QB', 'RB', 'WR', 'TE'],
+};
 
+export function getStarterIds(rosterIds, playerMap, rosterConfig = null) {
   const available = rosterIds.filter(pid => playerMap[pid]);
   const sorted = [...available].sort((a, b) => (playerMap[b].proj || 0) - (playerMap[a].proj || 0));
 
   const used = new Set();
   const starters = [];
-  const slotsFilled = {};
 
-  // Fill required positional slots first (greedy, best proj first)
-  for (const pid of sorted) {
-    const pos = playerMap[pid].pos;
-    const limit = slotLimits[pos] || 0;
-    if (limit > 0 && (slotsFilled[pos] || 0) < limit) {
-      slotsFilled[pos] = (slotsFilled[pos] || 0) + 1;
-      starters.push(pid);
-      used.add(pid);
+  // Build slot plan from rosterConfig (preferred) or fall back to STARTER_COUNTS + 1 FLEX.
+  // Each slot plan entry: { slot: <player-pos or flex-label>, eligible: [pos...] }.
+  const slotPlan = [];
+  const cfg = rosterConfig
+    ? Object.fromEntries(
+        Object.entries(rosterConfig)
+          .filter(([k]) => k !== 'BN' && k !== 'IR')
+          .map(([k, v]) => [k, v])
+      )
+    : { ...STARTER_COUNTS, FLEX: 1 };
+
+  for (const [slotKey, count] of Object.entries(cfg)) {
+    const pos = ROSTER_KEY_TO_POS[slotKey] || slotKey;
+    for (let i = 0; i < count; i++) {
+      if (FLEX_ELIGIBILITY[pos]) {
+        slotPlan.push({ slot: pos, eligible: FLEX_ELIGIBILITY[pos] });
+      } else {
+        slotPlan.push({ slot: pos, eligible: [pos] });
+      }
     }
   }
 
-  // Fill FLEX slot with best remaining RB/WR/TE
-  for (const pid of sorted) {
-    if (used.has(pid)) continue;
-    const pos = playerMap[pid].pos;
-    if (pos === 'RB' || pos === 'WR' || pos === 'TE') {
-      starters.push(pid);
-      used.add(pid);
-      break;
+  // Fill dedicated positional slots first (greedy, best proj), then flex/superflex.
+  slotPlan.sort((a, b) => a.eligible.length - b.eligible.length);
+  for (const slot of slotPlan) {
+    for (const pid of sorted) {
+      if (used.has(pid)) continue;
+      const pos = playerMap[pid].pos;
+      if (slot.eligible.includes(pos)) {
+        starters.push(pid);
+        used.add(pid);
+        break;
+      }
     }
   }
 
@@ -194,9 +215,9 @@ export function getStarterProjection(rosterIds, playerMap) {
  * No variance modeling, since hex scores are themselves a talent signal and
  * all inputs are synthetic pre-kickoff.
  */
-export function getHexWinProb(homeRosterIds, awayRosterIds, playerMap, getHexScoreFn) {
-  const homeStarters = getStarterIds(homeRosterIds, playerMap);
-  const awayStarters = getStarterIds(awayRosterIds, playerMap);
+export function getHexWinProb(homeRosterIds, awayRosterIds, playerMap, getHexScoreFn, rosterConfig = null) {
+  const homeStarters = getStarterIds(homeRosterIds, playerMap, rosterConfig);
+  const awayStarters = getStarterIds(awayRosterIds, playerMap, rosterConfig);
 
   const homeHexes = homeStarters.map(pid => getHexScoreFn(pid)).filter(h => h > 0);
   const awayHexes = awayStarters.map(pid => getHexScoreFn(pid)).filter(h => h > 0);
@@ -213,9 +234,9 @@ export function getHexWinProb(homeRosterIds, awayRosterIds, playerMap, getHexSco
 /**
  * Convenience: compute win probability for a full matchup.
  */
-export function getMatchupWinProb(homeRosterIds, awayRosterIds, playerMap) {
-  const homeStarters = getStarterIds(homeRosterIds, playerMap);
-  const awayStarters = getStarterIds(awayRosterIds, playerMap);
+export function getMatchupWinProb(homeRosterIds, awayRosterIds, playerMap, rosterConfig = null) {
+  const homeStarters = getStarterIds(homeRosterIds, playerMap, rosterConfig);
+  const awayStarters = getStarterIds(awayRosterIds, playerMap, rosterConfig);
   const home = getTeamScoreSplit(homeStarters, playerMap);
   const away = getTeamScoreSplit(awayStarters, playerMap);
   const combinedVariance = home.varianceSum + away.varianceSum;

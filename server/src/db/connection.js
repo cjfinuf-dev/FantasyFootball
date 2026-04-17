@@ -25,6 +25,15 @@ async function getDb() {
   }
 
   db.run('PRAGMA foreign_keys = ON');
+  // sql.js runs entirely in-memory and persists via writeFileSync. WAL mode
+  // is a no-op for the actual on-disk journal (there is no separate journal
+  // file), but setting it keeps behavior aligned with any future migration
+  // to native better-sqlite3 where WAL materially improves concurrency.
+  try {
+    db.run('PRAGMA journal_mode = WAL');
+  } catch (err) {
+    console.warn('[db] journal_mode=WAL not supported by this driver:', err?.message);
+  }
 
   return db;
 }

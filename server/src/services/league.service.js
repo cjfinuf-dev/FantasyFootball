@@ -12,6 +12,20 @@ const leagueUpdateSchema = z.object({
   settingsJson: z.string().max(10000).optional(),
 }).strict();
 
+// SECURITY: Column allowlist for the updateLeague SET clause.
+// Hoisted to module scope so it's precompiled once, not rebuilt per request,
+// and so the set of writable columns is a static artifact easy to audit.
+const LEAGUE_UPDATE_COL_MAP = Object.freeze({
+  name: 'name',
+  type: 'type',
+  scoringPreset: 'scoring_preset',
+  scoringJson: 'scoring_json',
+  rosterJson: 'roster_json',
+  leagueSize: 'league_size',
+  settingsJson: 'settings_json',
+});
+const LEAGUE_UPDATE_ALLOWED_COLS = new Set(Object.values(LEAGUE_UPDATE_COL_MAP));
+
 function generateInviteCode() {
   return crypto.randomBytes(8).toString('hex').toUpperCase();
 }
@@ -107,14 +121,14 @@ async function updateLeague(leagueId, userId, updates) {
     const err = new Error('Only the commissioner can update league settings.'); err.status = 403; throw err;
   }
 
-  const colMap = { name: 'name', type: 'type', scoringPreset: 'scoring_preset', scoringJson: 'scoring_json', rosterJson: 'roster_json', leagueSize: 'league_size', settingsJson: 'settings_json' };
-  // SECURITY: Only these column names may appear in the SET clause.
-  // colMap values are hardcoded above — never derived from user input.
-  const ALLOWED_COLS = new Set(Object.values(colMap));
   const sets = [];
   const vals = [];
   for (const [key, val] of Object.entries(validated)) {
-    if (colMap[key] && ALLOWED_COLS.has(colMap[key])) { sets.push(`${colMap[key]} = ?`); vals.push(val); }
+    const col = LEAGUE_UPDATE_COL_MAP[key];
+    if (col && LEAGUE_UPDATE_ALLOWED_COLS.has(col)) {
+      sets.push(`${col} = ?`);
+      vals.push(val);
+    }
   }
   if (sets.length > 0) {
     sets.push("updated_at = datetime('now')");

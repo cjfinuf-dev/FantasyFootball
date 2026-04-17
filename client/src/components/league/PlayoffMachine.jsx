@@ -40,11 +40,11 @@ export default function PlayoffMachine({ rosters, onTeamClick }) {
   }, [overrides]);
 
   // Baseline (no overrides) for delta comparison
-  const baseline = useMemo(() => runSimulations(TEAMS, {}), []);
+  const baseline = useMemo(() => runSimulations(TEAMS, {}), [TEAMS]);
   const results = useMemo(() => {
     const hasOvr = Object.keys(debouncedOverrides).length > 0;
     return runSimulations(TEAMS, debouncedOverrides, hasOvr ? INTERACTIVE_SIMS : undefined);
-  }, [debouncedOverrides]);
+  }, [debouncedOverrides, TEAMS]);
   const sorted = useMemo(() => [...results].sort((a, b) => b.playoffPct - a.playoffPct), [results]);
   const hasOverrides = Object.keys(overrides).length > 0;
 
@@ -70,8 +70,24 @@ export default function PlayoffMachine({ rosters, onTeamClick }) {
     games: schedule.filter(g => g.week === w),
   }));
 
-  // Bracket seeds
-  const seeds = sorted.slice(0, PLAYOFF_SPOTS);
+  // Bracket seeds should reflect the standings a real playoff committee
+  // uses (current wins → PF tiebreaker), NOT simulated playoff odds.
+  const standingsSorted = useMemo(
+    () => [...results].sort((a, b) => (b.wins - a.wins) || (b.pf - a.pf)),
+    [results]
+  );
+  const seeds = standingsSorted.slice(0, PLAYOFF_SPOTS);
+
+  // Wild-card pairings derived from seasonConfig: outermost seed vs innermost.
+  const wcStart = BYE_SEEDS;
+  const wcEnd = PLAYOFF_SPOTS - 1;
+  const wcGames = [];
+  for (let i = 0; i + wcStart < wcEnd - i; i++) {
+    const top = seeds[wcStart + i];
+    const bot = seeds[wcEnd - i];
+    if (top && bot) wcGames.push({ top, bot });
+  }
+  const byeSeeds = seeds.slice(0, BYE_SEEDS);
 
   return (
     <div className="pm">
@@ -246,20 +262,28 @@ export default function PlayoffMachine({ rosters, onTeamClick }) {
           Projected Bracket
         </div>
         <div className="pm-bracket">
-          {/* WILD CARD */}
+          {/* WILD CARD — pairings derived from BYE_SEEDS / PLAYOFF_SPOTS */}
           <div className="pm-bracket-round">
             <div className="pm-bracket-round-label">Wild Card</div>
-            <BracketGame top={seeds[2]} bot={seeds[5]} sorted={sorted} />
-            <BracketGame top={seeds[3]} bot={seeds[4]} sorted={sorted} />
+            {wcGames.map((g, i) => (
+              <BracketGame key={i} top={g.top} bot={g.bot} sorted={standingsSorted} />
+            ))}
           </div>
           <div className="pm-bracket-connectors">
             <svg viewBox="0 0 32 200" preserveAspectRatio="none"><path d="M0 50 H16 V100 H32 M0 150 H16 V100" stroke="var(--border-strong)" strokeWidth="1.5" fill="none"/></svg>
           </div>
-          {/* SEMIS */}
+          {/* SEMIS — one slot per bye seed */}
           <div className="pm-bracket-round">
             <div className="pm-bracket-round-label">Semifinals</div>
-            <BracketSlot label={`#1 ${seeds[0].abbr}`} sub="vs WC winner" isUser={seeds[0].id === USER_TEAM_ID} pct={seeds[0].champPct} />
-            <BracketSlot label={`#2 ${seeds[1].abbr}`} sub="vs WC winner" isUser={seeds[1].id === USER_TEAM_ID} pct={seeds[1].champPct} />
+            {byeSeeds.map((s, i) => (
+              <BracketSlot
+                key={s.id}
+                label={`#${i + 1} ${s.abbr}`}
+                sub="vs WC winner"
+                isUser={s.id === USER_TEAM_ID}
+                pct={s.champPct}
+              />
+            ))}
           </div>
           <div className="pm-bracket-connectors">
             <svg viewBox="0 0 32 200" preserveAspectRatio="none"><path d="M0 50 H16 V100 H32 M0 150 H16 V100" stroke="var(--border-strong)" strokeWidth="1.5" fill="none"/></svg>
@@ -280,9 +304,9 @@ export default function PlayoffMachine({ rosters, onTeamClick }) {
         <div className="pm-bye-callout">
           <span className="pm-bye-label">First-Round Bye</span>
           <div className="pm-bye-teams">
-            {seeds.slice(0, BYE_SEEDS).map(s => (
+            {byeSeeds.map(s => (
               <span key={s.id} className={`pm-bye-chip${s.id === USER_TEAM_ID ? ' pm-bye-chip--user' : ''}`}>
-                #{sorted.indexOf(s) + 1} {s.abbr}
+                #{standingsSorted.indexOf(s) + 1} {s.abbr}
                 <span className="pm-bye-chip-pct">{s.byePct.toFixed(0)}%</span>
               </span>
             ))}

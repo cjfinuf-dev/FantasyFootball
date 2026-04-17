@@ -24,6 +24,16 @@ router.post('/', requireAuth, validateCreateLeague, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// Join league via invite code. Must precede `/:id` routes so POST /join
+// doesn't get eaten by a `:id = "join"` match.
+router.post('/join', requireAuth, validateJoinLeague, async (req, res, next) => {
+  try {
+    const { inviteCode, teamName } = req.body;
+    const league = await leagueService.joinLeague({ inviteCode, teamName, userId: req.user.id });
+    res.json({ league });
+  } catch (err) { next(err); }
+});
+
 router.get('/:id', requireAuth, async (req, res, next) => {
   try {
     const league = await leagueService.getLeagueById(Number(req.params.id), req.user.id);
@@ -48,15 +58,6 @@ router.delete('/:id', requireAuth, async (req, res, next) => {
 router.delete('/:id/members/:memberId', requireAuth, async (req, res, next) => {
   try {
     const league = await leagueService.removeMember(Number(req.params.id), Number(req.params.memberId), req.user.id);
-    res.json({ league });
-  } catch (err) { next(err); }
-});
-
-// Join league via invite code
-router.post('/join', requireAuth, validateJoinLeague, async (req, res, next) => {
-  try {
-    const { inviteCode, teamName } = req.body;
-    const league = await leagueService.joinLeague({ inviteCode, teamName, userId: req.user.id });
     res.json({ league });
   } catch (err) { next(err); }
 });

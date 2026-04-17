@@ -25,12 +25,28 @@ export const NFL_WEEK1 = [
   { away: 'NE', home: 'LV', date: 'Mon Sep 14', time: '8:15 PM ET' },
 ];
 
-// Look up a player's Week 1 opponent by NFL team abbreviation
-// Returns { opp: 'BAL', location: 'away'|'home', gameTime: 'Thu 8:20 PM ET' } or null
-export function getOpponent(nflTeam) {
+// Per-week schedule table. Only Week 1 is populated today; request a week
+// that isn't in here and getOpponent returns null rather than silently
+// showing Week 1 data all season.
+const NFL_SCHEDULE_BY_WEEK = {
+  1: NFL_WEEK1,
+};
+
+// Look up a player's opponent by NFL team abbreviation for a specific week.
+// Returns { opp, location, gameTime } or null when data for the week is
+// unavailable. `week` defaults to 1 to preserve the old pre-fix signature for
+// callers that never needed week-awareness (e.g. preseason preview UIs).
+export function getOpponent(nflTeam, week = 1) {
   if (!nflTeam) return null;
+  const table = NFL_SCHEDULE_BY_WEEK[week];
+  if (!table) {
+    if (typeof import.meta !== 'undefined' && import.meta.env?.DEV) {
+      console.warn(`[nflSchedule] No schedule data for week ${week} — returning null.`);
+    }
+    return null;
+  }
   const upper = nflTeam.toUpperCase();
-  for (const game of NFL_WEEK1) {
+  for (const game of table) {
     if (game.away === upper) {
       return { opp: game.home, location: 'away', gameTime: game.date.split(' ').slice(0, 1)[0] + ' ' + game.time.replace(' ET', '') };
     }

@@ -3,6 +3,9 @@ import { TEAMS, USER_TEAM_ID } from '../../data/teams';
 import { PLAYERS } from '../../data/players';
 import { PLAYOFF_SPOTS } from '../../data/seasonConfig';
 import { getHexScore } from '../../utils/hexScore';
+import { getStarterIds } from '../../utils/winProb';
+import { computeLiveTeamScore } from '../../utils/liveScoring';
+import { useLiveTick, useAnyGameActive } from '../../hooks/useLiveTick';
 import Sparkline from '../ui/Sparkline';
 
 const PLAYER_MAP = {};
@@ -11,6 +14,16 @@ PLAYERS.forEach(p => { PLAYER_MAP[p.id] = p; });
 function getRosterHexTotal(teamId, rosters) {
   if (!rosters || !rosters[teamId]) return 0;
   return rosters[teamId].reduce((sum, pid) => sum + getHexScore(pid), 0);
+}
+
+// Current-week live PF (actual points locked so far). Returns null when there
+// are no playing/final contributors — keeps the column hidden pre-kickoff.
+function getCurrentWeekLivePF(teamId, rosters) {
+  if (!rosters || !rosters[teamId]) return null;
+  const starters = getStarterIds(rosters[teamId], PLAYER_MAP);
+  const live = computeLiveTeamScore(starters, PLAYER_MAP);
+  if (live.playing === 0 && live.final === 0) return null;
+  return live.actual;
 }
 
 function estimatePlayoffPct(team, rank, totalTeams) {
@@ -37,6 +50,8 @@ export default function StandingsCard({ expanded: expandedProp = false, rosters,
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const expanded = expandedProp || sidebarOpen;
   const showToggle = !expandedProp;
+  const tick = useLiveTick();
+  const gamesActive = useAnyGameActive();
   const standings = useMemo(() => {
     return [...TEAMS].sort((a, b) => {
       // Sort by wins, then PF as tiebreaker
@@ -48,9 +63,15 @@ export default function StandingsCard({ expanded: expandedProp = false, rosters,
       const trend = getWeeklyTrend(team);
       const clinched = i < 4 && team.wins >= 8;
       const eliminated = i >= 10 && team.losses >= 9;
-      return { ...team, hexTotal, playoffPct, trend, clinched, eliminated, standingRank: i + 1 };
+      const livePF = rosters ? getCurrentWeekLivePF(team.id, rosters) : null;
+      return { ...team, hexTotal, playoffPct, trend, clinched, eliminated, standingRank: i + 1, livePF };
     });
-  }, [rosters]);
+    // tick is intentionally in deps — livePF is derived from the live gameState
+    // singleton and must recompute on each SSE broadcast.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rosters, tick]);
+
+  const showLiveCol = gamesActive && standings.some(t => t.livePF != null);
 
   const hasDraftData = rosters && Object.values(rosters).some(r => r.length > 0);
 
@@ -75,6 +96,7 @@ export default function StandingsCard({ expanded: expandedProp = false, rosters,
                 <th style={{ width: 40 }}>#</th>
                 <th>Team</th>
                 <th style={{ textAlign: 'center' }}>Record</th>
+                {showLiveCol && <th style={{ textAlign: 'right', color: 'var(--success-green)' }}>Wk Live</th>}
                 {expanded && <th style={{ textAlign: 'right' }}>PF</th>}
                 {expanded && <th style={{ textAlign: 'right' }}>PA</th>}
                 <th style={{ textAlign: 'center', width: 60 }}>Trend</th>
@@ -119,6 +141,11 @@ export default function StandingsCard({ expanded: expandedProp = false, rosters,
                         </span>
                       )}
                     </td>
+                    {showLiveCol && (
+                      <td className="tabular-nums" style={{ textAlign: 'right', fontSize: 14, fontWeight: 700, color: team.livePF != null ? 'var(--success-green)' : 'var(--text-muted)' }}>
+                        {team.livePF != null ? team.livePF.toFixed(1) : '—'}
+                      </td>
+                    )}
                     {expanded && (
                       <td className="tabular-nums" style={{ textAlign: 'right', fontSize: 14 }}>
                         {team.pf.toFixed(1)}

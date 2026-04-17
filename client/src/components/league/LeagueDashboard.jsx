@@ -331,7 +331,8 @@ export default function LeagueDashboard() {
             </span>
             <button onClick={() => setActiveTab('settings')}
               className={`ff-hero-settings-btn${activeTab === 'settings' ? ' active' : ''}`}
-              title="League Settings">
+              title="League Settings"
+              aria-label="League Settings">
               <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M6.1 1.5h1.8l.3 1.3.9.4 1.1-.7 1.3 1.3-.7 1.1.4.9 1.3.3v1.8l-1.3.3-.4.9.7 1.1-1.3 1.3-1.1-.7-.9.4-.3 1.3H6.1l-.3-1.3-.9-.4-1.1.7-1.3-1.3.7-1.1-.4-.9-1.3-.3V6.1l1.3-.3.4-.9-.7-1.1 1.3-1.3 1.1.7.9-.4z"/><circle cx="7" cy="7" r="2"/>
               </svg>

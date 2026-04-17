@@ -337,4 +337,7 @@ export const PLAYERS = [
 
 ];
 
-export const PLAYERS_LAST_UPDATED = { week: 11, season: 2024, date: '2024-11-19' };
+// NOTE: season bumped to match seasonConfig.DATA_SEASON so UI staleness
+// banners match. The underlying stat rows still reflect the original dataset
+// and must be refreshed separately from the live stats source.
+export const PLAYERS_LAST_UPDATED = { week: 11, season: 2026, date: '2026-11-19' };
